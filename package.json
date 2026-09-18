@@ -15,6 +15,7 @@
     "db:migrate": "bun run scripts/migrate.ts",
     "db:query": "bun run scripts/sql.ts",
     "db:seed": "bun run scripts/seed.ts",
+    "admin:add": "bun run scripts/add-admin.ts",
     "test": "bun test",
     "typecheck": "bun x tsc --noEmit",
     "build": "bun run build:gateway",
