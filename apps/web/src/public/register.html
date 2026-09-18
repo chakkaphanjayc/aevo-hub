@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create your Aevo ID — Aevo Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 16px;
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-popover);
+      width: 100%;
+      max-width: 440px;
+      padding: 38px 34px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      animation: subtle-fade 0.25s ease;
+    }
+    .auth-card-head {
+      text-align: center;
+    }
+    .auth-title {
+      font-family: var(--font-serif);
+      font-size: 1.85rem;
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .auth-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-light);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 4px 0;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+    .auth-foot {
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .auth-foot a {
+      color: var(--brand-dark);
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .auth-foot a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-card-head">
+      <a href="/" class="brand-group" style="display:inline-flex; margin-bottom:14px;">
+        <div class="brand-mark" style="width:36px; height:36px;">A</div>
+      </a>
+      <h2 class="auth-title">Create your Aevo ID</h2>
+      <p class="auth-subtitle">ศูนย์กลางจัดการร้านค้า แอป และระบบธุรกิจของคุณ</p>
+    </div>
+
+    <form id="form-register" class="auth-form">
+      <div class="input-field-group">
+        <label for="reg-fullname">ชื่อ-นามสกุล (Full Name) *</label>
+        <input type="text" id="reg-fullname" required placeholder="เช่น สมชาย วงศ์สว่าง" autocomplete="name" />
+      </div>
+
+      <div class="input-field-group">
+        <label for="reg-email">อีเมล (Work Email) *</label>
+        <input type="email" id="reg-email" required placeholder="owner@business.com" autocomplete="email" />
+      </div>
+
+      <div class="input-field-group">
+        <label for="reg-password">รหัสผ่าน (Password) *</label>
+        <input type="password" id="reg-password" required minlength="8" placeholder="ขั้นต่ำ 8 ตัวอักษร" autocomplete="new-password" />
+      </div>
+
+      <div class="input-field-group">
+        <label for="reg-confirm-password">ยืนยันรหัสผ่าน (Confirm Password) *</label>
+        <input type="password" id="reg-confirm-password" required minlength="8" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autocomplete="new-password" />
+      </div>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.78rem; color:var(--text-muted); cursor:pointer; margin-top:2px;">
+        <input type="checkbox" id="reg-terms" required style="margin-top:2px;">
+        <span>ฉันยอมรับ Terms of Service และ Privacy Policy ของ Aevo Hub</span>
+      </label>
+
+      <button type="submit" id="btn-submit" class="pill-btn pill-btn-primary" style="width:100%; padding:10px; margin-top:6px;">
+        <span>สร้างบัญชี & ตั้งค่าธุรกิจ →</span>
+      </button>
+    </form>
+
+    <div class="auth-foot">
+      มีบัญชีอยู่แล้ว? <a href="/login">ลงชื่อเข้าใช้ (Sign In) →</a>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="/" style="font-size:0.78rem; color:var(--text-light); text-decoration:none;">← กลับสู่หน้าหลัก Aevo Hub</a>
+    </div>
+  </div>
+
+  <!-- Toast Notification Tray -->
+  <div class="toast-tray" id="toast-tray"></div>
+
+  <script type="module">
+    import { apiFetch, redirectIfAuthenticated } from "/auth.js";
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById("toast-tray");
+      const toast = document.createElement("div");
+      toast.className = "toast-bubble" + (isError ? " error" : "");
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transition = "opacity 0.25s";
+        setTimeout(() => toast.remove(), 250);
+      }, 4000);
+    }
+
+    void redirectIfAuthenticated();
+
+    const regForm = document.getElementById("form-register");
+    regForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById("reg-fullname").value.trim();
+      const email = document.getElementById("reg-email").value.trim();
+      const password = document.getElementById("reg-password").value;
+      const confirmPassword = document.getElementById("reg-confirm-password").value;
+      const submitBtn = document.getElementById("btn-submit");
+
+      if (password !== confirmPassword) {
+        showToast("Passwords do not match", true);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating Account...";
+      try {
+        const data = await apiFetch("/api/v1/hub/onboarding/register", {
+          method: "POST",
+          body: JSON.stringify({ fullName, email, password })
+        });
+        showToast(`Welcome, ${data.user?.displayName || email}! Redirecting...`);
+        setTimeout(() => {
+        window.location.assign("/organize?setup=true");
+        }, 500);
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "Registration failed", true);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "<span>สร้างบัญชี & ตั้งค่าธุรกิจ →</span>";
+      }
+    };
+  </script>
+</body>
+</html>

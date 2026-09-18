@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome Back — Aevo Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 16px;
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-popover);
+      width: 100%;
+      max-width: 440px;
+      padding: 38px 34px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      animation: subtle-fade 0.25s ease;
+    }
+    .auth-card-head {
+      text-align: center;
+    }
+    .auth-title {
+      font-family: var(--font-serif);
+      font-size: 1.85rem;
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .auth-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-light);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 4px 0;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+    .auth-foot {
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .auth-foot a {
+      color: var(--brand-dark);
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .auth-foot a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-card-head">
+      <a href="/" class="brand-group" style="display:inline-flex; margin-bottom:14px;">
+        <div class="brand-mark" style="width:36px; height:36px;">A</div>
+      </a>
+      <h2 class="auth-title">Welcome Back</h2>
+      <p class="auth-subtitle">ลงชื่อเข้าใช้เพื่อจัดการร้านค้าและแอปของคุณ</p>
+    </div>
+
+    <form id="form-login" class="auth-form">
+      <div class="input-field-group">
+        <label for="login-email">อีเมล (Email Address) *</label>
+        <input type="email" id="login-email" required placeholder="owner@business.com" autocomplete="email" />
+      </div>
+
+      <div class="input-field-group">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label for="login-password">รหัสผ่าน (Password) *</label>
+          <a href="/forgot-password" style="font-size:0.75rem; color:var(--brand-dark); text-decoration:none;">ลืมรหัสผ่าน?</a>
+        </div>
+        <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <button type="submit" id="btn-submit" class="pill-btn pill-btn-primary" style="width:100%; padding:10px; margin-top:6px;">
+        <span>เข้าสู่ระบบ (Sign In) →</span>
+      </button>
+    </form>
+
+    <div class="auth-foot">
+      ยังไม่มีบัญชี? <a href="/register">สมัครสมาชิกฟรี (Register) →</a>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="/" style="font-size:0.78rem; color:var(--text-light); text-decoration:none;">← กลับสู่หน้าหลัก Aevo Hub</a>
+    </div>
+  </div>
+
+  <!-- Toast Notification Tray -->
+  <div class="toast-tray" id="toast-tray"></div>
+
+  <script type="module">
+    import { apiFetch, redirectIfAuthenticated } from "/auth.js";
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById("toast-tray");
+      const toast = document.createElement("div");
+      toast.className = "toast-bubble" + (isError ? " error" : "");
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transition = "opacity 0.25s";
+        setTimeout(() => toast.remove(), 250);
+      }, 4000);
+    }
+
+    void redirectIfAuthenticated(new URLSearchParams(window.location.search).get("next"));
+
+    const loginForm = document.getElementById("form-login");
+    loginForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+      const submitBtn = document.getElementById("btn-submit");
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Signing In...";
+      try {
+        const data = await apiFetch("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password })
+        });
+        showToast("Signed in successfully ✓");
+
+        const requestedNext = new URLSearchParams(window.location.search).get("next");
+        const safeNext = requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//")
+          ? requestedNext
+          : null;
+        if (safeNext === "/admin" || safeNext?.startsWith("/admin/")) {
+          window.location.assign(safeNext);
+          return;
+        }
+
+        // Inspect if user has an active organization
+        const orgData = await apiFetch("/api/v1/hub/organizations");
+        if (orgData.organizations && orgData.organizations.length > 0) {
+          const activeOrg = orgData.organizations[0];
+          const storeData = await apiFetch(`/api/v1/hub/stores?organizationId=${encodeURIComponent(activeOrg.id)}`, {
+            headers: { "x-organization-id": activeOrg.id }
+          });
+          window.location.assign(storeData.stores?.length ? "/workspace" : "/organize?setup=true");
+        } else {
+          window.location.assign("/organize?setup=true");
+        }
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "Login failed", true);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "<span>เข้าสู่ระบบ (Sign In) →</span>";
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aevo Hub — The Unified Operating Platform for Modern Commerce & Hospitality</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+    .landing-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 250, 248, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+      padding: 16px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .landing-nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+    .landing-nav-link {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+      cursor: pointer;
+    }
+    .landing-nav-link:hover {
+      color: var(--brand-dark);
+    }
+    .landing-actions,
+    .landing-action-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .landing-session-loading {
+      color: var(--text-light);
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .landing-account-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 220px;
+      padding: 5px 10px 5px 6px;
+      border: 1px solid var(--brand-border);
+      border-radius: var(--radius-pill);
+      background: var(--brand-tint);
+      color: var(--brand-dark);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    .landing-account-avatar {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--brand-dark);
+      color: #fff;
+      font-size: 0.7rem;
+      flex: 0 0 auto;
+    }
+    .landing-account-email {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .landing-session-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 24px;
+      padding: 28px 30px;
+      border: 1px solid var(--brand-border);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, var(--brand-tint), var(--surface));
+      box-shadow: var(--shadow-subtle);
+    }
+    .landing-session-eyebrow {
+      color: var(--brand-dark);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .landing-session-card h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.65rem, 3vw, 2.35rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .landing-session-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.55;
+      max-width: 680px;
+    }
+    .landing-session-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .landing-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .landing-metric {
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+    }
+    .landing-metric-label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      margin-bottom: 5px;
+    }
+    .landing-metric-value {
+      display: block;
+      color: var(--text-main);
+      font-family: var(--font-serif);
+      font-size: 1.55rem;
+      font-weight: 500;
+      font-feature-settings: 'tnum';
+    }
+    .landing-metric-note {
+      display: block;
+      color: var(--text-light);
+      font-size: 0.68rem;
+      margin-top: 3px;
+    }
+    .landing-auth-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+    .landing-auth-note .pulse-dot {
+      width: 7px;
+      height: 7px;
+    }
+    .module-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--brand-dark);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .module-status[data-state="locked"] {
+      color: var(--text-muted);
+    }
+    .module-status[data-state="setup"],
+    .module-status[data-state="guest"] {
+      color: var(--text-muted);
+    }
+    .module-status[data-state="loading"] {
+      color: var(--text-light);
+    }
+    .module-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      flex: 0 0 auto;
+    }
+    .landing-hero {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 84px 24px 60px;
+      text-align: center;
+    }
+    .landing-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      background: var(--brand-tint);
+      border: 1px solid var(--brand-border);
+      color: var(--brand-dark);
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .landing-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 5.5vw, 4rem);
+      font-weight: 400;
+      letter-spacing: -0.025em;
+      line-height: 1.12;
+      color: var(--text-main);
+      margin-bottom: 24px;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .landing-subtitle {
+      font-size: clamp(1rem, 1.8vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 740px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+    .landing-cta-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 56px;
+    }
+    .landing-trust-rail {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      max-width: 880px;
+      margin: 0 auto;
+    }
+    .trust-stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+    }
+    .trust-stat-val {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--brand-dark);
+      font-feature-settings: 'tnum';
+    }
+    .trust-stat-lbl {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .landing-section {
+      padding: 72px 24px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .section-head-center {
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto 48px;
+    }
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: 2.2rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      margin-bottom: 12px;
+    }
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .module-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow-subtle);
+      transition: all 0.2s ease;
+    }
+    .module-card:hover {
+      border-color: #cbd5c4;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+    }
+    .module-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--brand-tint);
+      color: var(--brand-dark);
+      display: grid;
+      place-items: center;
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 600;
+      border: 1px solid var(--brand-border);
+    }
+    .journey-rail {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+    .journey-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .journey-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--brand-dark);
+      background: var(--brand-tint);
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      align-self: flex-start;
+      font-feature-settings: 'tnum';
+    }
+    @media (max-width: 768px) {
+      .landing-nav-links { display: none; }
+      .landing-trust-rail { grid-template-columns: repeat(2, 1fr); }
+      .landing-actions { width: 100%; justify-content: flex-start; }
+      .landing-session-card { grid-template-columns: 1fr; padding: 22px; }
+      .landing-session-actions { justify-content: flex-start; }
+      .landing-metrics { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-auth-state="guest">
+  <!-- Landing Sticky Nav -->
+  <header class="landing-nav">
+    <a href="/" class="brand-group">
+      <div class="brand-mark">A</div>
+      <div>
+        <div class="brand-title">Aevo Hub</div>
+        <div class="brand-scope">Unified Platform</div>
+      </div>
+    </a>
+
+    <nav class="landing-nav-links">
+      <a class="landing-nav-link" href="#modules">Modules</a>
+      <a class="landing-nav-link" href="#journey">Journey</a>
+      <a class="landing-nav-link" href="#architecture">Architecture</a>
+      <span class="status-capsule-sm">Enterprise Core</span>
+    </nav>
+
+    <div id="landing-actions" class="landing-actions" aria-live="polite">
+      <span id="landing-auth-loading" class="landing-session-loading" hidden>Checking session…</span>
+      <div id="landing-guest-actions" class="landing-action-group landing-auth-guest">
+        <a href="/login" class="pill-btn pill-btn-subtle">Sign In ↗</a>
+        <a href="/register" class="pill-btn pill-btn-primary">Start Free Trial →</a>
+      </div>
+      <div id="landing-user-actions" class="landing-action-group landing-auth-user" hidden>
+        <span class="landing-account-chip" title="Signed-in account">
+          <span id="landing-account-avatar" class="landing-account-avatar">A</span>
+          <span id="landing-account-email" class="landing-account-email">Account</span>
+        </span>
+        <a href="/workspace" class="pill-btn pill-btn-primary">Open Workspace →</a>
+        <button id="landing-signout" type="button" class="pill-btn pill-btn-subtle">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="landing-hero">
+    <div class="landing-tag-pill">
+      <span class="pulse-dot"></span>
+      <span>Enterprise Multi-Tenant Operating Platform</span>
+    </div>
+    <h1 id="landing-hero-title" class="landing-title">The Unified Operating Platform for Modern Commerce & Hospitality.</h1>
+    <p id="landing-hero-subtitle" class="landing-subtitle">
+      Run Cashier POS, Self-Ordering Kiosks, Sports & Venue Bookings, Customer Memberships, and Odoo ERP synchronizations seamlessly from a single Supabase PostgreSQL core.
+    </p>
+    <div id="landing-hero-guest" class="landing-cta-group landing-auth-guest">
+      <a href="/register" class="pill-btn pill-btn-primary pill-btn-lg">
+        Start Free Trial →
+      </a>
+      <a href="/login" class="pill-btn pill-btn-outline pill-btn-lg">
+        Sign In to Workspace ↗
+      </a>
+    </div>
+    <div id="landing-hero-user" class="landing-cta-group landing-auth-user" hidden>
+      <a href="/workspace" class="pill-btn pill-btn-primary pill-btn-lg">Open Workspace →</a>
+      <a href="/organize" class="pill-btn pill-btn-outline pill-btn-lg">Manage Organization ↗</a>
+      <span class="landing-auth-note"><span class="pulse-dot"></span><span id="landing-hero-session-note">Session active</span></span>
+    </div>
+
+    <!-- Trust stats rail -->
+    <div class="landing-trust-rail">
+      <div class="trust-stat-item">
+        <span class="trust-stat-val">Multi-tenant</span>
+        <span class="trust-stat-lbl">Organization isolation</span>
+      </div>
+      <div class="trust-stat-item">
+        <span class="trust-stat-val">RBAC</span>
+        <span class="trust-stat-lbl">Scoped permissions</span>
+      </div>
+      <div class="trust-stat-item">
+        <span class="trust-stat-val">Supabase</span>
+        <span class="trust-stat-lbl">Auth &amp; data core</span>
+      </div>
+      <div class="trust-stat-item">
+        <span class="trust-stat-val">Session-first</span>
+        <span class="trust-stat-lbl">Secure browser access</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Authenticated workspace context -->
+  <section id="landing-account" class="landing-section" hidden aria-live="polite">
+    <div class="landing-session-card">
+      <div>
+        <div class="landing-session-eyebrow">Your Aevo Hub</div>
+        <h2 id="landing-account-title">Welcome back</h2>
+        <p id="landing-account-summary">Your workspace context is loading from the active session.</p>
+      </div>
+      <div class="landing-session-actions">
+        <a id="landing-account-primary" href="/workspace" class="pill-btn pill-btn-primary">Open Workspace →</a>
+        <a href="/organize" class="pill-btn pill-btn-subtle">Organize</a>
+      </div>
+    </div>
+    <div class="landing-metrics" aria-label="Workspace summary">
+      <div class="landing-metric">
+        <span class="landing-metric-label">Organizations</span>
+        <strong id="landing-org-count" class="landing-metric-value">—</strong>
+        <span id="landing-org-note" class="landing-metric-note">Active memberships</span>
+      </div>
+      <div class="landing-metric">
+        <span class="landing-metric-label">Active stores</span>
+        <strong id="landing-store-count" class="landing-metric-value">—</strong>
+        <span id="landing-store-note" class="landing-metric-note">Across your workspace</span>
+      </div>
+      <div class="landing-metric">
+        <span class="landing-metric-label">Enabled modules</span>
+        <strong id="landing-module-count" class="landing-metric-value">—</strong>
+        <span id="landing-module-note" class="landing-metric-note">Plan entitlements</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modules Showcase Section -->
+  <section id="modules" class="landing-section" style="border-top:1px solid var(--line);">
+    <div class="section-head-center">
+      <span class="status-capsule-sm" style="margin-bottom:8px; display:inline-block;">Modular Ecosystem</span>
+      <h2 class="section-title">One Core, Every Business Touchpoint</h2>
+      <p style="font-size:0.9rem; color:var(--text-muted);">
+        Each module operates autonomously on frontends while sharing transactions, products, stock, and customers.
+      </p>
+    </div>
+
+    <div class="modules-grid">
+      <div class="module-card">
+        <div class="module-card-icon">P</div>
+        <h3 style="font-family:var(--font-serif); font-size:1.3rem;">Aevo POS</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+          Point-of-Sale designed for high-throughput retail, cafes, and restaurants. Split billing, table assignments, receipt printing, and cashier cash reconciliation.
+        </p>
+        <div id="module-status-pos" class="module-status" data-state="loading"><span class="module-status-dot"></span><span>Workspace module</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-icon">K</div>
+        <h3 style="font-family:var(--font-serif); font-size:1.3rem;">Aevo Kiosk</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+          Self-ordering customer station with visual menus, dynamic modifier selections, QR prompt payments, and synchronized kitchen queue tickets.
+        </p>
+        <div id="module-status-kiosk" class="module-status" data-state="loading"><span class="module-status-dot"></span><span>Workspace module</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-icon">B</div>
+        <h3 style="font-family:var(--font-serif); font-size:1.3rem;">Aevo Booking</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+          Court, table, and venue reservation engine. Fixed or flexible time slots, pricing schedules, peak-rate rules, and automated FIFO waitlist rotation.
+        </p>
+        <div id="module-status-booking" class="module-status" data-state="loading"><span class="module-status-dot"></span><span>Workspace module</span></div>
+      </div>
+
+      <div class="module-card">
+        <div class="module-card-icon">O</div>
+        <h3 style="font-family:var(--font-serif); font-size:1.3rem;">Aevo Core & Odoo</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+          Unified customer profiles, multi-store inventory ledgers, transactional audit trails, and two-way Odoo 19 ERP synchronization via resilient outbox queues.
+        </p>
+        <div id="module-status-odoo" class="module-status" data-state="loading"><span class="module-status-dot"></span><span>Workspace module</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- User Journey Stepper Section -->
+  <section id="journey" class="landing-section" style="background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line);">
+    <div class="section-head-center">
+      <span class="status-capsule-sm" style="margin-bottom:8px; display:inline-block;">End-to-End Flow</span>
+      <h2 id="landing-journey-title" class="section-title">From Registration to Operational in Minutes</h2>
+      <p id="landing-journey-description" style="font-size:0.9rem; color:var(--text-muted);">
+        A streamlined path designed to eliminate setup friction while preserving enterprise governance.
+      </p>
+    </div>
+
+    <div class="journey-rail">
+      <div class="journey-card">
+        <span class="journey-step-num">Step 01</span>
+        <h4 style="font-family:var(--font-serif); font-size:1.1rem;">Register Account</h4>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Create your personal user account with email and password without complex forms.</p>
+      </div>
+
+      <div class="journey-card">
+        <span class="journey-step-num">Step 02</span>
+        <h4 style="font-family:var(--font-serif); font-size:1.1rem;">Organize & Store</h4>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Define your legal entity, brand profile, and initialize your first store with operational mode.</p>
+      </div>
+
+      <div class="journey-card">
+        <span class="journey-step-num">Step 03</span>
+        <h4 style="font-family:var(--font-serif); font-size:1.1rem;">Select Modules</h4>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Enable POS, Kiosk, Booking, and optionally seed realistic sample data with 1 click.</p>
+      </div>
+
+      <div class="journey-card">
+        <span class="journey-step-num">Step 04</span>
+        <h4 style="font-family:var(--font-serif); font-size:1.1rem;">Launch Workspace</h4>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Open Aevo Hub Dashboard with live KPI metrics, checklist progress, and hardware terminals.</p>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:36px;">
+      <a id="landing-journey-guest" href="/register" class="pill-btn pill-btn-primary landing-auth-guest" style="padding:10px 24px;">
+        Start System Flow Now →
+      </a>
+      <a id="landing-journey-user" href="/workspace" class="pill-btn pill-btn-primary landing-auth-user" style="padding:10px 24px;" hidden>
+        Continue to Workspace →
+      </a>
+    </div>
+  </section>
+
+  <!-- Architecture Callout Section -->
+  <section id="architecture" class="landing-section">
+    <div style="background:var(--surface-subtle); border:1px solid var(--line); border-radius:var(--radius-lg); padding:36px 32px; display:flex; justify-content:space-between; align-items:center; gap:32px; flex-wrap:wrap;">
+      <div style="max-width:540px;">
+        <span class="status-capsule-sm" style="margin-bottom:8px; display:inline-block;">Engineering Foundations</span>
+        <h3 style="font-family:var(--font-serif); font-size:1.7rem; margin-bottom:10px;">Enterprise Multi-Tenant Design</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.6;">
+          Aevo Hub isolates tenant data using row-level multi-tenancy (<code>organization_id</code>, <code>store_id</code>), CASL permission abilities, outbox queue workers for ERP sync, and global high-availability architecture.
+        </p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <a id="landing-architecture-guest" href="/register" class="pill-btn pill-btn-primary landing-auth-guest">
+          Start Free Trial Now →
+        </a>
+        <a id="landing-architecture-user" href="/organize" class="pill-btn pill-btn-primary landing-auth-user" hidden>
+          Manage Organization →
+        </a>
+        <button type="button" class="pill-btn pill-btn-subtle" onclick="window.open('http://localhost:4000/swagger', '_blank')">
+          API Gateway Swagger Docs ↗
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Landing Minimal Footer -->
+  <footer style="border-top:1px solid var(--line); padding:28px 32px; display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--text-muted); flex-wrap:wrap; gap:12px;">
+    <div>© 2026 Aevo Ecosystem. All rights reserved. Enterprise SaaS Edition.</div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <span class="status-capsule-sm" style="background:#e4eedb; color:#2d4a30;">All Systems Operational</span>
+      <a href="#" style="color:var(--text-muted); text-decoration:none;">Back to Top ↑</a>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { apiFetch, getCurrentUser, signOut } from "/auth.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    function setAuthState(state) {
+      document.body.dataset.authState = state;
+      document.querySelectorAll(".landing-auth-guest").forEach((node) => {
+        node.hidden = state !== "guest";
+      });
+      document.querySelectorAll(".landing-auth-user").forEach((node) => {
+        node.hidden = state !== "user";
+      });
+      $("landing-auth-loading").hidden = state !== "loading";
+    }
+
+    function displayName(user) {
+      const name = String(user?.displayName || "").trim();
+      if (name) return name;
+      const email = String(user?.email || "").trim();
+      return email.includes("@") ? email.split("@")[0] : email || "there";
+    }
+
+    function resetLandingForGuest() {
+      $("landing-account").hidden = true;
+      $("landing-hero-title").textContent = "The Unified Operating Platform for Modern Commerce & Hospitality.";
+      $("landing-hero-subtitle").textContent = "Run Cashier POS, Self-Ordering Kiosks, Sports & Venue Bookings, Customer Memberships, and Odoo ERP synchronizations seamlessly from a single Supabase PostgreSQL core.";
+      $("landing-hero-session-note").textContent = "Session active";
+      $("landing-journey-title").textContent = "From Registration to Operational in Minutes";
+      $("landing-journey-description").textContent = "A streamlined path designed to eliminate setup friction while preserving enterprise governance.";
+      $("landing-org-count").textContent = "—";
+      $("landing-store-count").textContent = "—";
+      $("landing-module-count").textContent = "—";
+      $("landing-org-note").textContent = "Active memberships";
+      $("landing-store-note").textContent = "Across your workspace";
+      $("landing-module-note").textContent = "Plan entitlements";
+      $("landing-account-primary").href = "/workspace";
+      $("landing-account-primary").textContent = "Open Workspace →";
+    }
+
+    function updateModuleStatus(features, authenticated, unavailableLabel = null) {
+      const keys = {
+        pos: "pos",
+        kiosk: "kiosk",
+        booking: "booking",
+        odoo: "odoo_integration"
+      };
+
+      for (const [module, featureKey] of Object.entries(keys)) {
+        const node = $("module-status-" + module);
+        if (!node) continue;
+        const enabled = authenticated && Boolean(features?.[featureKey]);
+        node.dataset.state = authenticated
+          ? (unavailableLabel ? "setup" : (enabled ? "enabled" : "locked"))
+          : "guest";
+        const label = node.querySelector("span:last-child");
+        if (label) {
+          label.textContent = authenticated
+            ? (unavailableLabel || (enabled ? "Included in organization plan" : "Plan required"))
+            : "Sign in to view availability";
+        }
+      }
+    }
+
+    async function loadLandingState() {
+      setAuthState("loading");
+      updateModuleStatus({}, false);
+
+      const me = await getCurrentUser(true).catch(() => null);
+      if (!me) {
+        resetLandingForGuest();
+        setAuthState("guest");
+        return;
+      }
+
+      const user = me.effectiveUser || me.user || {};
+      const name = displayName(user);
+      const email = String(user.email || "");
+      const accountSection = $("landing-account");
+
+      setAuthState("user");
+      $("landing-account-avatar").textContent = name.charAt(0).toUpperCase() || "A";
+      $("landing-account-email").textContent = email || name;
+      $("landing-hero-title").textContent = `Welcome back, ${name}.`;
+      $("landing-hero-subtitle").textContent = "Your Aevo Hub session is active. Continue operating your organizations, stores, and enabled modules from one workspace.";
+      $("landing-hero-session-note").textContent = email ? `Signed in as ${email}` : "Session active";
+      $("landing-journey-title").textContent = "Keep your operation moving";
+      $("landing-journey-description").textContent = "Your next action is now tied to the live workspace state, from organization readiness to daily store operations.";
+      accountSection.hidden = false;
+      $("landing-account-title").textContent = `Good to see you, ${name}.`;
+
+      try {
+        const organizationResponse = await apiFetch("/api/v1/hub/organizations");
+        const organizations = Array.isArray(organizationResponse?.organizations) ? organizationResponse.organizations : [];
+        $("landing-org-count").textContent = String(organizations.length);
+
+        if (organizations.length === 0) {
+          $("landing-account-summary").textContent = "Your account is ready. Complete organization setup to unlock the workspace and start configuring your first store.";
+          $("landing-account-primary").href = "/organize?setup=true";
+          $("landing-account-primary").textContent = "Complete Organization Setup →";
+          $("landing-org-note").textContent = "Setup is the next step";
+          $("landing-store-count").textContent = "0";
+          $("landing-store-note").textContent = "Create your first store in Organize";
+          $("landing-module-count").textContent = "—";
+          $("landing-module-note").textContent = "Choose a plan after setup";
+          updateModuleStatus({}, true, "Complete organization setup");
+          return;
+        }
+
+        const activeOrganization = organizations[0];
+        $("landing-org-note").textContent = activeOrganization.name || "Active memberships";
+        $("landing-account-summary").textContent = `${activeOrganization.name || "Your organization"} is connected. Open Workspace for live operations or Organize to manage identity, stores, members, and readiness.`;
+
+        const storeResults = await Promise.all(organizations.map(async (organization) => {
+          try {
+            const response = await apiFetch(`/api/v1/hub/stores?organizationId=${encodeURIComponent(organization.id)}`, {
+              headers: { "x-organization-id": organization.id }
+            });
+            return Array.isArray(response?.stores) ? response.stores : [];
+          } catch {
+            return [];
+          }
+        }));
+        const storeCount = storeResults.reduce((count, stores) => count + stores.length, 0);
+        $("landing-store-count").textContent = String(storeCount);
+        $("landing-store-note").textContent = storeCount === 1 ? "One active operating location" : "Across active organizations";
+
+        let entitlements = null;
+        try {
+          entitlements = await apiFetch("/api/v1/me/entitlements", {
+            headers: { "x-organization-id": activeOrganization.id }
+          });
+        } catch {
+          entitlements = null;
+        }
+        const features = entitlements?.entitlements?.features || {};
+        const enabledCount = Object.entries(features).filter(([key, enabled]) => enabled && !key.startsWith("max_")).length;
+        $("landing-module-count").textContent = String(enabledCount);
+        $("landing-module-note").textContent = entitlements?.entitlements?.planId
+          ? `${entitlements.entitlements.planId} plan entitlements`
+          : "Organization plan entitlements";
+        updateModuleStatus(features, true);
+      } catch {
+        $("landing-account-summary").textContent = "Your session is active, but workspace details are temporarily unavailable. Open Workspace to retry the live view.";
+        $("landing-org-count").textContent = "—";
+        $("landing-store-count").textContent = "—";
+        $("landing-module-count").textContent = "—";
+        updateModuleStatus({}, true);
+      }
+    }
+
+    let landingRefreshPromise = null;
+    function refreshLandingState() {
+      if (!landingRefreshPromise) {
+        landingRefreshPromise = loadLandingState().finally(() => {
+          landingRefreshPromise = null;
+        });
+      }
+      return landingRefreshPromise;
+    }
+
+    $("landing-signout").addEventListener("click", async () => {
+      const button = $("landing-signout");
+      button.disabled = true;
+      button.textContent = "Signing out…";
+      try {
+        await signOut();
+      } finally {
+        window.location.assign("/");
+      }
+    });
+
+    void refreshLandingState();
+    window.addEventListener("pageshow", () => void refreshLandingState());
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void refreshLandingState();
+    });
+  </script>
+</body>
+</html>

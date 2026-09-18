@@ -1,0 +1,13 @@
+{
+  "name": "@aevo/hub-web",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "start": "bun run src/server.ts"
+  },
+  "dependencies": {
+    "@aevo/contracts": "workspace:*",
+    "@aevo/hub-client": "workspace:*"
+  }
+}

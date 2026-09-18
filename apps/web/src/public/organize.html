@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Set up and manage your Aevo Hub organization, stores, team, and applications." />
+  <title>Organize — Aevo Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared.css" />
+  <style>
+    :root {
+      --canvas: #f7f8f4; --surface: #fff; --soft: #f0f4ec; --ink: #192019;
+      --muted: #6b7768; --faint: #93a08f; --line: #e2e8de; --brand: #527451;
+      --dark: #294b2f; --wash: #e4eedb; --danger: #a33e35;
+      --shadow: 0 14px 34px rgba(32,52,35,.07); --radius: 14px;
+      --sans: 'Plus Jakarta Sans','Noto Sans Thai',sans-serif;
+      --serif: 'Newsreader',Georgia,serif; --mono: 'Fira Code',monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--canvas); font-family: var(--sans); }
+    button, input, select, textarea { font: inherit; }
+    a { color: inherit; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(82,116,81,.28); outline-offset: 2px; }
+    .shell { display: grid; grid-template-columns: 248px minmax(0,1fr); min-height: 100vh; }
+    .sidebar { display: flex; flex-direction: column; background: #f1f4ed; border-right: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 22px 20px 18px; border-bottom: 1px solid var(--line); text-decoration: none; }
+    .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; color: #fff; background: var(--dark); border-radius: 9px; font: 600 1.2rem var(--serif); }
+    .brand-copy strong { display: block; font-size: .92rem; letter-spacing: -.02em; }
+    .brand-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; }
+    .context { padding: 16px; border-bottom: 1px solid var(--line); }
+    .context label, .eyebrow { color: var(--muted); font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .context select { width: 100%; margin-top: 7px; padding: 9px 10px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+    .nav { display: grid; gap: 3px; padding: 18px 12px; }
+    .nav-title { padding: 0 10px 7px; color: var(--faint); font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .nav button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 11px; color: var(--muted); background: transparent; border: 0; border-radius: 9px; cursor: pointer; font-size: .77rem; text-align: left; }
+    .nav button:hover, .nav button.active { color: var(--dark); background: rgba(255,255,255,.72); }
+    .nav button.active { font-weight: 700; box-shadow: inset 3px 0 var(--brand); }
+    .nav svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+    .nav .count { margin-left: auto; min-width: 21px; padding: 2px 6px; color: var(--dark); background: var(--wash); border-radius: 20px; font: 600 .66rem var(--mono); text-align: center; }
+    .account { display: flex; align-items: center; gap: 9px; margin-top: auto; padding: 15px 14px; border-top: 1px solid var(--line); }
+    .avatar { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 30px; color: #fff; background: var(--dark); border-radius: 50%; font-size: .75rem; font-weight: 700; }
+    .account-copy { min-width: 0; flex: 1; }
+    .account-copy strong { display: block; overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+    .account-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: .63rem; text-transform: uppercase; }
+    .link-button { padding: 4px 0; color: var(--dark); background: none; border: 0; cursor: pointer; font-size: .7rem; }
+    .main { min-width: 0; }
+    .topbar { display: flex; align-items: center; gap: 16px; min-height: 74px; padding: 0 34px; background: rgba(255,255,255,.78); border-bottom: 1px solid var(--line); }
+    .topbar-title { font: 500 1.4rem var(--serif); letter-spacing: -.02em; }
+    .topbar-spacer { flex: 1; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 8px 13px; color: var(--dark); background: #fff; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: .74rem; font-weight: 700; text-decoration: none; }
+    .button:hover { border-color: #bbcbb6; background: #fbfcfa; }
+    .button-primary { color: #fff; background: var(--dark); border-color: var(--dark); }
+    .button-primary:hover { background: #1d3823; }
+    .button-danger { color: var(--danger); background: #fff8f7; border-color: #efc7c1; }
+    .button:disabled { opacity: .55; cursor: wait; }
+    .content { max-width: 1360px; margin: 0 auto; padding: 38px 44px 64px; }
+    .page-head { display: flex; align-items: end; justify-content: space-between; gap: 22px; margin-bottom: 30px; }
+    .page-head h1 { margin: 5px 0; font: 500 clamp(2.1rem,4vw,3.4rem)/1 var(--serif); letter-spacing: -.04em; }
+    .page-head p { max-width: 680px; margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.55; }
+    .page-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .view { display: none; }
+    .view.active { display: block; animation: appear .2s ease-out; }
+    @keyframes appear { from { opacity: .2; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .panel { margin-bottom: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 2px 7px rgba(32,52,35,.025); }
+    .panel-head { display: flex; align-items: start; justify-content: space-between; gap: 14px; padding: 20px 21px 15px; border-bottom: 1px solid var(--line); }
+    .panel-head h2 { margin: 0; font-size: .93rem; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: .71rem; line-height: 1.5; }
+    .panel-body { padding: 21px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .field { display: grid; gap: 7px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: var(--muted); font-size: .7rem; font-weight: 700; }
+    .field input, .field select, .field textarea { width: 100%; min-height: 40px; padding: 9px 11px; color: var(--ink); background: #fff; border: 1px solid #d5dfd1; border-radius: 8px; outline: none; }
+    .field textarea { min-height: 82px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--brand); }
+    .hint { color: var(--faint); font-size: .66rem; line-height: 1.5; }
+    .form-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 650px; border-collapse: collapse; }
+    th, td { padding: 13px 21px; border-bottom: 1px solid #edf0eb; font-size: .72rem; text-align: left; white-space: nowrap; }
+    th { color: var(--muted); font-size: .63rem; letter-spacing: .08em; text-transform: uppercase; }
+    td code { color: var(--dark); font: .68rem var(--mono); }
+    .status { display: inline-flex; padding: 3px 7px; color: #35633a; background: #e7f3e6; border-radius: 20px; font-size: .61rem; font-weight: 700; }
+    .empty { padding: 38px 20px; color: var(--muted); font-size: .75rem; text-align: center; }
+    .app-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; padding: 20px 21px 21px; }
+    .app-card { display: flex; flex-direction: column; min-height: 165px; padding: 15px; border: 1px solid var(--line); border-radius: 10px; }
+    .app-card-top { display: flex; justify-content: space-between; gap: 8px; }
+    .glyph { display: grid; place-items: center; width: 31px; height: 31px; color: var(--dark); background: var(--wash); border-radius: 8px; font-size: .7rem; font-weight: 700; }
+    .badge { padding: 3px 7px; color: var(--muted); background: #f1f4ef; border-radius: 20px; font-size: .61rem; font-weight: 700; }
+    .badge.on { color: #35633a; background: #e7f3e6; }
+    .app-card h3 { margin: 14px 0 5px; font-size: .82rem; }
+    .app-card p { flex: 1; margin: 0; color: var(--muted); font-size: .68rem; line-height: 1.55; }
+    .app-card .button { align-self: start; margin-top: 13px; min-height: 31px; padding: 6px 9px; font-size: .67rem; }
+    dialog { width: min(500px,calc(100vw - 32px)); padding: 0; color: var(--ink); background: #fff; border: 0; border-radius: 14px; box-shadow: var(--shadow); }
+    dialog::backdrop { background: rgba(22,37,24,.32); }
+    .dialog-inner { padding: 22px; }
+    .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .dialog-head h2 { margin: 0; font: 500 1.45rem var(--serif); }
+    .close { color: var(--muted); background: none; border: 0; cursor: pointer; font-size: 1.2rem; }
+
+    .setup-screen { animation: appear .2s ease-out; }
+    #setup-screen[hidden], #organization-tabs[hidden] { display: none; }
+    .setup-intro { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+    .setup-intro h2 { margin: 6px 0; font: 500 clamp(1.9rem,3vw,2.8rem)/1 var(--serif); letter-spacing: -.035em; }
+    .setup-intro p { max-width: 650px; margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.65; }
+    .setup-stepper { display: grid; grid-template-columns: repeat(7,minmax(84px,1fr)); gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 2px; }
+    .step-button { display: grid; gap: 7px; min-width: 84px; padding: 12px 10px; color: var(--muted); background: #f3f5f1; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; text-align: left; }
+    .step-button:hover:not(:disabled) { border-color: #b9cbb5; background: #fff; }
+    .step-button.active { color: #fff; background: var(--dark); border-color: var(--dark); }
+    .step-button.done { color: var(--dark); background: var(--wash); border-color: #cbd9c3; }
+    .step-button:disabled { cursor: not-allowed; opacity: .58; }
+    .step-number { display: inline-grid; place-items: center; width: 23px; height: 23px; color: var(--muted); background: #fff; border: 1px solid #d9e2d5; border-radius: 50%; font-size: .67rem; font-weight: 700; }
+    .step-button.active .step-number { color: var(--dark); border-color: #fff; }
+    .step-button.done .step-number { color: #fff; background: var(--brand); border-color: var(--brand); }
+    .step-label { font-size: .69rem; font-weight: 700; white-space: nowrap; }
+    .setup-layout { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(260px,.55fr); gap: 16px; align-items: start; }
+    .setup-card, .readiness-card, .setup-help { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 2px 7px rgba(32,52,35,.025); }
+    .setup-card-head { display: flex; justify-content: space-between; gap: 16px; padding: 22px 23px 18px; border-bottom: 1px solid var(--line); }
+    .setup-card-head h3 { margin: 0; font: 500 1.45rem var(--serif); letter-spacing: -.02em; }
+    .setup-card-head p { margin: 5px 0 0; color: var(--muted); font-size: .73rem; line-height: 1.55; }
+    .setup-card-body { padding: 22px 23px 23px; }
+    .setup-pane { display: none; }
+    .setup-pane.active { display: block; animation: appear .18s ease-out; }
+    .setup-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 24px; padding-top: 17px; border-top: 1px solid var(--line); }
+    .setup-actions-right { display: flex; gap: 8px; }
+    .choice-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .choice { display: flex; align-items: start; gap: 10px; min-height: 74px; padding: 13px; background: #fff; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+    .choice:hover { border-color: #b9cbb5; }
+    .choice:has(input:checked) { background: #f5f9f1; border-color: #9fba98; box-shadow: inset 0 0 0 1px #c7d9c1; }
+    .choice:has(input:disabled) { cursor: not-allowed; opacity: .62; }
+    .choice input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--brand); }
+    .choice strong { display: block; font-size: .75rem; }
+    .choice span span { display: block; margin-top: 4px; color: var(--muted); font-size: .66rem; line-height: 1.45; }
+    .setup-note { margin-bottom: 17px; padding: 12px 13px; color: #526550; background: var(--wash); border: 1px solid #cbd9c3; border-radius: 9px; font-size: .7rem; line-height: 1.6; }
+    .setup-side { display: grid; gap: 12px; }
+    .readiness-card, .setup-help { padding: 18px; }
+    .readiness-card h3, .setup-help h3 { margin: 5px 0 4px; font: 500 1.35rem var(--serif); }
+    .readiness-card p, .setup-help p { margin: 0; color: var(--muted); font-size: .7rem; line-height: 1.6; }
+    .progress-track { height: 8px; margin: 15px 0 8px; overflow: hidden; background: #edf1e9; border-radius: 20px; }
+    .progress-track span { display: block; width: 0; height: 100%; background: var(--brand); border-radius: inherit; transition: width .2s ease; }
+    .progress-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .66rem; }
+    .checklist { display: grid; gap: 8px; margin-top: 15px; }
+    .check-item { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 8px; align-items: start; padding-top: 8px; border-top: 1px solid #edf0eb; }
+    .check-mark { display: grid; place-items: center; width: 20px; height: 20px; color: var(--muted); background: #f2f4ef; border-radius: 50%; font-size: .68rem; font-weight: 700; }
+    .check-item.complete .check-mark { color: #fff; background: var(--brand); }
+    .check-item.pending .check-mark { color: #8b682b; background: #fff3d5; }
+    .check-item strong { display: block; font-size: .67rem; }
+    .check-item span { display: block; margin-top: 2px; color: var(--muted); font-size: .62rem; line-height: 1.4; }
+    .radio-row { display: grid; gap: 8px; }
+    .radio-row .choice { min-height: 0; }
+    .inline-fields { display: grid; grid-template-columns: minmax(0,1fr) 150px; gap: 12px; margin-top: 13px; }
+    .setup-loading { color: var(--muted); font-size: .74rem; }
+    .success-mark { display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 16px; color: #fff; background: var(--brand); border-radius: 50%; font-size: 1.45rem; }
+    .ready-summary { padding: 16px; background: #f7faf4; border: 1px solid #d9e7d2; border-radius: 10px; }
+    .ready-summary strong { display: block; font-size: .78rem; }
+    .ready-summary span { display: block; margin-top: 4px; color: var(--muted); font-size: .68rem; line-height: 1.5; }
+    .toast-tray { position: fixed; right: 20px; bottom: 20px; z-index: 30; display: grid; gap: 8px; }
+    .toast { max-width: 360px; padding: 11px 14px; color: #fff; background: var(--dark); border-radius: 8px; box-shadow: var(--shadow); font-size: .73rem; }
+    .toast.error { background: #923c35; }
+    @media (max-width: 1050px) {
+      .shell { grid-template-columns: 215px minmax(0,1fr); }
+      .content { padding-inline: 28px; }
+      .app-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .setup-layout { grid-template-columns: 1fr; }
+      .setup-side { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 700px) {
+      .shell { display: block; }
+      .sidebar { border-right: 0; }
+      .context, .account { display: none; }
+      .nav { grid-template-columns: repeat(3,minmax(0,1fr)); padding: 9px; }
+      .nav-title, .nav .count { display: none; }
+      .nav button { justify-content: center; padding: 9px 5px; font-size: .61rem; text-align: center; }
+      .nav svg { display: none; }
+      .topbar { min-height: 62px; padding: 0 16px; }
+      .topbar-title { font-size: 1.2rem; }
+      .topbar .button { padding-inline: 9px; font-size: .65rem; }
+      .content { padding: 25px 16px 42px; }
+      .page-head { display: block; }
+      .page-actions { margin-top: 16px; }
+      .form-grid, .app-grid, .choice-grid, .setup-side { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .setup-intro { display: block; }
+      .setup-intro .button { margin-top: 15px; }
+      .setup-card-head { display: block; }
+      .setup-actions { align-items: stretch; flex-direction: column; }
+      .setup-actions-right { justify-content: space-between; }
+      .inline-fields { grid-template-columns: 1fr; }
+      table { min-width: 590px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Organization management navigation">
+      <a class="brand" href="/workspace"><span class="brand-mark">A</span><span class="brand-copy"><strong>Aevo Hub</strong><span>Organization management</span></span></a>
+      <div class="context"><label for="org-switcher">Active organization</label><select id="org-switcher" aria-label="Choose organization"></select></div>
+      <nav class="nav">
+        <div class="nav-title">Organize</div>
+        <button class="active" id="setup-nav" type="button"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 3v4M16 10v4M11 17v4"/></svg><span>Setup &amp; readiness</span><span class="count" id="setup-progress-count">—</span></button>
+        <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg><span>Profile</span></button>
+        <button type="button" data-tab="stores"><svg viewBox="0 0 24 24"><path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg><span>Stores &amp; branches</span></button>
+        <button type="button" data-tab="team"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M16 3.1a4 4 0 0 1 0 7.8M18 15h1a4 4 0 0 1 4 4v2"/></svg><span>Team &amp; access</span></button>
+        <button type="button" data-tab="apps"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>App subscriptions</span></button>
+        <button type="button" data-tab="billing"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span>Billing &amp; Subscription</span></button>
+      </nav>
+      <div class="account"><div class="avatar" id="avatar">A</div><div class="account-copy"><strong id="account-email">Loading…</strong><span id="account-role">Member</span></div><button class="link-button" id="sign-out" type="button">Sign out</button></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="topbar-title">Organize</div><span class="topbar-spacer"></span><a class="button" href="/workspace">Back to workspace →</a><button class="button button-primary" id="top-sign-out" type="button">Sign out</button></header>
+      <div class="content">
+        <div class="page-head">
+          <div><div class="eyebrow">Aevo Hub / Organization</div><h1 id="page-title">Your organization.</h1><p id="page-description">Keep your business identity, locations, people, and applications in one place.</p></div>
+          <div class="page-actions"><select class="button" id="page-org-switcher" aria-label="Choose organization"></select><button class="button button-primary" id="open-setup" type="button">Setup &amp; readiness →</button><button class="button" id="new-org" type="button">+ New organization</button></div>
+        </div>
+
+        <section class="setup-screen" id="setup-screen" hidden aria-labelledby="setup-title">
+          <div class="setup-intro"><div><div class="eyebrow">Aevo onboarding flow</div><h2 id="setup-title">Setup &amp; readiness</h2><p>Turn the first decisions about your business into a ready-to-run workspace. Your progress is saved as each step is completed.</p></div><button class="button" id="close-setup" type="button">Back to organization</button></div>
+          <div class="setup-stepper" aria-label="Setup progress">
+            <button class="step-button active" type="button" data-setup-index="0"><span class="step-number">1</span><span class="step-label">Objectives</span></button>
+            <button class="step-button" type="button" data-setup-index="1" disabled><span class="step-number">2</span><span class="step-label">Organization</span></button>
+            <button class="step-button" type="button" data-setup-index="2" disabled><span class="step-number">3</span><span class="step-label">Store</span></button>
+            <button class="step-button" type="button" data-setup-index="3" disabled><span class="step-number">4</span><span class="step-label">Apps</span></button>
+            <button class="step-button" type="button" data-setup-index="4" disabled><span class="step-number">5</span><span class="step-label">Catalog</span></button>
+            <button class="step-button" type="button" data-setup-index="5" disabled><span class="step-number">6</span><span class="step-label">Staff</span></button>
+            <button class="step-button" type="button" data-setup-index="6" disabled><span class="step-number">7</span><span class="step-label">Ready</span></button>
+          </div>
+          <div class="setup-layout">
+            <section class="setup-card">
+              <div class="setup-card-head"><div><h3 id="setup-pane-title">Start with your objectives</h3><p id="setup-pane-description">Choose the work Aevo Hub should support first.</p></div><span class="eyebrow" id="setup-step-count">Step 1 of 7</span></div>
+              <div class="setup-card-body">
+                <section class="setup-pane active" data-setup-pane="0">
+                  <div class="setup-note">These choices tailor the rest of setup. You can change subscriptions and add modules later from this organization hub.</div>
+                  <div class="choice-grid">
+                    <label class="choice"><input type="checkbox" value="pos" data-objective /><span><strong>Run the business with POS</strong><span>Cashier, orders, receipts, and daily sales.</span></span></label>
+                    <label class="choice"><input type="checkbox" value="kiosk" data-objective /><span><strong>Let customers self-order</strong><span>Kiosk and QR ordering connected to operations.</span></span></label>
+                    <label class="choice"><input type="checkbox" value="booking" data-objective /><span><strong>Manage bookings or venues</strong><span>Reservations, resources, availability, and waitlist.</span></span></label>
+                    <label class="choice"><input type="checkbox" value="inventory" data-objective /><span><strong>Manage products and stock</strong><span>Catalog, inventory, and production workflows.</span></span></label>
+                    <label class="choice"><input type="checkbox" value="odoo" data-objective /><span><strong>Connect Odoo ERP</strong><span>Plan an ERP bridge for stock and accounting sync.</span></span></label>
+                    <label class="choice"><input type="checkbox" value="all" data-objective /><span><strong>Explore the Aevo suite</strong><span>Start with the full operating model and adjust later.</span></span></label>
+                  </div>
+                </section>
+                <section class="setup-pane" data-setup-pane="1">
+                  <div class="form-grid">
+                    <div class="field full"><label for="setup-org-name">Organization name</label><input id="setup-org-name" required placeholder="Sakura Cafe Co., Ltd." autocomplete="organization" /></div>
+                    <div class="field full"><label for="setup-legal-name">Legal name <span class="hint">(optional)</span></label><input id="setup-legal-name" placeholder="Registered company name" /></div>
+                    <div class="field"><label for="setup-business-type">Business type</label><select id="setup-business-type"><option value="restaurant">Restaurant / Food &amp; Beverage</option><option value="retail">Retail</option><option value="service">Service business</option><option value="sport">Sports / venue business</option><option value="other">Other</option></select></div>
+                    <div class="field"><label for="setup-timezone">Timezone</label><select id="setup-timezone"><option>Asia/Bangkok</option><option>Asia/Singapore</option><option>Asia/Tokyo</option><option>UTC</option></select></div>
+                    <div class="field"><label for="setup-country">Country</label><input id="setup-country" maxlength="10" value="TH" /></div>
+                    <div class="field"><label for="setup-currency">Currency</label><input id="setup-currency" maxlength="10" value="THB" /></div>
+                    <div class="field full"><label for="setup-contact-email">Operations email <span class="hint">(optional)</span></label><input id="setup-contact-email" type="email" placeholder="ops@example.com" /></div>
+                  </div>
+                </section>
+                <section class="setup-pane" data-setup-pane="2">
+                  <div class="setup-note">Your first store becomes the operating context for apps, terminals, catalog, and bookings.</div>
+                  <div class="form-grid">
+                    <div class="field full"><label for="setup-store-name">First store name</label><input id="setup-store-name" required placeholder="Central World Branch" /></div>
+                    <div class="field"><label for="setup-store-code">Store code</label><input id="setup-store-code" required placeholder="BKK-01" /></div>
+                    <div class="field"><label for="setup-store-mode">Primary mode</label><select id="setup-store-mode"><option value="POS">POS</option><option value="POS_BOOKING">POS + Booking</option><option value="KIOSK">Kiosk</option><option value="BOOKING">Booking</option><option value="CUSTOM">Custom</option></select></div>
+                    <div class="field"><label for="setup-store-timezone">Store timezone</label><select id="setup-store-timezone"><option>Asia/Bangkok</option><option>Asia/Singapore</option><option>Asia/Tokyo</option><option>UTC</option></select></div>
+                    <div class="field"><label for="setup-store-phone">Phone <span class="hint">(optional)</span></label><input id="setup-store-phone" type="tel" placeholder="+66 2 000 0000" /></div>
+                    <div class="field full"><label for="setup-store-address">Address <span class="hint">(optional)</span></label><textarea id="setup-store-address" placeholder="Store address"></textarea></div>
+                  </div>
+                </section>
+                <section class="setup-pane" data-setup-pane="3">
+                  <div class="setup-note">Select the apps this organization should have ready. Availability is resolved by the organization plan and entitlement policy.</div>
+                  <div class="choice-grid" id="setup-apps"><div class="setup-loading">Loading available apps…</div></div>
+                </section>
+                <section class="setup-pane" data-setup-pane="4">
+                  <div class="setup-note">Start with a clean catalog or use clearly labeled demo records to explore the workflows. You can add real products later.</div>
+                  <div class="radio-row">
+                    <label class="choice"><input type="radio" name="catalog-mode" value="skip" checked /><span><strong>I’ll add the catalog later</strong><span>Keep this step open and continue to staff setup.</span></span></label>
+                    <label class="choice"><input type="radio" name="catalog-mode" value="demo" /><span><strong>Create a starter demo catalog</strong><span>Add sample categories, products, and a demo transaction for testing.</span></span></label>
+                    <label class="choice"><input type="radio" name="catalog-mode" value="booking" /><span><strong>Configure booking resources</strong><span>Create a venue and bookable resources for the first store.</span></span></label>
+                  </div>
+                  <div id="booking-fields" hidden><div class="inline-fields"><div class="field"><label for="setup-venue-name">Venue name</label><input id="setup-venue-name" placeholder="Main venue" /></div><div class="field"><label for="setup-duration">Slot minutes</label><input id="setup-duration" type="number" min="15" max="1440" value="60" /></div></div><div class="field" style="margin-top:13px"><label for="setup-resources">Resource names</label><textarea id="setup-resources" placeholder="Table 1&#10;Table 2&#10;VIP room"></textarea><span class="hint">One resource per line. Prices can be configured after setup.</span></div></div>
+                </section>
+                <section class="setup-pane" data-setup-pane="5">
+                  <div class="setup-note">You are already the organization owner. Invite one person now if you want to test role-based access, or continue and do it later from Team &amp; access.</div>
+                  <div class="form-grid">
+                    <div class="field full"><label for="setup-staff-email">Invite email <span class="hint">(optional)</span></label><input id="setup-staff-email" type="email" placeholder="manager@example.com" autocomplete="email" /></div>
+                    <div class="field"><label for="setup-staff-name">Display name <span class="hint">(optional)</span></label><input id="setup-staff-name" placeholder="Store manager" /></div>
+                    <div class="field"><label for="setup-staff-role">Role</label><select id="setup-staff-role"><option value="BRANCH_MANAGER">Branch manager</option><option value="STAFF">Staff</option><option value="VIEWER">Viewer</option></select></div>
+                  </div>
+                </section>
+                <section class="setup-pane" data-setup-pane="6">
+                  <div class="success-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                  <div class="ready-summary"><strong id="ready-title">Review your readiness</strong><span id="ready-description">The checklist on the right reflects what is ready for this organization.</span></div>
+                  <div class="setup-note" style="margin-top:14px">Required setup is organization + store. Catalog, staff, booking resources, and integrations can continue after you open the operational workspace.</div>
+                </section>
+                <div class="setup-actions"><span class="hint" id="setup-action-hint">Your progress is saved after each step.</span><div class="setup-actions-right"><button class="button" id="setup-back" type="button">Back</button><button class="button button-primary" id="setup-next" type="button">Continue →</button></div></div>
+              </div>
+            </section>
+            <aside class="setup-side">
+              <section class="readiness-card"><div class="eyebrow">Readiness</div><h3 id="readiness-percent">0% ready</h3><p>Live checks across the organization, store, apps, catalog, and team.</p><div class="progress-track" aria-hidden="true"><span id="readiness-bar"></span></div><div class="progress-meta"><span id="readiness-count">0 of 0 checks complete</span><span id="readiness-state">In progress</span></div><div class="checklist" id="setup-checklist"><div class="setup-loading">Readiness checks will appear once an organization exists.</div></div></section>
+              <section class="setup-help"><div class="eyebrow">A calmer start</div><h3>Set the foundation, then operate.</h3><p>Setup lives here so the workspace stays focused on everyday operations. Return whenever you need to change organization identity, stores, access, or app subscriptions.</p></section>
+            </aside>
+          </div>
+        </section>
+
+        <div id="organization-tabs">
+          <section class="view active" id="view-profile"><div class="panel"><div class="panel-head"><div><h2>Organization profile</h2><p>Identity and defaults used across Aevo Hub.</p></div></div><div class="panel-body"><form id="profile-form"><div class="form-grid"><div class="field full"><label for="profile-name">Organization name</label><input id="profile-name" required /></div><div class="field"><label for="profile-legal">Legal name</label><input id="profile-legal" /></div><div class="field"><label for="profile-slug">URL slug</label><input id="profile-slug" required /></div><div class="field"><label for="profile-type">Business type</label><select id="profile-type"><option value="restaurant">Restaurant / Food &amp; Beverage</option><option value="retail">Retail</option><option value="service">Service business</option><option value="sport">Sports / venue business</option><option value="other">Other</option></select></div><div class="field"><label for="profile-timezone">Default timezone</label><select id="profile-timezone"><option>Asia/Bangkok</option><option>Asia/Singapore</option><option>Asia/Tokyo</option><option>UTC</option></select></div><div class="field"><label for="profile-country">Country</label><input id="profile-country" maxlength="10" value="TH" /></div><div class="field"><label for="profile-currency">Currency</label><input id="profile-currency" maxlength="10" value="THB" /></div><div class="field"><label for="profile-email">Contact email</label><input id="profile-email" type="email" /></div><div class="field"><label for="profile-phone">Contact phone</label><input id="profile-phone" type="tel" /></div></div><div class="form-actions"><button class="button button-primary" type="submit">Save changes</button></div></form></div></div></section>
+          <section class="view" id="view-stores"><div class="panel"><div class="panel-head"><div><h2>Stores &amp; branches</h2><p>Manage the physical locations that operate under this organization.</p></div><button class="button button-primary" id="add-store" type="button">+ Add store</button></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Code</th><th>Timezone</th><th>Status</th><th>Action</th></tr></thead><tbody id="stores-table"><tr><td colspan="5" class="empty">Loading stores…</td></tr></tbody></table></div></div></section>
+          <section class="view" id="view-team"><div class="panel"><div class="panel-head"><div><h2>Team &amp; access</h2><p>Invite people and keep access aligned with their responsibilities.</p></div><button class="button button-primary" id="invite-member" type="button">+ Invite member</button></div><div class="table-wrap"><table><thead><tr><th>Member</th><th>Role</th><th>Store scope</th><th>Status</th><th>Action</th></tr></thead><tbody id="team-table"><tr><td colspan="5" class="empty">Loading team…</td></tr></tbody></table></div></div></section>
+          <section class="view" id="view-apps"><div class="panel"><div class="panel-head"><div><h2>App subscriptions</h2><p>Choose the modules each store needs to run the business.</p></div><select class="button" id="app-store-switcher" aria-label="Choose store for applications"></select></div><div class="app-grid" id="apps-grid"><div class="empty">Loading applications…</div></div></div></section>
+          <section class="view" id="view-billing">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Billing &amp; Subscription</h2>
+                  <p>Commercial plan, server-resolved entitlements, quota usage, and Stripe billing portal.</p>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button class="button" id="btn-billing-refresh" type="button">Refresh</button>
+                  <button class="button button-primary" id="btn-open-stripe-portal" type="button">Manage Portal ↗</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:20px;">
+                  <div style="padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--soft);">
+                    <div style="font-size:0.7rem; font-weight:700; color:var(--muted); text-transform:uppercase;">Current Active Plan</div>
+                    <div id="billing-plan-name" style="font-size:1.4rem; font-weight:600; font-family:var(--serif); margin:6px 0;">--</div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span class="status" id="billing-plan-status">--</span>
+                      <span style="font-size:0.72rem; color:var(--muted);" id="billing-plan-period"></span>
+                    </div>
+                  </div>
+
+                  <div style="padding:16px; border:1px solid var(--line); border-radius:10px; background:#fff;">
+                    <div style="font-size:0.7rem; font-weight:700; color:var(--muted); text-transform:uppercase;">Store Quota Usage</div>
+                    <div id="billing-stores-quota" style="font-size:1.4rem; font-weight:600; font-family:var(--serif); margin:6px 0;">-- / --</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Stores registered in this organization</div>
+                  </div>
+
+                  <div style="padding:16px; border:1px solid var(--line); border-radius:10px; background:#fff;">
+                    <div style="font-size:0.7rem; font-weight:700; color:var(--muted); text-transform:uppercase;">Team Quota Usage</div>
+                    <div id="billing-users-quota" style="font-size:1.4rem; font-weight:600; font-family:var(--serif); margin:6px 0;">-- / --</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Active user seats provisioned</div>
+                  </div>
+                </div>
+
+                <div style="margin-top:20px;">
+                  <h3 style="font-size:0.85rem; font-weight:700; margin-bottom:10px;">Entitled Feature Modules (Server-Verified)</h3>
+                  <div id="billing-entitlements-list" style="display:flex; flex-wrap:wrap; gap:8px;">
+                    <span style="color:var(--muted); font-size:0.75rem;">Loading entitlements...</span>
+                  </div>
+                </div>
+
+                <div style="margin-top:28px; padding-top:16px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                  <div>
+                    <strong style="font-size:0.8rem; display:block;">Upgrade or Downgrade Subscription</strong>
+                    <span style="font-size:0.72rem; color:var(--muted);">Select plans powered by Stripe Checkout with immediate webhook fulfillment.</span>
+                  </div>
+                  <div style="display:flex; gap:8px;">
+                    <button class="button btn-checkout-plan" data-plan="starter" type="button">Starter</button>
+                    <button class="button button-primary btn-checkout-plan" data-plan="pro" type="button">Pro</button>
+                    <button class="button btn-checkout-plan" data-plan="business" type="button">Business</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="store-dialog"><div class="dialog-inner"><div class="dialog-head"><h2 id="store-dialog-title">Add store</h2><button class="close" data-close="store-dialog" type="button" aria-label="Close">×</button></div><form id="store-form"><input id="store-id" type="hidden" /><div class="form-grid"><div class="field full"><label for="store-name">Store name</label><input id="store-name" required /></div><div class="field"><label for="store-code">Store code</label><input id="store-code" required /></div><div class="field"><label for="store-timezone">Timezone</label><select id="store-timezone"><option>Asia/Bangkok</option><option>Asia/Singapore</option><option>Asia/Tokyo</option><option>UTC</option></select></div></div><div class="form-actions"><button class="button" type="button" data-close="store-dialog">Cancel</button><button class="button button-primary" type="submit">Save store</button></div></form></div></dialog>
+  <dialog id="member-dialog"><div class="dialog-inner"><div class="dialog-head"><h2>Invite member</h2><button class="close" data-close="member-dialog" type="button" aria-label="Close">×</button></div><form id="member-form"><div class="form-grid"><div class="field full"><label for="member-email">Email</label><input id="member-email" type="email" required /></div><div class="field"><label for="member-name">Display name</label><input id="member-name" /></div><div class="field"><label for="member-scope">Scope</label><select id="member-scope"><option value="ORGANIZATION">Organization Scope</option><option value="STORE" selected>Store Scope</option></select></div><div class="field"><label for="member-role">Role</label><select id="member-role"><option value="STORE_MANAGER">Store Manager</option><option value="CASHIER">Cashier</option><option value="BOOKING_STAFF">Booking Staff</option><option value="KIOSK_STAFF">Kiosk Staff</option><option value="STAFF" selected>Staff</option><option value="VIEWER">Viewer</option></select></div><div class="field full" id="member-store-wrap"><label for="member-store">Assign store</label><select id="member-store"></select></div></div><div class="form-actions"><button class="button" type="button" data-close="member-dialog">Cancel</button><button class="button button-primary" type="submit">Send invitation</button></div></form></div></dialog>
+  <dialog id="org-dialog"><div class="dialog-inner"><div class="dialog-head"><h2>New organization</h2><button class="close" data-close="org-dialog" type="button" aria-label="Close">×</button></div><form id="org-form"><div class="field"><label for="new-org-name">Organization name</label><input id="new-org-name" required /></div><div class="field" style="margin-top:14px"><label for="new-org-slug">URL slug</label><input id="new-org-slug" /></div><div class="form-actions"><button class="button" type="button" data-close="org-dialog">Cancel</button><button class="button button-primary" type="submit">Create organization</button></div></form></div></dialog>
+  <div class="toast-tray" id="toast-tray" aria-live="polite"></div>
+
+  <script type="module">
+    import { apiFetch, signOut, AuthApiError } from "/auth.js";
+
+    const setupSteps = [
+      { key: "OBJECTIVES", title: "Start with your objectives", description: "Choose the work Aevo Hub should support first." },
+      { key: "ORGANIZATION", title: "Tell us about the organization", description: "These defaults keep every store and module aligned." },
+      { key: "STORE", title: "Add the first store", description: "Give your team a clear operating context." },
+      { key: "APPS", title: "Choose the apps to enable", description: "Select the modules this organization should have ready." },
+      { key: "RESOURCES", title: "Shape the starting catalog", description: "Start clean or explore with clearly labeled demo records." },
+      { key: "STAFF", title: "Bring in the team", description: "Invite a manager or teammate and keep access intentional." },
+      { key: "COMPLETE", title: "Ready for the workspace", description: "Review the live checks, then open your operational home." }
+    ];
+    const state = { user: null, organizations: [], currentOrg: null, stores: [], members: [], apps: [], subscriptions: [], storeId: null, onboarding: null, checklist: null, setupMode: false, setupStep: 0, setupMaxStep: 0, setupBusy: false };
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[character]));
+    const subscriptionAppId = (item) => item.appId || item.app_id;
+    const hubFetch = (path, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      if (state.currentOrg?.id) headers.set("x-organization-id", state.currentOrg.id);
+      if (state.storeId) headers.set("x-store-id", state.storeId);
+      return apiFetch(path, { ...options, headers });
+    };
+    function toast(message, error = false) {
+      const node = document.createElement("div");
+      node.className = "toast" + (error ? " error" : "");
+      node.textContent = message;
+      $("toast-tray").appendChild(node);
+      window.setTimeout(() => node.remove(), 4200);
+    }
+    function closeDialogs() { document.querySelectorAll("dialog").forEach((dialog) => dialog.close()); }
+    document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => $(button.dataset.close).close()));
+    function hasCompleted(key) { return Boolean(state.onboarding?.completedSteps?.includes(key)); }
+    function checklistItem(id) { return state.checklist?.items?.find((item) => item.id === id); }
+    function checklistComplete(id) { return checklistItem(id)?.status === "COMPLETED"; }
+    function deriveStep() {
+      if (state.onboarding?.isCompleted) return 6;
+      if (!hasCompleted("OBJECTIVES")) return 0;
+      if (!hasCompleted("ORGANIZATION") || !state.currentOrg) return 1;
+      if (!hasCompleted("STORE") || !state.stores.length) return 2;
+      if (!hasCompleted("APPS")) return 3;
+      if (!hasCompleted("RESOURCES") && !checklistComplete("products_setup") && !checklistComplete("booking_resources")) return 4;
+      if (!hasCompleted("STAFF") && !checklistComplete("staff_invite")) return 5;
+      return 6;
+    }
+    function renderContext() {
+      const options = state.organizations.map((item) => "<option value=\"" + escapeHtml(item.id) + "\"" + (item.id === state.currentOrg?.id ? " selected" : "") + ">" + escapeHtml(item.name) + "</option>").join("");
+      $("org-switcher").innerHTML = options || "<option value=\"\">No organization yet</option>";
+      $("page-org-switcher").innerHTML = options || "<option value=\"\">No organization yet</option>";
+      $("org-switcher").disabled = !state.currentOrg;
+      $("page-org-switcher").disabled = !state.currentOrg;
+      $("setup-progress-count").textContent = state.checklist ? state.checklist.completedCount + "/" + state.checklist.totalCount : "—";
+    }
+    function renderMode() {
+      $("setup-screen").hidden = !state.setupMode;
+      $("organization-tabs").hidden = state.setupMode;
+      $("open-setup").textContent = state.setupMode ? "Organization settings" : "Setup & readiness →";
+      $("setup-nav").classList.toggle("active", state.setupMode);
+    }
+    function setTab(tab) {
+      const safeTab = ["profile", "stores", "team", "apps", "billing"].includes(tab) ? tab : "profile";
+      state.setupMode = false;
+      renderMode();
+      document.querySelectorAll(".view").forEach((node) => node.classList.toggle("active", node.id === "view-" + safeTab));
+      document.querySelectorAll(".nav button[data-tab]").forEach((node) => node.classList.toggle("active", node.dataset.tab === safeTab));
+      const labels = {
+        profile: ["Your organization.", "Keep your business identity, locations, people, and applications in one place."],
+        stores: ["Stores & branches.", "Manage the physical locations that operate under this organization."],
+        team: ["Team & access.", "Invite people and keep access aligned with their responsibilities."],
+        apps: ["App subscriptions.", "Choose the modules each store needs to run the business."],
+        billing: ["Billing & Subscription.", "Commercial plan tier, server-resolved entitlements, quota usage, and Stripe portal."]
+      };
+      $("page-title").textContent = labels[safeTab][0];
+      $("page-description").textContent = labels[safeTab][1];
+      if (safeTab === "profile") loadProfile();
+      if (safeTab === "stores") loadStores();
+      if (safeTab === "team") loadTeam();
+      if (safeTab === "apps") loadAppsTab();
+      if (safeTab === "billing") loadBillingTab();
+      history.replaceState(null, "", "/organize#" + safeTab);
+    }
+    async function loadOrganizations() {
+      const response = await apiFetch("/api/v1/hub/organizations");
+      state.organizations = response.organizations || [];
+      const saved = localStorage.getItem("aevo.hub.orgId");
+      state.currentOrg = state.organizations.find((item) => item.id === saved) || state.organizations[0] || null;
+      if (state.currentOrg) localStorage.setItem("aevo.hub.orgId", state.currentOrg.id);
+      renderContext();
+    }
+    async function loadProfile() {
+      if (!state.currentOrg) return;
+      const response = await hubFetch("/api/v1/hub/organizations/" + state.currentOrg.id);
+      const org = response.organization;
+      $("profile-name").value = org.name || "";
+      $("profile-legal").value = org.legalName || "";
+      $("profile-slug").value = org.slug || "";
+      $("profile-type").value = String(org.businessType || "restaurant").toLowerCase();
+      $("profile-timezone").value = org.timezone || "Asia/Bangkok";
+      $("profile-country").value = org.country || "TH";
+      $("profile-currency").value = org.currency || "THB";
+      $("profile-email").value = org.contactEmail || "";
+      $("profile-phone").value = org.contactPhone || "";
+      $("setup-org-name").value = org.name || "";
+      $("setup-legal-name").value = org.legalName || "";
+      $("setup-business-type").value = String(org.businessType || "restaurant").toLowerCase();
+      $("setup-timezone").value = org.timezone || "Asia/Bangkok";
+      $("setup-country").value = org.country || "TH";
+      $("setup-currency").value = org.currency || "THB";
+      $("setup-contact-email").value = org.contactEmail || "";
+    }
+    async function loadStores() {
+      if (!state.currentOrg) return;
+      const response = await hubFetch("/api/v1/hub/stores?organizationId=" + encodeURIComponent(state.currentOrg.id));
+      state.stores = response.stores || [];
+      const saved = localStorage.getItem("aevo.hub.storeId");
+      state.storeId = state.stores.some((item) => item.id === saved) ? saved : state.stores[0]?.id || null;
+      if (state.storeId) localStorage.setItem("aevo.hub.storeId", state.storeId);
+      $("stores-table").innerHTML = state.stores.length ? state.stores.map((store) => "<tr><td><strong>" + escapeHtml(store.name) + "</strong></td><td><code>" + escapeHtml(store.code) + "</code></td><td>" + escapeHtml(store.timezone) + "</td><td><span class=\"status\">ACTIVE</span></td><td><button class=\"button\" data-edit-store=\"" + escapeHtml(store.id) + "\" type=\"button\">Edit</button></td></tr>").join("") : "<tr><td colspan=\"5\" class=\"empty\">No stores yet. Add the first location for this organization.</td></tr>";
+      document.querySelectorAll("[data-edit-store]").forEach((button) => button.addEventListener("click", () => openStore(state.stores.find((store) => store.id === button.dataset.editStore))));
+      renderStoreOptions();
+    }
+    function renderStoreOptions() {
+      $("app-store-switcher").innerHTML = state.stores.map((store) => "<option value=\"" + escapeHtml(store.id) + "\"" + (store.id === state.storeId ? " selected" : "") + ">" + escapeHtml(store.name) + " · " + escapeHtml(store.code) + "</option>").join("") || "<option value=\"\">No stores</option>";
+      $("app-store-switcher").disabled = !state.stores.length;
+    }
+    async function loadTeam() {
+      if (!state.currentOrg) return;
+      const response = await hubFetch("/api/v1/hub/members");
+      state.members = response.members || [];
+      $("team-table").innerHTML = state.members.length ? state.members.map((member) => "<tr><td><strong>" + escapeHtml(member.displayName || member.email) + "</strong><br><span style=\"color:var(--muted);font-size:.65rem\">" + escapeHtml(member.email) + "</span></td><td>" + escapeHtml(member.role) + "</td><td>" + (member.storeIds?.length ? member.storeIds.length + " store" + (member.storeIds.length === 1 ? "" : "s") : "All stores") + "</td><td><span class=\"status\">" + escapeHtml(member.status) + "</span></td><td>" + (member.userId === state.user?.id ? "You" : "<button class=\"button button-danger\" data-revoke=\"" + escapeHtml(member.membershipId) + "\" type=\"button\">Revoke</button>") + "</td></tr>").join("") : "<tr><td colspan=\"5\" class=\"empty\">No team members yet.</td></tr>";
+      document.querySelectorAll("[data-revoke]").forEach((button) => button.addEventListener("click", () => revokeMember(button.dataset.revoke)));
+    }
+    async function loadAppsData() {
+      const appsResponse = await apiFetch("/api/v1/hub/apps");
+      state.apps = appsResponse.apps || [];
+      if (state.currentOrg) {
+        const query = state.storeId ? "?storeId=" + encodeURIComponent(state.storeId) : "";
+        const response = await hubFetch("/api/v1/hub/subscriptions" + query);
+        state.subscriptions = response.subscriptions || [];
+      }
+    }
+    async function loadAppsTab() {
+      if (!state.currentOrg) return;
+      try {
+        await loadAppsData();
+        $("apps-grid").innerHTML = state.apps.length ? state.apps.map((app) => {
+          const subscription = state.subscriptions.find((item) => subscriptionAppId(item) === app.id);
+          const active = Boolean(subscription?.isEntitled);
+          return "<article class=\"app-card\"><div class=\"app-card-top\"><span class=\"glyph\">" + escapeHtml(String(app.name || app.id).slice(0, 2).toUpperCase()) + "</span><span class=\"badge" + (active ? " on" : "") + "\">" + (active ? "Included" : "Plan required") + "</span></div><h3>" + escapeHtml(app.name || app.id) + "</h3><p>" + escapeHtml(app.description || "Connected Aevo business module.") + "</p>" + (active ? "" : "<button class=\"button button-primary\" data-open-billing type=\"button\">View plans</button>") + "</article>";
+        }).join("") : "<div class=\"empty\">No applications are configured yet.</div>";
+        document.querySelectorAll("[data-open-billing]").forEach((button) => button.addEventListener("click", () => setTab("billing")));
+      } catch (error) { toast(error.message || "Could not load applications", true); }
+    }
+    async function loadBillingTab() {
+      if (!state.currentOrg) return;
+      try {
+        const [billingRes, entRes] = await Promise.all([
+          hubFetch("/api/v1/hub/billing/current"),
+          hubFetch("/api/v1/me/entitlements")
+        ]);
+
+        const sub = billingRes?.subscription;
+        const plan = billingRes?.plan;
+        const quotas = billingRes?.quotas || {};
+
+        $("billing-plan-name").textContent = plan?.name || sub?.plan_id || "Starter (Active)";
+        $("billing-plan-status").textContent = (sub?.status || "active").toUpperCase();
+        $("billing-plan-status").style.background = sub?.status === "active" ? "#e7f3e6" : "#fef3c7";
+        $("billing-plan-status").style.color = sub?.status === "active" ? "#35633a" : "#92400e";
+
+        if (sub?.current_period_end) {
+          $("billing-plan-period").textContent = `Renews ${new Date(sub.current_period_end).toLocaleDateString()}`;
+        } else if (sub?.trial_end) {
+          $("billing-plan-period").textContent = `Trial ends ${new Date(sub.trial_end).toLocaleDateString()}`;
+        } else {
+          $("billing-plan-period").textContent = "Operational Access";
+        }
+
+        const storeCount = state.stores?.length ?? 0;
+        const maxStores = quotas.maxStores ?? 5;
+        $("billing-stores-quota").textContent = `${storeCount} / ${maxStores >= 9999 ? '∞' : maxStores}`;
+
+        const memberCount = state.members?.length ?? 1;
+        const maxUsers = quotas.maxUsers ?? 10;
+        $("billing-users-quota").textContent = `${memberCount} / ${maxUsers >= 9999 ? '∞' : maxUsers}`;
+
+        const features = entRes?.features || {};
+        const container = $("billing-entitlements-list");
+        container.replaceChildren();
+
+        const entries = Object.entries(features);
+        if (entries.length === 0) {
+          container.innerHTML = '<span style="color:var(--muted); font-size:0.75rem;">Standard Starter Modules</span>';
+        } else {
+          for (const [key, enabled] of entries) {
+            const chip = document.createElement("span");
+            chip.className = "status";
+            chip.style.fontSize = "0.72rem";
+            chip.style.padding = "4px 8px";
+            chip.style.background = enabled ? "#e7f3e6" : "#f3f4f6";
+            chip.style.color = enabled ? "#35633a" : "#9ca3af";
+            chip.textContent = `${key.toUpperCase()}: ${enabled ? 'ACTIVE' : 'LOCKED'}`;
+            container.appendChild(chip);
+          }
+        }
+      } catch (err) {
+        toast("Failed to load billing details: " + err.message, true);
+      }
+    }
+    async function handleOpenPortal() {
+      try {
+        const res = await hubFetch("/api/v1/hub/billing/portal", { method: "POST" });
+        if (res?.url) {
+          window.location.assign(res.url);
+        } else {
+          toast("Customer portal not available yet.", true);
+        }
+      } catch (err) {
+        toast(err.message, true);
+      }
+    }
+    async function handleCheckout(planId) {
+      try {
+        const res = await hubFetch("/api/v1/hub/billing/checkout", {
+          method: "POST",
+          body: JSON.stringify({ planId })
+        });
+        if (res?.url) {
+          window.location.assign(res.url);
+        } else {
+          toast(`Plan ${planId} activated successfully.`);
+          await loadBillingTab();
+        }
+      } catch (err) {
+        toast(err.message, true);
+      }
+    }
+    async function loadOnboarding() {
+      const query = state.currentOrg ? "?organizationId=" + encodeURIComponent(state.currentOrg.id) : "";
+      const response = await apiFetch("/api/v1/hub/onboarding/session" + query);
+      state.onboarding = response.session;
+    }
+    async function loadChecklist() {
+      if (!state.currentOrg) { state.checklist = null; renderReadiness(); return; }
+      const query = "?organizationId=" + encodeURIComponent(state.currentOrg.id) + (state.storeId ? "&storeId=" + encodeURIComponent(state.storeId) : "");
+      const response = await apiFetch("/api/v1/hub/onboarding/checklist" + query);
+      state.checklist = response.checklist;
+      renderContext();
+      renderReadiness();
+    }
+    function renderReadiness() {
+      const checklist = state.checklist;
+      const percent = checklist?.totalProgressPercent ?? 0;
+      $("readiness-percent").textContent = percent + "% ready";
+      $("readiness-bar").style.width = percent + "%";
+      $("readiness-count").textContent = checklist ? checklist.completedCount + " of " + checklist.totalCount + " checks complete" : "0 of 0 checks complete";
+      $("readiness-state").textContent = checklist?.isReady ? "Ready to operate" : "In progress";
+      $("setup-progress-count").textContent = checklist ? checklist.completedCount + "/" + checklist.totalCount : "—";
+      if (!checklist?.items?.length) { $("setup-checklist").innerHTML = "<div class=\"setup-loading\">Readiness checks will appear once an organization exists.</div>"; return; }
+      $("setup-checklist").innerHTML = checklist.items.map((item) => {
+        const complete = item.status === "COMPLETED";
+        const pending = item.status === "PENDING";
+        return "<div class=\"check-item " + (complete ? "complete" : pending ? "pending" : "") + "\"><span class=\"check-mark\">" + (complete ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg>' : pending ? "·" : "…") + "</span><div><strong>" + escapeHtml(item.title) + "</strong><span>" + escapeHtml(item.description) + "</span></div></div>";
+      }).join("");
+    }
+    function renderSetupApps() {
+      if (!state.apps.length) { $("setup-apps").innerHTML = "<div class=\"setup-loading\">No app catalog is available yet.</div>"; return; }
+      const objectives = new Set(state.onboarding?.objectives || []);
+      const existing = new Set(state.subscriptions.map(subscriptionAppId));
+      const suggested = objectives.has("all") ? state.apps.filter((app) => app.status !== "COMING_SOON").map((app) => app.id) : state.apps.filter((app) => objectives.has(app.id) && app.status !== "COMING_SOON").map((app) => app.id);
+      $("setup-apps").innerHTML = state.apps.map((app) => {
+        const unavailable = app.status === "COMING_SOON" || app.status === "DEPRECATED";
+        const checked = existing.has(app.id) || suggested.includes(app.id);
+        return "<label class=\"choice\"><input type=\"checkbox\" value=\"" + escapeHtml(app.id) + "\" data-setup-app" + (unavailable ? " disabled" : "") + (checked ? " checked" : "") + " /><span><strong>" + escapeHtml(app.name || app.id) + "</strong><span>" + escapeHtml(unavailable ? "Coming soon" : app.description || "Connected Aevo business module.") + "</span></span></label>";
+      }).join("");
+    }
+    function renderSetup() {
+      const step = setupSteps[state.setupStep];
+      document.querySelectorAll(".step-button").forEach((button, index) => {
+        button.classList.toggle("active", index === state.setupStep);
+        button.classList.toggle("done", index < state.setupStep);
+        button.disabled = index > state.setupMaxStep;
+        if (index === state.setupStep) button.setAttribute("aria-current", "step"); else button.removeAttribute("aria-current");
+      });
+      document.querySelectorAll(".setup-pane").forEach((pane) => pane.classList.toggle("active", Number(pane.dataset.setupPane) === state.setupStep));
+      $("setup-pane-title").textContent = step.title;
+      $("setup-pane-description").textContent = step.description;
+      $("setup-step-count").textContent = "Step " + (state.setupStep + 1) + " of 7";
+      $("setup-back").disabled = state.setupStep === 0 || state.setupBusy;
+      $("setup-next").disabled = state.setupBusy;
+      $("setup-next").textContent = state.setupStep === 6 ? "Open workspace →" : "Continue →";
+      $("setup-action-hint").textContent = state.setupStep === 6 ? (state.checklist?.isReady ? "Required checks are complete." : "You can continue optional setup later.") : "Your progress is saved after each step.";
+      if (state.setupStep === 0) document.querySelectorAll("[data-objective]").forEach((node) => { node.checked = Boolean(state.onboarding?.objectives?.includes(node.value)); });
+      if (state.setupStep === 3) renderSetupApps();
+      if (state.setupStep === 4) $("booking-fields").hidden = document.querySelector('input[name="catalog-mode"]:checked')?.value !== "booking";
+      if (state.setupStep === 6) {
+        $("ready-title").textContent = state.checklist?.isReady ? "Your organization is ready." : "Your foundation is saved.";
+        $("ready-description").textContent = state.checklist?.isReady ? "The required organization and store checks are complete. Open the workspace when you are ready." : "Finish the required organization and store steps, then open the workspace. Optional checks can continue later.";
+      }
+      renderReadiness();
+    }
+    async function openSetup() {
+      state.setupMode = true;
+      renderMode();
+      $("page-title").textContent = "Setup & readiness.";
+      $("page-description").textContent = "A saved seven-step foundation for the organization and the people who operate it.";
+      try {
+        if (state.currentOrg && !state.stores.length) await loadStores();
+        await loadOnboarding();
+        if (state.currentOrg) await Promise.all([loadChecklist(), loadAppsData(), loadProfile()]);
+      } catch (error) { toast(error.message || "Could not load setup progress", true); }
+      state.setupStep = deriveStep();
+      state.setupMaxStep = state.setupStep;
+      renderSetup();
+      history.replaceState(null, "", "/organize?setup=true");
+    }
+    function closeSetup() {
+      if (!state.currentOrg || !state.stores.length) { toast("Finish the organization and first store steps before opening the workspace.", true); return; }
+      setTab("profile");
+    }
+    async function saveSetupStep() {
+      if (state.setupBusy) return;
+      state.setupBusy = true;
+      renderSetup();
+      try {
+        if (state.setupStep === 0) {
+          const selected = Array.from(document.querySelectorAll("[data-objective]:checked")).map((node) => node.value);
+          if (!selected.length) throw new Error("Choose at least one objective to continue.");
+          const response = await apiFetch("/api/v1/hub/onboarding/objectives", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, objectives: selected }) });
+          state.onboarding = response.session;
+        } else if (state.setupStep === 1) {
+          const name = $("setup-org-name").value.trim();
+          if (!name) throw new Error("Enter an organization name.");
+          const response = await apiFetch("/api/v1/hub/onboarding/organization", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, name, legalName: $("setup-legal-name").value.trim() || undefined, businessType: $("setup-business-type").value, country: $("setup-country").value.trim().toUpperCase() || "TH", timezone: $("setup-timezone").value, currency: $("setup-currency").value.trim().toUpperCase() || "THB", contactEmail: $("setup-contact-email").value.trim() || undefined }) });
+          state.onboarding = response.session;
+          await loadOrganizations();
+          state.currentOrg = state.organizations.find((item) => item.id === response.organizationId) || state.currentOrg;
+          renderContext();
+          await loadProfile();
+        } else if (state.setupStep === 2) {
+          if (!state.currentOrg) throw new Error("Create the organization first.");
+          const name = $("setup-store-name").value.trim();
+          const code = $("setup-store-code").value.trim();
+          if (!name || !code) throw new Error("Enter a store name and code.");
+          const response = await apiFetch("/api/v1/hub/onboarding/store", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, name, code, storeMode: $("setup-store-mode").value, address: $("setup-store-address").value.trim() || undefined, phone: $("setup-store-phone").value.trim() || undefined }) });
+          state.onboarding = response.session;
+          await loadStores();
+          state.storeId = response.storeId;
+          await loadChecklist();
+        } else if (state.setupStep === 3) {
+          if (!state.currentOrg) throw new Error("Create the organization first.");
+          const appIds = Array.from(document.querySelectorAll("[data-setup-app]:checked")).map((node) => node.value);
+          if (!appIds.length) throw new Error("Choose at least one app, or go back and adjust your objectives.");
+          const response = await apiFetch("/api/v1/hub/onboarding/apps", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, appIds }) });
+          state.onboarding = response.session;
+          await loadAppsData();
+        } else if (state.setupStep === 4) {
+          if (!state.currentOrg || !state.storeId) throw new Error("Add the first store before setting up the catalog.");
+          const mode = document.querySelector('input[name="catalog-mode"]:checked')?.value || "skip";
+          if (mode === "demo" && !checklistComplete("products_setup")) {
+            await apiFetch("/api/v1/hub/onboarding/demo-data", { method: "POST", body: JSON.stringify({ organizationId: state.currentOrg.id, storeId: state.storeId, businessType: $("setup-business-type").value }) });
+          }
+          if (mode === "booking" && !checklistComplete("booking_resources")) {
+            const venueName = $("setup-venue-name").value.trim();
+            const resourceNames = $("setup-resources").value.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean);
+            if (!venueName || !resourceNames.length) throw new Error("Enter a venue name and at least one resource.");
+            const response = await apiFetch("/api/v1/hub/onboarding/booking-setup", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, storeId: state.storeId, venueName, businessType: $("setup-business-type").value, resourceNames, durationMinutes: Number($("setup-duration").value || 60), priceMinor: 0, enableWaitlist: true }) });
+            state.onboarding = response.session;
+          }
+          if (!state.onboarding?.completedSteps?.includes("RESOURCES")) {
+            const response = await apiFetch("/api/v1/hub/onboarding/progress", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, step: "RESOURCES" }) });
+            state.onboarding = response.session;
+          }
+          await loadChecklist();
+        } else if (state.setupStep === 5) {
+          const email = $("setup-staff-email").value.trim();
+          if (email) {
+            if (!state.currentOrg) throw new Error("Create the organization first.");
+            await hubFetch("/api/v1/hub/members", { method: "POST", body: JSON.stringify({ email, displayName: $("setup-staff-name").value.trim() || undefined, role: $("setup-staff-role").value, storeIds: state.storeId ? [state.storeId] : [] }) });
+            $("setup-staff-email").value = "";
+            $("setup-staff-name").value = "";
+            await loadTeam();
+            await loadChecklist();
+          }
+          if (!state.onboarding?.completedSteps?.includes("STAFF")) {
+            const response = await apiFetch("/api/v1/hub/onboarding/progress", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, step: "STAFF" }) });
+            state.onboarding = response.session;
+          }
+        } else if (state.setupStep === 6) {
+          const response = await apiFetch("/api/v1/hub/onboarding/complete", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id }) });
+          state.onboarding = response.session;
+          window.location.assign("/workspace");
+          return;
+        }
+        state.setupStep = Math.min(6, state.setupStep + 1);
+        state.setupMaxStep = Math.max(state.setupMaxStep, state.setupStep);
+        if (state.setupStep === 6 && state.currentOrg) await loadChecklist();
+      } catch (error) {
+        toast(error.message || "Could not save this step", true);
+      } finally {
+        state.setupBusy = false;
+        renderSetup();
+      }
+    }
+    function goBackSetup() {
+      if (state.setupBusy || state.setupStep === 0) return;
+      state.setupStep -= 1;
+      renderSetup();
+    }
+    function openStore(store) {
+      $("store-dialog-title").textContent = store ? "Edit store" : "Add store";
+      $("store-id").value = store?.id || "";
+      $("store-name").value = store?.name || "";
+      $("store-code").value = store?.code || "";
+      $("store-timezone").value = store?.timezone || "Asia/Bangkok";
+      $("store-dialog").showModal();
+    }
+    async function revokeMember(id) {
+      if (!window.confirm("Revoke this member's access?")) return;
+      try { await hubFetch("/api/v1/hub/members/" + id, { method: "DELETE" }); await loadTeam(); await loadChecklist(); toast("Member access revoked."); } catch (error) { toast(error.message || "Could not revoke member", true); }
+    }
+
+    document.querySelectorAll(".nav button[data-tab]").forEach((button) => button.addEventListener("click", () => setTab(button.dataset.tab)));
+    $("setup-nav").addEventListener("click", openSetup);
+    $("open-setup").addEventListener("click", () => state.setupMode ? setTab("profile") : openSetup());
+    $("close-setup").addEventListener("click", closeSetup);
+    $("setup-next").addEventListener("click", saveSetupStep);
+    $("setup-back").addEventListener("click", goBackSetup);
+    document.querySelectorAll(".step-button").forEach((button) => button.addEventListener("click", () => { const index = Number(button.dataset.setupIndex); if (index <= state.setupMaxStep) { state.setupStep = index; renderSetup(); } }));
+    document.querySelectorAll('input[name="catalog-mode"]').forEach((input) => input.addEventListener("change", () => { $("booking-fields").hidden = input.value !== "booking"; }));
+    $("sign-out").addEventListener("click", async () => { try { await signOut(); } finally { window.location.assign("/login"); } });
+    $("top-sign-out").addEventListener("click", async () => { try { await signOut(); } finally { window.location.assign("/login"); } });
+    $("page-org-switcher").addEventListener("change", (event) => { localStorage.setItem("aevo.hub.orgId", event.target.value); window.location.reload(); });
+    $("org-switcher").addEventListener("change", (event) => { localStorage.setItem("aevo.hub.orgId", event.target.value); window.location.reload(); });
+    $("add-store").addEventListener("click", () => openStore(null));
+    $("invite-member").addEventListener("click", () => {
+      $("member-store").innerHTML = state.stores.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)} · ${escapeHtml(s.code)}</option>`).join("") || `<option value="">No stores available</option>`;
+      $("member-dialog").showModal();
+    });
+    $("member-scope").addEventListener("change", (e) => {
+      const scope = e.target.value;
+      if (scope === "ORGANIZATION") {
+        $("member-store-wrap").style.display = "none";
+        $("member-role").innerHTML = `<option value="ORGANIZATION_MANAGER" selected>Organization Manager</option>`;
+      } else {
+        $("member-store-wrap").style.display = "grid";
+        $("member-role").innerHTML = `
+          <option value="STORE_MANAGER">Store Manager</option>
+          <option value="CASHIER">Cashier</option>
+          <option value="BOOKING_STAFF">Booking Staff</option>
+          <option value="KIOSK_STAFF">Kiosk Staff</option>
+          <option value="STAFF" selected>Staff</option>
+          <option value="VIEWER">Viewer</option>
+        `;
+      }
+    });
+    $("app-store-switcher").addEventListener("change", (event) => { state.storeId = event.target.value || null; if (state.storeId) localStorage.setItem("aevo.hub.storeId", state.storeId); loadAppsTab(); });
+    $("btn-billing-refresh")?.addEventListener("click", loadBillingTab);
+    $("btn-open-stripe-portal")?.addEventListener("click", handleOpenPortal);
+    document.querySelectorAll(".btn-checkout-plan").forEach((b) => {
+      b.addEventListener("click", () => handleCheckout(b.dataset.plan));
+    });
+    $("profile-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      try {
+        const response = await hubFetch("/api/v1/hub/organizations/" + state.currentOrg.id, { method: "PATCH", body: JSON.stringify({ name: $("profile-name").value, legalName: $("profile-legal").value, slug: $("profile-slug").value, businessType: $("profile-type").value, timezone: $("profile-timezone").value, country: $("profile-country").value, currency: $("profile-currency").value, contactEmail: $("profile-email").value || null, contactPhone: $("profile-phone").value || null }) });
+        state.currentOrg = { ...state.currentOrg, name: response.organization.name, slug: response.organization.slug };
+        renderContext();
+        await loadProfile();
+        toast("Organization profile saved.");
+      } catch (error) { toast(error.message || "Could not save organization", true); } finally { button.disabled = false; }
+    });
+    $("store-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const id = $("store-id").value;
+      const payload = { name: $("store-name").value, code: $("store-code").value, timezone: $("store-timezone").value };
+      try {
+        if (id) await hubFetch("/api/v1/hub/stores/" + id, { method: "PATCH", body: JSON.stringify(payload) });
+        else await hubFetch("/api/v1/hub/stores", { method: "POST", body: JSON.stringify({ ...payload, organizationId: state.currentOrg.id }) });
+        closeDialogs();
+        await loadStores();
+        await loadChecklist();
+        toast(id ? "Store updated." : "Store created.");
+      } catch (error) { toast(error.message || "Could not save store", true); }
+    });
+    $("member-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const scopeType = $("member-scope").value;
+        const storeId = scopeType === "STORE" ? $("member-store").value : undefined;
+        await hubFetch("/api/v1/hub/invitations", {
+          method: "POST",
+          body: JSON.stringify({
+            email: $("member-email").value,
+            role: $("member-role").value,
+            scopeType,
+            storeId: storeId || undefined
+          })
+        });
+        closeDialogs();
+        event.target.reset();
+        await loadTeam();
+        await loadChecklist();
+        toast("Scoped invitation sent.");
+      } catch (error) { toast(error.message || "Could not invite member", true); }
+    });
+    $("org-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const response = await apiFetch("/api/v1/hub/organizations", { method: "POST", body: JSON.stringify({ name: $("new-org-name").value, slug: $("new-org-slug").value || undefined }) });
+        state.organizations.push(response.organization);
+        state.currentOrg = response.organization;
+        state.stores = [];
+        state.storeId = null;
+        state.onboarding = null;
+        state.checklist = null;
+        closeDialogs();
+        renderContext();
+        await openSetup();
+        toast("Organization created. Continue with setup when ready.");
+      } catch (error) { toast(error.message || "Could not create organization", true); }
+    });
+
+    async function init() {
+      try {
+        const me = await apiFetch("/api/auth/me");
+        state.user = me.effectiveUser || me.user;
+        $("account-email").textContent = state.user.email || "Account";
+        $("account-role").textContent = me.principal?.role || "Member";
+        $("avatar").textContent = (state.user.displayName || state.user.email || "A").charAt(0).toUpperCase();
+        await loadOrganizations();
+        if (state.currentOrg) await loadStores();
+        try { await loadOnboarding(); } catch (error) { toast(error.message || "Setup progress is unavailable", true); }
+        if (state.currentOrg) {
+          try { await loadChecklist(); } catch (error) { toast(error.message || "Readiness checks are unavailable", true); }
+          try { await loadAppsData(); } catch (error) { toast(error.message || "App catalog is unavailable", true); }
+          await loadProfile();
+        }
+        if (!state.currentOrg || !state.stores.length || new URLSearchParams(location.search).get("setup") === "true") await openSetup();
+        else setTab(location.hash.slice(1) || "profile");
+      } catch (error) {
+        if (error instanceof AuthApiError && error.status === 401) window.location.replace("/login");
+        else toast(error.message || "Could not load organization", true);
+      }
+    }
+    init();
+  </script>
+</body>
+</html>

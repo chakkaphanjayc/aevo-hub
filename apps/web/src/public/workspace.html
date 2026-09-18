@@ -1,0 +1,2789 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Aevo Hub scoped operational workspace for multi-store brands and locations." />
+  <title>Workspace — Aevo Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared.css" />
+  <style>
+    :root {
+      --canvas: #fafaf8;
+      --surface: #ffffff;
+      --surface-soft: #f5f6f2;
+      --ink: #192019;
+      --muted: #6b7768;
+      --faint: #8e9a8b;
+      --line: #e7eae3;
+      --brand: #5b7b58;
+      --brand-dark: #2d4a30;
+      --brand-wash: #e4eedb;
+      --brand-wash-soft: #f0f5ec;
+      --danger: #9e362d;
+      --shadow: 0 4px 20px rgba(25, 32, 25, 0.05);
+      --shadow-flyout: 0 12px 36px rgba(25, 32, 25, 0.12);
+      --radius: 12px;
+      --sans: 'Plus Jakarta Sans', 'Noto Sans Thai', sans-serif;
+      --serif: 'Newsreader', Georgia, serif;
+      --mono: 'Fira Code', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--sans);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, select, input { font: inherit; }
+    a { color: inherit; text-decoration: none; }
+    button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+      outline: 2px solid var(--brand-dark);
+      outline-offset: 2px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 264px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    /* ==========================================================================
+       SIDEBAR & CONTEXT SWITCHER
+       ========================================================================== */
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #f4f6f1;
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      z-index: 15;
+    }
+
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--brand-dark);
+      color: #fff;
+      font: 600 1.15rem var(--serif);
+    }
+
+    .brand-title strong {
+      display: block;
+      font-size: 0.92rem;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-title span {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Hierarchical Unified Context Switcher */
+    .context-box {
+      padding: 14px 14px 12px;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+
+    .context-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .context-trigger:hover {
+      border-color: #cbd8c5;
+      box-shadow: 0 2px 6px rgba(45, 74, 48, 0.04);
+    }
+
+    .context-trigger-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .context-scope-pill {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--brand-wash);
+      color: var(--brand-dark);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .context-name {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .context-sub {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .context-trigger svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--muted);
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+
+    .context-trigger[aria-expanded="true"] svg {
+      transform: rotate(180deg);
+    }
+
+    /* Context Switcher Flyout Menu */
+    .context-flyout {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 14px;
+      right: 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow-flyout);
+      padding: 8px;
+      z-index: 50;
+      display: none;
+    }
+
+    .context-flyout.open {
+      display: block;
+      animation: flyoutIn 0.16s ease-out;
+    }
+
+    @keyframes flyoutIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .flyout-header {
+      padding: 6px 10px 4px;
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+
+    .flyout-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 10px;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.76rem;
+      color: var(--ink);
+      text-align: left;
+      transition: background 0.12s ease;
+    }
+
+    .flyout-item:hover {
+      background: var(--surface-soft);
+    }
+
+    .flyout-item.active {
+      background: var(--brand-wash);
+      color: var(--brand-dark);
+      font-weight: 600;
+    }
+
+    .flyout-item svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      flex-shrink: 0;
+    }
+
+    .flyout-item-text {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .flyout-item-title {
+      display: block;
+      font-size: 0.77rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .flyout-item-sub {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .flyout-stores-list {
+      max-height: 180px;
+      overflow-y: auto;
+      display: grid;
+      gap: 2px;
+      margin: 4px 0;
+    }
+
+    .flyout-footer {
+      border-top: 1px solid var(--line);
+      margin-top: 6px;
+      padding-top: 6px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .flyout-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 0.72rem;
+      color: var(--brand-dark);
+      border-radius: 6px;
+    }
+
+    .flyout-action:hover {
+      background: var(--brand-wash-soft);
+    }
+
+    /* Sidebar Navigation Links */
+    .nav {
+      flex: 1;
+      padding: 16px 12px;
+      display: grid;
+      gap: 3px;
+      align-content: start;
+    }
+
+    .nav-label {
+      padding: 10px 10px 4px;
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 10px;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      text-align: left;
+      text-decoration: none;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+
+    .nav-item:hover {
+      color: var(--brand-dark);
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .nav-item.active {
+      color: var(--brand-dark);
+      background: #fff;
+      font-weight: 600;
+      box-shadow: inset 3px 0 0 var(--brand-dark);
+    }
+
+    .nav-item svg {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .nav-item .count-pill {
+      margin-left: auto;
+      padding: 1px 6px;
+      border-radius: 12px;
+      background: var(--brand-wash);
+      color: var(--brand-dark);
+      font: 600 0.65rem var(--mono);
+    }
+
+    .user-footer {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand-dark);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .user-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .user-email {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-role-badge {
+      display: inline-block;
+      font-size: 0.62rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .btn-signout {
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      color: var(--faint);
+      padding: 4px;
+      border-radius: 4px;
+      display: grid;
+      place-items: center;
+    }
+
+    .btn-signout:hover {
+      color: var(--danger);
+    }
+
+    /* ==========================================================================
+       MAIN CONTENT AREA & TOPBAR
+       ========================================================================== */
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      min-height: 64px;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-scope-crumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .topbar-scope-crumb strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .security-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 9999px;
+      background: var(--brand-wash);
+      color: var(--brand-dark);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .security-badge svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.12s ease, border-color 0.12s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--brand-dark);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #203522;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--brand-dark);
+      border-color: var(--line);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-soft);
+      border-color: #cbd8c5;
+    }
+
+    .btn-sm {
+      min-height: 30px;
+      padding: 5px 10px;
+      font-size: 0.7rem;
+    }
+
+    /* Content Layout */
+    .content {
+      max-width: 1260px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 34px 32px 64px;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .page-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 6px;
+    }
+
+    .page-head h1 {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 3.5vw, 2.8rem);
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    .page-head p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      max-width: 620px;
+      margin-top: 6px;
+    }
+
+    /* Views */
+    .view { display: none; }
+    .view.active {
+      display: block;
+      animation: viewIn 0.18s ease-out;
+    }
+
+    @keyframes viewIn {
+      from { opacity: 0.4; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Metric Micro-Grid */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: 0 1px 4px rgba(25, 32, 25, 0.02);
+    }
+
+    .metric-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--faint);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      display: block;
+      font-family: var(--serif);
+      font-size: 2.2rem;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-foot {
+      display: block;
+      margin-top: 8px;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    /* Panel Components */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 4px rgba(25, 32, 25, 0.02);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .panel-title h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .panel-title p {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.75rem;
+    }
+
+    th {
+      padding: 12px 22px;
+      font-size: 0.64rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--faint);
+      border-bottom: 1px solid var(--line);
+      background: #fafbf9;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 14px 22px;
+      border-bottom: 1px solid #eef1ec;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 0.63rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status-pill.active {
+      background: var(--brand-wash);
+      color: var(--brand-dark);
+    }
+
+    .status-pill.inactive {
+      background: #f1f3ee;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Operation Launchers Grid (Store Mode) */
+    .launcher-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      padding: 20px 22px;
+    }
+
+    .launcher-card {
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      background: #fafbf9;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      transition: transform 0.12s ease, border-color 0.12s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .launcher-card:hover {
+      transform: translateY(-2px);
+      border-color: #c9d6c3;
+      background: #fff;
+    }
+
+    .launcher-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .launcher-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--brand-wash);
+      color: var(--brand-dark);
+      display: grid;
+      place-items: center;
+    }
+
+    .launcher-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .launcher-card h3 {
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .launcher-card p {
+      font-size: 0.68rem;
+      color: var(--muted);
+      line-height: 1.45;
+      flex: 1;
+    }
+
+    .launcher-action {
+      margin-top: 14px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--brand-dark);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Application Cards Grid */
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 20px 22px;
+    }
+
+    .app-item-card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .app-item-card h3 {
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+    }
+
+    .app-item-card p {
+      font-size: 0.7rem;
+      color: var(--muted);
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    /* Empty and Loading States */
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty-state p {
+      font-size: 0.78rem;
+      margin-top: 6px;
+    }
+
+    /* Toast Notification Tray */
+    .toast-tray {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      display: grid;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .toast {
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--brand-dark);
+      color: #fff;
+      font-size: 0.74rem;
+      box-shadow: var(--shadow);
+      animation: toastIn 0.2s ease-out;
+    }
+
+    .toast.error {
+      background: var(--danger);
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 1050px) {
+      .shell { grid-template-columns: 230px minmax(0, 1fr); }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .launcher-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .app-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 768px) {
+      .shell { display: block; }
+      .sidebar { height: auto; position: static; }
+      .topbar { padding: 0 16px; min-height: 56px; }
+      .content { padding: 24px 16px 48px; }
+      .metric-grid, .launcher-grid, .app-grid { grid-template-columns: 1fr; }
+      .page-head { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* Universal query workbench */
+    .query-workbench {
+      display: grid;
+      gap: 16px;
+    }
+
+    .query-toolbar {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.35fr) minmax(260px, 1fr) auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .query-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .query-field label {
+      color: var(--faint);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .query-field select,
+    .query-field input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 12px;
+    }
+
+    .query-field input::placeholder {
+      color: var(--faint);
+    }
+
+    .query-helper {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+
+    .query-helper code,
+    .query-result-meta code {
+      color: var(--brand-dark);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+    }
+
+    .query-state {
+      padding: 26px 18px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.82rem;
+    }
+
+    .query-state.error {
+      color: var(--danger);
+    }
+
+    .query-result-meta {
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+
+    .query-table th,
+    .query-table td {
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .query-table td code {
+      color: var(--brand-dark);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+    }
+
+    .query-controls {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .query-control-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .query-control-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .query-control-heading strong {
+      display: block;
+      color: var(--ink);
+      font-size: 0.78rem;
+    }
+
+    .query-control-heading span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .query-control-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .query-filter-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .query-filter-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 0.9fr) minmax(130px, 0.65fr) minmax(160px, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .query-filter-row select,
+    .query-filter-row input {
+      min-height: 40px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 10px;
+      font-size: 0.75rem;
+    }
+
+    .query-field-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .query-field-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--ink);
+      background: var(--surface-subtle);
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+
+    .query-field-chip:has(input:checked) {
+      border-color: var(--brand-dark);
+      background: var(--brand-tint);
+    }
+
+    .query-muted,
+    .query-list-state {
+      color: var(--muted);
+      font-size: 0.74rem;
+      line-height: 1.5;
+    }
+
+    .query-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 18px 14px;
+    }
+
+    .query-summary-item {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-subtle);
+      color: var(--ink);
+      font-size: 0.72rem;
+    }
+
+    .query-secondary-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .query-secondary-grid .panel {
+      min-width: 0;
+    }
+
+    .query-list-state {
+      display: grid;
+      gap: 8px;
+      padding: 0 18px 18px;
+    }
+
+    .query-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-subtle);
+    }
+
+    .query-list-item strong,
+    .query-list-item span {
+      display: block;
+    }
+
+    .query-list-item strong { font-size: 0.74rem; }
+    .query-list-item span { color: var(--muted); font-size: 0.68rem; margin-top: 2px; }
+
+    .query-job-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 18px 14px;
+    }
+
+    .query-file-button { cursor: pointer; }
+
+    .query-import-mapping {
+      display: grid;
+      gap: 10px;
+      margin: 0 18px 18px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-subtle);
+    }
+
+    .query-import-mapping-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .query-import-mapping-head strong {
+      display: block;
+      font-size: 0.78rem;
+    }
+
+    .query-import-mapping-head span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      line-height: 1.45;
+    }
+
+    .query-import-mapping-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 0.8fr) minmax(160px, 1fr);
+      align-items: center;
+      gap: 8px;
+    }
+
+    .query-import-mapping-row label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .query-import-mapping-row select {
+      min-height: 36px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 9px;
+      font-size: 0.72rem;
+    }
+
+    .query-import-mapping-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    @media (max-width: 980px) {
+      .query-toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+      .query-toolbar .btn {
+        width: 100%;
+      }
+      .query-control-grid,
+      .query-secondary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .query-filter-row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .query-toolbar {
+        grid-template-columns: 1fr;
+      }
+      .query-control-grid,
+      .query-secondary-grid,
+      .query-filter-row {
+        grid-template-columns: 1fr;
+      }
+      .query-control-heading {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- Collapsible Scoped Navigation Sidebar -->
+    <aside class="sidebar" aria-label="Aevo Workspace Navigation">
+      <div class="brand-header">
+        <span class="brand-mark">A</span>
+        <div class="brand-title">
+          <strong>Aevo Hub</strong>
+          <span>Unified Operations</span>
+        </div>
+      </div>
+
+      <!-- Hierarchical Unified Context Switcher -->
+      <div class="context-box">
+        <button class="context-trigger" id="context-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Switch workspace scope">
+          <div class="context-trigger-info">
+            <span class="context-scope-pill" id="current-scope-badge">ORGANIZATION</span>
+            <strong class="context-name" id="current-scope-name">Loading…</strong>
+            <span class="context-sub" id="current-scope-sub">Organization Workspace</span>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        <!-- Context Flyout Dropdown -->
+        <div class="context-flyout" id="context-flyout" role="menu">
+          <div class="flyout-header">ORGANIZATION LEVEL</div>
+          <button class="flyout-item active" id="btn-scope-org" type="button" role="menuitem">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <div class="flyout-item-text">
+              <span class="flyout-item-title" id="flyout-org-name">Organization Workspace</span>
+              <span class="flyout-item-sub">Brand &amp; multi-store overview</span>
+            </div>
+          </button>
+
+          <div class="flyout-header" style="margin-top: 6px;">STORES &amp; BRANCHES (<span id="flyout-store-count">0</span>)</div>
+          <div class="flyout-stores-list" id="flyout-stores-list">
+            <!-- Populated via JS -->
+          </div>
+
+          <div class="flyout-footer">
+            <a class="flyout-action" href="/organize?tab=stores">
+              <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>+ Add Store</span>
+            </a>
+            <a class="flyout-action" href="/organize">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Manage Organization</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scoped Dynamic Navigation -->
+      <nav class="nav" id="sidebar-nav">
+        <!-- Injected depending on active scope (Organization vs Store) -->
+      </nav>
+
+      <!-- Authenticated User Footer -->
+      <div class="user-footer">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div class="user-info">
+          <strong class="user-email" id="user-email">Loading…</strong>
+          <span class="user-role-badge" id="user-role">Member</span>
+        </div>
+        <button class="btn-signout" id="btn-signout" title="Sign out" aria-label="Sign out">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Operational Workspace Shell -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-scope-crumb">
+            <span>Current Scope:</span>
+            <strong id="topbar-scope-label">Organization Workspace</strong>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="security-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>SECURE SCOPED WORKSPACE</span>
+          </div>
+          <a class="btn btn-secondary btn-sm" href="/organize">
+            <span>Manage Organization</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Dynamic Header -->
+        <div class="page-head">
+          <div>
+            <div class="page-eyebrow" id="page-eyebrow">Aevo Hub / Brand Overview</div>
+            <h1 id="page-title">Organization Overview</h1>
+            <p id="page-description">Real-time metrics, active subscriptions, and store network performance.</p>
+          </div>
+          <div id="page-head-actions">
+            <!-- Populated dynamically based on scope -->
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             VIEW 1: ORGANIZATION WORKSPACE OVERVIEW (Brand Level)
+             ================================================================== -->
+        <section class="view active" id="view-org-overview" aria-label="Organization Overview">
+          <!-- KPI Micro-Grid: Stores, Active Apps, Members, Revenue (NO Terminals!) -->
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">Connected Stores</span>
+              <strong class="metric-value" id="org-kpi-stores">—</strong>
+              <span class="metric-foot">Active retail &amp; venue locations</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Active Applications</span>
+              <strong class="metric-value" id="org-kpi-apps">—</strong>
+              <span class="metric-foot">Subscribed business modules</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Team Members</span>
+              <strong class="metric-value" id="org-kpi-members">—</strong>
+              <span class="metric-foot">Managers and store personnel</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Sales Today</span>
+              <strong class="metric-value" id="org-kpi-revenue">฿0</strong>
+              <span class="metric-foot">Gross revenue across all stores</span>
+            </div>
+          </div>
+
+          <!-- Store Performance Network Roster -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h2>Store Performance Network</h2>
+                <p>Real-time status, daily volume, and branch workspace direct access.</p>
+              </div>
+              <a class="btn btn-secondary btn-sm" href="/organize?tab=stores">+ New Store</a>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Store / Location</th>
+                    <th>Code</th>
+                    <th>Status</th>
+                    <th>Sales Today</th>
+                    <th>Orders</th>
+                    <th>Terminals</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="org-stores-table">
+                  <tr><td colspan="7" class="empty-state">Loading stores network…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Applications Quick Overview -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h2>Active Subscriptions &amp; Modules</h2>
+                <p>Operational applications enabled for this brand.</p>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btn-browse-apps">Browse Applications</button>
+            </div>
+            <div class="app-grid" id="org-apps-summary">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 2: STORE WORKSPACE OVERVIEW (Branch Level)
+             ================================================================== -->
+        <section class="view" id="view-store-overview" aria-label="Store Overview">
+          <!-- Store KPI Micro-Grid -->
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">Sales Today</span>
+              <strong class="metric-value" id="store-kpi-sales">฿0</strong>
+              <span class="metric-foot">Paid orders at this store</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Orders Today</span>
+              <strong class="metric-value" id="store-kpi-orders">0</strong>
+              <span class="metric-foot">Completed and in-flight tickets</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Bookings Today</span>
+              <strong class="metric-value" id="store-kpi-bookings">0</strong>
+              <span class="metric-foot">Court &amp; table reservations</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Hardware Terminals</span>
+              <strong class="metric-value" id="store-kpi-devices">0 / 0</strong>
+              <span class="metric-foot">Active devices connected</span>
+            </div>
+          </div>
+
+          <!-- Operational Launchers -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h2>Operational Launchers</h2>
+                <p>Launch cash sessions, point-of-sale registers, and self-ordering terminals.</p>
+              </div>
+            </div>
+            <div class="launcher-grid">
+              <div class="launcher-card" id="launch-pos-card">
+                <div class="launcher-top">
+                  <span class="launcher-icon">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                  </span>
+                  <span class="status-pill active"><span class="status-dot"></span><span>Ready</span></span>
+                </div>
+                <h3>Point of Sale (POS)</h3>
+                <p>Register station for cashier checkout, bar tabs, and receipt printing.</p>
+                <span class="launcher-action">Open Register Station →</span>
+              </div>
+
+              <div class="launcher-card" id="launch-kiosk-card">
+                <div class="launcher-top">
+                  <span class="launcher-icon">
+                    <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                  </span>
+                  <span class="status-pill active"><span class="status-dot"></span><span>Active</span></span>
+                </div>
+                <h3>Self-Ordering Kiosk</h3>
+                <p>Customer self-ordering interface with PromptPay QR and kiosk mode.</p>
+                <span class="launcher-action">Launch Kiosk Mode →</span>
+              </div>
+
+              <div class="launcher-card" id="launch-booking-card">
+                <div class="launcher-top">
+                  <span class="launcher-icon">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </span>
+                  <span class="status-pill active"><span class="status-dot"></span><span>Active</span></span>
+                </div>
+                <h3>Bookings &amp; Venues</h3>
+                <p>Court scheduling, table reservations, and waitlist management.</p>
+                <span class="launcher-action">View Booking Board →</span>
+              </div>
+
+              <div class="launcher-card" id="launch-drawer-card">
+                <div class="launcher-top">
+                  <span class="launcher-icon">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>
+                  </span>
+                  <span class="status-pill active"><span class="status-dot"></span><span>Session</span></span>
+                </div>
+                <h3>Cash Drawer Session</h3>
+                <p>Open shift, register cash movements, and perform daily closing.</p>
+                <span class="launcher-action">Manage Cash Shift →</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Store Hardware Devices Table -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h2>Connected Hardware Terminals</h2>
+                <p>Point-of-sale registers, receipt printers, and kiosk displays for this branch.</p>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btn-refresh-devices">Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Device Name</th>
+                    <th>Mode</th>
+                    <th>Last Active</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="store-devices-table">
+                  <tr><td colspan="4" class="empty-state">Loading branch devices…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 3: APPLICATIONS CATALOG
+             ================================================================== -->
+        <section class="view" id="view-apps" aria-label="Applications Catalog">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h2>Aevo Business Modules</h2>
+                <p>Modular capabilities subscribed at the organization level.</p>
+              </div>
+            </div>
+            <div class="app-grid" id="all-apps-grid">
+              <div class="empty-state">Loading applications catalog…</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 3: UNIVERSAL QUERY WORKBENCH
+             ================================================================== -->
+        <section class="view" id="view-query" aria-label="Universal Query Workbench">
+          <div class="query-workbench">
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h2>Universal Query Workbench</h2>
+                  <p>Search products, orders, and stores with one organization-scoped query language.</p>
+                </div>
+                <span class="status-pill active"><span class="status-dot"></span><span>AST v1</span></span>
+              </div>
+              <div class="query-toolbar">
+                <div class="query-field">
+                  <label for="query-model-select">Data model</label>
+                  <select id="query-model-select" aria-label="Data model">
+                    <option value="">Loading models…</option>
+                  </select>
+                </div>
+                <div class="query-field">
+                  <label for="query-search-input">Search and filter</label>
+                  <input id="query-search-input" type="search" autocomplete="off" placeholder='name:"สกรู" AND base_price_minor:>100' aria-describedby="query-helper" />
+                </div>
+                <button class="btn btn-primary btn-sm" id="query-run-button" type="button">Run Query</button>
+                <button class="btn btn-secondary btn-sm" id="query-save-button" type="button">Save View</button>
+              </div>
+              <p class="query-helper" id="query-helper">Use natural text or field expressions. Examples: <code>สกรู AND ขาว</code>, <code>status:ACTIVE</code>, <code>total_minor:>10000</code>.</p>
+              <div class="query-controls" aria-label="Structured query controls">
+                <div class="query-control-section">
+                  <div class="query-control-heading">
+                    <div><strong>Filters</strong><span>Build the same AST as the search language.</span></div>
+                    <button class="btn btn-secondary btn-sm" id="query-add-filter" type="button">Add filter</button>
+                  </div>
+                  <div id="query-filter-list" class="query-filter-list" aria-live="polite">
+                    <div class="query-muted">No structured filters. Use the search bar or add one here.</div>
+                  </div>
+                </div>
+                <div class="query-control-grid">
+                  <div class="query-field">
+                    <label for="query-sort-select">Sort by</label>
+                    <select id="query-sort-select"></select>
+                  </div>
+                  <div class="query-field">
+                    <label for="query-sort-direction">Direction</label>
+                    <select id="query-sort-direction">
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+                  </div>
+                  <div class="query-field">
+                    <label for="query-group-select">Group by</label>
+                    <select id="query-group-select"><option value="">No grouping</option></select>
+                  </div>
+                  <div class="query-field">
+                    <label for="query-aggregate-select">Aggregate</label>
+                    <select id="query-aggregate-select"><option value="">No aggregate</option></select>
+                  </div>
+                </div>
+                <div class="query-control-section query-fields-section">
+                  <div class="query-control-heading">
+                    <div><strong>Visible and export fields</strong><span>Only metadata-permitted fields can be selected.</span></div>
+                    <button class="btn btn-quiet btn-sm" id="query-select-all-fields" type="button">Select readable</button>
+                  </div>
+                  <div id="query-field-list" class="query-field-list"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h2>Query Results</h2>
+                  <p id="query-result-scope">Current organization scope</p>
+                </div>
+                <span class="query-result-meta" id="query-result-meta">Ready</span>
+              </div>
+              <div id="query-summary" class="query-summary" hidden></div>
+              <div id="query-state" class="query-state" role="status">Choose a model to load query results.</div>
+              <div class="table-wrap" id="query-table-wrap" hidden>
+                <table class="query-table">
+                  <thead id="query-results-head"></thead>
+                  <tbody id="query-results-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="query-secondary-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <div class="panel-title"><h2>Saved views &amp; history</h2><p>Reuse validated AST definitions within your current organization.</p></div>
+                  <button class="btn btn-quiet btn-sm" id="query-refresh-history" type="button">Refresh</button>
+                </div>
+                <div id="query-saved-list" class="query-list-state">Loading saved views…</div>
+                <div id="query-history-list" class="query-list-state"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div class="panel-title"><h2>Import &amp; export</h2><p>Use the same model metadata for mapped imports and scoped exports.</p></div>
+                </div>
+                <div class="query-job-actions">
+                  <button class="btn btn-secondary btn-sm" id="query-export-csv" type="button">Export CSV</button>
+                  <button class="btn btn-secondary btn-sm" id="query-export-json" type="button">Export JSON</button>
+                  <button class="btn btn-secondary btn-sm" id="query-export-xlsx" type="button">Export Excel</button>
+                  <label class="btn btn-secondary btn-sm query-file-button" for="query-import-file">Choose CSV</label>
+                  <input id="query-import-file" type="file" accept=".csv,text/csv" hidden />
+                  <button class="btn btn-primary btn-sm" id="query-import-preview" type="button" disabled>Preview import</button>
+                </div>
+                <div id="query-job-state" class="query-list-state" role="status">No import or export job has been started.</div>
+                <div id="query-import-mapping" class="query-import-mapping" hidden></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 4: HARDWARE DEVICES
+             ================================================================== -->
+        <section class="view" id="view-devices" aria-label="Hardware Devices">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h2>Hardware Registers &amp; Terminals</h2>
+                <p>Managed peripherals and active paired stations.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" id="btn-reload-devices">Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Terminal</th>
+                    <th>Mode</th>
+                    <th>Assigned Store</th>
+                    <th>Last Active</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="all-devices-table">
+                  <tr><td colspan="5" class="empty-state">Loading terminals…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 5: BILLING & SUBSCRIPTIONS
+             ================================================================== -->
+        <section class="view" id="view-billing" aria-label="Billing &amp; Plans">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h2>Organization Subscription &amp; Plans</h2>
+                <p>Stripe automated billing, invoice receipts, and tier limits.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" id="btn-billing-portal">Manage in Stripe Portal →</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Module / Plan</th>
+                    <th>Billing Interval</th>
+                    <th>Period End</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="billing-table">
+                  <tr><td colspan="4" class="empty-state">Loading billing details…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-tray" id="toast-tray" aria-live="polite"></div>
+
+  <script type="module">
+    import { apiFetch, API_BASE, signOut, AuthApiError } from "/auth.js";
+
+    // Application Global Scope State
+    const state = {
+      user: null,
+      principal: null,
+      organizations: [],
+      stores: [],
+      currentOrg: null,
+      activeScope: "ORGANIZATION", // "ORGANIZATION" | "STORE"
+      activeStore: null,
+      activeView: "org-overview",
+      apps: [],
+      subscriptions: [],
+      orgStats: null,
+      storeStats: null,
+      queryModels: [],
+      queryModel: null,
+      queryRows: [],
+      queryFilterRules: [],
+      querySelectedFields: [],
+      querySortField: "",
+      querySortDirection: "asc",
+      queryGroupField: "",
+      queryAggregate: "",
+      queryImport: null,
+      queryImportJobId: null,
+      queryImportDetail: null,
+      queryLoadedSpec: null
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (val) => String(val ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
+
+    function formatCurrency(minor) {
+      const val = (Number(minor) || 0) / 100;
+      return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(val);
+    }
+
+    function toast(message, isError = false) {
+      const node = document.createElement("div");
+      node.className = `toast${isError ? " error" : ""}`;
+      node.textContent = message;
+      $("toast-tray").appendChild(node);
+      setTimeout(() => node.remove(), 4000);
+    }
+
+    // Context Switcher Flyout Toggle
+    const contextBtn = $("context-btn");
+    const contextFlyout = $("context-flyout");
+
+    contextBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = contextFlyout.classList.contains("open");
+      contextFlyout.classList.toggle("open", !isOpen);
+      contextBtn.setAttribute("aria-expanded", String(!isOpen));
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!contextBox().contains(e.target)) {
+        contextFlyout.classList.remove("open");
+        contextBtn.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    function contextBox() {
+      return document.querySelector(".context-box");
+    }
+
+    // Switch to Organization Scope
+    $("btn-scope-org").addEventListener("click", () => {
+      contextFlyout.classList.remove("open");
+      contextBtn.setAttribute("aria-expanded", "false");
+      setScope("ORGANIZATION");
+    });
+
+    // Sign out
+    $("btn-signout").addEventListener("click", async () => {
+      $("btn-signout").disabled = true;
+      try { await signOut(); } finally { window.location.assign("/login"); }
+    });
+
+    // Scope Controller
+    function setScope(scope, storeId = null) {
+      state.activeScope = scope;
+      localStorage.setItem("aevo.hub.scope", scope);
+
+      if (scope === "ORGANIZATION") {
+        state.activeStore = null;
+        localStorage.removeItem("aevo.hub.storeId");
+        $("current-scope-badge").textContent = "ORGANIZATION";
+        $("current-scope-name").textContent = state.currentOrg?.name || "Organization";
+        $("current-scope-sub").textContent = "Organization Workspace";
+        $("topbar-scope-label").textContent = `${state.currentOrg?.name || "Organization"} (Brand Scope)`;
+        renderSidebarNav("ORGANIZATION");
+        showView("org-overview");
+        loadOrganizationOverview();
+      } else {
+        const store = state.stores.find((s) => s.id === storeId) || state.stores[0];
+        if (!store) {
+          setScope("ORGANIZATION");
+          return;
+        }
+        state.activeStore = store;
+        localStorage.setItem("aevo.hub.storeId", store.id);
+        $("current-scope-badge").textContent = "STORE";
+        $("current-scope-name").textContent = store.name;
+        $("current-scope-sub").textContent = `Store Workspace · ${store.code}`;
+        $("topbar-scope-label").textContent = `${state.currentOrg?.name} / ${store.name}`;
+        renderSidebarNav("STORE");
+        showView("store-overview");
+        loadStoreOverview(store.id);
+      }
+      updateFlyoutActiveState();
+    }
+
+    function updateFlyoutActiveState() {
+      $("btn-scope-org").classList.toggle("active", state.activeScope === "ORGANIZATION");
+      document.querySelectorAll(".flyout-store-btn").forEach((btn) => {
+        btn.classList.toggle("active", state.activeScope === "STORE" && btn.dataset.storeId === state.activeStore?.id);
+      });
+    }
+
+    // Render Navigation based on Scope
+    function renderSidebarNav(scope) {
+      const nav = $("sidebar-nav");
+      if (scope === "ORGANIZATION") {
+        nav.innerHTML = `
+          <div class="nav-label">Workspace</div>
+          <button class="nav-item active" data-view="org-overview" type="button">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span>Overview</span>
+          </button>
+          <button class="nav-item" data-view="apps" type="button">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>Applications</span>
+            <span class="count-pill" id="nav-apps-count">—</span>
+          </button>
+          <button class="nav-item" data-view="query" type="button">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/></svg>
+            <span>Query Workbench</span>
+          </button>
+          <button class="nav-item" data-view="devices" type="button">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
+            <span>Hardware Network</span>
+          </button>
+
+          <div class="nav-label" style="margin-top: 10px;">Business</div>
+          <button class="nav-item" data-view="billing" type="button">
+            <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <span>Billing &amp; Plans</span>
+          </button>
+
+          <div class="nav-label" style="margin-top: 10px;">Brand Settings</div>
+          <a class="nav-item" href="/organize">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Manage Organization</span>
+          </a>
+        `;
+      } else {
+        nav.innerHTML = `
+          <div class="nav-label">Store Workspace</div>
+          <button class="nav-item active" data-view="store-overview" type="button">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span>Store Pulse</span>
+          </button>
+
+          <div class="nav-label" style="margin-top: 10px;">Applications</div>
+          <button class="nav-item" data-action="launch-pos" type="button">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <span>POS Register</span>
+          </button>
+          <button class="nav-item" data-action="launch-kiosk" type="button">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+            <span>Self Kiosk</span>
+          </button>
+          <button class="nav-item" data-action="launch-booking" type="button">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Bookings &amp; Venues</span>
+          </button>
+
+          <div class="nav-label" style="margin-top: 10px;">Operations</div>
+          <button class="nav-item" data-view="query" type="button">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/></svg>
+            <span>Query Workbench</span>
+          </button>
+          <button class="nav-item" data-view="devices" type="button">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
+            <span>Store Devices</span>
+          </button>
+          <a class="nav-item" href="/organize?tab=stores">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Store Settings</span>
+          </a>
+        `;
+      }
+
+      // Reattach nav events
+      nav.querySelectorAll("button[data-view]").forEach((btn) => {
+        btn.addEventListener("click", () => showView(btn.dataset.view));
+      });
+
+      nav.querySelectorAll("button[data-action]").forEach((btn) => {
+        btn.addEventListener("click", () => handleNavAction(btn.dataset.action));
+      });
+    }
+
+    function handleNavAction(action) {
+      if (action === "launch-pos") {
+        toast("Opening POS Register terminal session...");
+      } else if (action === "launch-kiosk") {
+        toast("Switching device to Kiosk Self-Order mode...");
+      } else if (action === "launch-booking") {
+        toast("Loading Bookings & Court reservations...");
+      }
+    }
+
+    function showView(viewId) {
+      state.activeView = viewId;
+      document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${viewId}`));
+      document.querySelectorAll(".nav-item[data-view]").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === viewId));
+
+      const titles = {
+        "org-overview": ["Aevo Hub / Brand Overview", "Organization Overview", "Real-time metrics, active subscriptions, and store network performance."],
+        "store-overview": [`Aevo Hub / ${state.activeStore?.name || "Store"}`, `${state.activeStore?.name || "Store"} Workspace`, "Daily branch operations, live checkouts, and device health."],
+        "apps": ["Aevo Hub / Applications", "Business Modules", "Turn applications on and off to support your business requirements."],
+        "query": ["Aevo Hub / Query Platform", "Universal Query Workbench", "Search, filter, sort, and group tenant data through one validated query contract."],
+        "devices": ["Aevo Hub / Hardware", "Hardware & Terminals", "Registers, self-service kiosks, and thermal printers connected to your stores."],
+        "billing": ["Aevo Hub / Business", "Billing & Subscriptions", "Keep your organization plan, trial period, and payment methods in view."]
+      };
+
+      if (titles[viewId]) {
+        $("page-eyebrow").textContent = titles[viewId][0];
+        $("page-title").textContent = titles[viewId][1];
+        $("page-description").textContent = titles[viewId][2];
+      }
+
+      if (viewId === "apps") loadAppsView();
+      if (viewId === "query") loadQueryView();
+      if (viewId === "devices") loadDevicesView();
+      if (viewId === "billing") loadBillingView();
+    }
+
+    // Quick Browse Apps Link
+    $("btn-browse-apps").addEventListener("click", () => showView("apps"));
+    $("btn-refresh-devices").addEventListener("click", () => loadDevicesView());
+    $("btn-reload-devices").addEventListener("click", () => loadDevicesView());
+    $("query-model-select").addEventListener("change", () => {
+      state.queryModel = state.queryModels.find((model) => model.technical_name === $("query-model-select").value) || null;
+      resetQueryControls();
+      renderQueryControls();
+    });
+    $("query-run-button").addEventListener("click", () => runQuery());
+    $("query-search-input").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") runQuery();
+    });
+    $("query-save-button").addEventListener("click", () => saveCurrentQuery());
+    $("query-add-filter").addEventListener("click", () => {
+      const firstField = filterableFields(state.queryModel)[0];
+      if (!firstField) return;
+      state.queryLoadedSpec = null;
+      state.queryFilterRules.push({ field: firstField.path, operator: firstField.operators[0] || "eq", value: "" });
+      renderQueryControls();
+    });
+    $("query-sort-select").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.querySortField = event.target.value; });
+    $("query-sort-direction").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.querySortDirection = event.target.value; });
+    $("query-group-select").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.queryGroupField = event.target.value; });
+    $("query-aggregate-select").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.queryAggregate = event.target.value; });
+    $("query-select-all-fields").addEventListener("click", () => {
+      state.queryLoadedSpec = null;
+      state.querySelectedFields = readableFields(state.queryModel).map((field) => field.path);
+      renderQueryControls();
+    });
+    $("query-refresh-history").addEventListener("click", () => loadQuerySavedAndHistory());
+    $("query-export-csv").addEventListener("click", () => exportCurrentQuery("CSV"));
+    $("query-export-json").addEventListener("click", () => exportCurrentQuery("JSON"));
+    $("query-export-xlsx").addEventListener("click", () => exportCurrentQuery("XLSX"));
+    $("query-import-file").addEventListener("change", handleImportFile);
+    $("query-import-preview").addEventListener("click", () => previewSelectedImport());
+
+    // Billing Portal
+    $("btn-billing-portal").addEventListener("click", async () => {
+      const btn = $("btn-billing-portal");
+      btn.disabled = true;
+      try {
+        const res = await apiFetch("/api/v1/hub/billing/portal", {
+          method: "POST",
+          body: JSON.stringify({ returnUrl: window.location.href }),
+          headers: { "x-organization-id": state.currentOrg.id }
+        });
+        if (res.url) window.location.assign(res.url);
+      } catch (err) {
+        toast(err.message || "Failed to open billing portal", true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Data Loaders
+    async function loadOrganizationOverview() {
+      try {
+        const [overviewRes, appsRes] = await Promise.all([
+          apiFetch("/api/v1/hub/overview/organization", { headers: { "x-organization-id": state.currentOrg.id } }),
+          apiFetch("/api/v1/hub/apps", { headers: { "x-organization-id": state.currentOrg.id } })
+        ]);
+
+        const stats = overviewRes.stats || {};
+        state.orgStats = stats;
+        state.apps = appsRes.apps || [];
+
+        $("org-kpi-stores").textContent = stats.totalStores ?? state.stores.length;
+        $("org-kpi-apps").textContent = stats.activeApps ?? "0";
+        $("org-kpi-members").textContent = stats.totalMembers ?? "0";
+        $("org-kpi-revenue").textContent = formatCurrency(stats.todayRevenueMinor ?? 0);
+
+        if ($("nav-apps-count")) $("nav-apps-count").textContent = state.apps.length;
+
+        // Render Store Performance Roster
+        const tbody = $("org-stores-table");
+        if (!stats.storePerformance || stats.storePerformance.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No stores registered. Create your first location to get started.</td></tr>`;
+        } else {
+          tbody.innerHTML = stats.storePerformance.map((s) => `
+            <tr>
+              <td><strong>${escapeHtml(s.name)}</strong></td>
+              <td><code>${escapeHtml(s.code)}</code></td>
+              <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(s.status)}</span></span></td>
+              <td class="tabular">${formatCurrency(s.todayRevenueMinor)}</td>
+              <td class="tabular">${s.todayOrdersCount}</td>
+              <td class="tabular">${s.activeDevicesCount} active</td>
+              <td>
+                <button class="btn btn-secondary btn-sm btn-enter-store" data-store-id="${escapeHtml(s.storeId)}" type="button">
+                  Enter Store Workspace →
+                </button>
+              </td>
+            </tr>
+          `).join("");
+
+          tbody.querySelectorAll(".btn-enter-store").forEach((btn) => {
+            btn.addEventListener("click", () => setScope("STORE", btn.dataset.storeId));
+          });
+        }
+
+        // Render Apps Summary Cards
+        const appsSummary = $("org-apps-summary");
+        appsSummary.innerHTML = state.apps.slice(0, 3).map((app) => `
+          <div class="app-item-card">
+            <div class="app-item-top">
+              <span class="status-pill active"><span class="status-dot"></span><span>Active</span></span>
+            </div>
+            <h3>${escapeHtml(app.name || app.id)}</h3>
+            <p>${escapeHtml(app.description || "Integrated Aevo business module.")}</p>
+          </div>
+        `).join("");
+      } catch (err) {
+        toast(err.message || "Failed to load organization metrics", true);
+      }
+    }
+
+    async function loadStoreOverview(storeId) {
+      try {
+        const [storeRes, devicesRes] = await Promise.all([
+          apiFetch(`/api/v1/hub/overview/store?storeId=${encodeURIComponent(storeId)}`, { headers: { "x-organization-id": state.currentOrg.id } }),
+          apiFetch(`/api/v1/hub/devices?storeId=${encodeURIComponent(storeId)}`, { headers: { "x-organization-id": state.currentOrg.id } })
+        ]);
+
+        const stats = storeRes.stats || {};
+        state.storeStats = stats;
+
+        $("store-kpi-sales").textContent = formatCurrency(stats.todaySalesMinor ?? 0);
+        $("store-kpi-orders").textContent = stats.todayOrders ?? 0;
+        $("store-kpi-bookings").textContent = stats.todayBookings ?? 0;
+        $("store-kpi-devices").textContent = `${stats.devicesOnline ?? 0} / ${stats.devicesTotal ?? 0}`;
+
+        const devices = devicesRes.devices || [];
+        const tbody = $("store-devices-table");
+        if (!devices.length) {
+          tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No devices registered at this branch yet.</td></tr>`;
+        } else {
+          tbody.innerHTML = devices.map((d) => `
+            <tr>
+              <td><strong>${escapeHtml(d.name)}</strong></td>
+              <td><code>${escapeHtml(d.mode)}</code></td>
+              <td>${escapeHtml(d.lastActiveAt || "Active")}</td>
+              <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(d.status || "ACTIVE")}</span></span></td>
+            </tr>
+          `).join("");
+        }
+      } catch (err) {
+        toast(err.message || "Failed to load store overview", true);
+      }
+    }
+
+    function readableFields(model) {
+      return (model?.fields || [])
+        .filter((field) => field.capabilities?.export || field.capabilities?.search || field.capabilities?.filter)
+        .sort((left, right) => Number(left.sequence || 0) - Number(right.sequence || 0));
+    }
+
+    function queryFields(model) {
+      const available = readableFields(model);
+      const selected = new Set(state.querySelectedFields.length ? state.querySelectedFields : available.slice(0, 8).map((field) => field.path));
+      return available.filter((field) => selected.has(field.path));
+    }
+
+    function filterableFields(model) {
+      return readableFields(model).filter((field) => field.capabilities?.filter);
+    }
+
+    function sortableFields(model) {
+      return readableFields(model).filter((field) => field.capabilities?.sort);
+    }
+
+    function groupableFields(model) {
+      return readableFields(model).filter((field) => field.capabilities?.group);
+    }
+
+    function fieldByPath(model, path) {
+      return (model?.fields || []).find((field) => field.path === path);
+    }
+
+    function resetQueryControls() {
+      const model = state.queryModel;
+      const available = readableFields(model);
+      state.querySelectedFields = available.slice(0, 8).map((field) => field.path);
+      state.queryFilterRules = [];
+      state.querySortField = model?.default_order?.find((item) => sortableFields(model).some((field) => field.path === item.field))?.field || sortableFields(model)[0]?.path || "";
+      state.querySortDirection = model?.default_order?.find((item) => item.field === state.querySortField)?.direction || "asc";
+      state.queryGroupField = "";
+      state.queryAggregate = "";
+      state.queryLoadedSpec = null;
+    }
+
+    function filterValueInput(field, rule) {
+      if (["is_empty", "is_not_empty", "today", "yesterday", "this_week", "this_month"].includes(rule.operator)) return "<span class=\"query-filter-no-value\">No value</span>";
+      const type = ["integer", "decimal", "money", "percentage", "rating"].includes(field?.field_type) ? "number" : field?.field_type === "date" || field?.field_type === "datetime" ? "date" : "text";
+      return `<input type="${type}" value="${escapeHtml(rule.value || "")}" data-filter-value aria-label="Filter value" placeholder="Value" />`;
+    }
+
+    function renderQueryControls() {
+      const model = state.queryModel;
+      if (!model) return;
+      const selectedFields = new Set(state.querySelectedFields);
+      $("query-field-list").innerHTML = readableFields(model).map((field) => `<label class="query-field-chip"><input type="checkbox" data-query-field value="${escapeHtml(field.path)}" ${selectedFields.has(field.path) ? "checked" : ""} />${escapeHtml(field.label)}</label>`).join("");
+      $("query-field-list").querySelectorAll("[data-query-field]").forEach((node) => node.addEventListener("change", () => {
+        state.queryLoadedSpec = null;
+        state.querySelectedFields = Array.from($("query-field-list").querySelectorAll("[data-query-field]:checked")).map((item) => item.value);
+        if (!state.querySelectedFields.length) node.checked = true;
+      }));
+
+      const sortFields = sortableFields(model);
+      $("query-sort-select").innerHTML = sortFields.map((field) => `<option value="${escapeHtml(field.path)}">${escapeHtml(field.label)}</option>`).join("") || `<option value="">No sortable fields</option>`;
+      $("query-sort-select").value = state.querySortField;
+      $("query-sort-direction").value = state.querySortDirection;
+      const groupFields = groupableFields(model);
+      $("query-group-select").innerHTML = `<option value="">No grouping</option>${groupFields.map((field) => `<option value="${escapeHtml(field.path)}">${escapeHtml(field.label)}</option>`).join("")}`;
+      $("query-group-select").value = state.queryGroupField;
+      const aggregateFields = readableFields(model).filter((field) => field.capabilities?.aggregate);
+      $("query-aggregate-select").innerHTML = `<option value="">No aggregate</option><option value="count">Count rows</option>${aggregateFields.map((field) => `<option value="sum:${escapeHtml(field.path)}">Sum ${escapeHtml(field.label)}</option><option value="avg:${escapeHtml(field.path)}">Average ${escapeHtml(field.label)}</option><option value="min:${escapeHtml(field.path)}">Minimum ${escapeHtml(field.label)}</option><option value="max:${escapeHtml(field.path)}">Maximum ${escapeHtml(field.label)}</option>`).join("")}`;
+      $("query-aggregate-select").value = state.queryAggregate;
+
+      const fields = filterableFields(model);
+      const filterList = $("query-filter-list");
+      if (!state.queryFilterRules.length) {
+        filterList.innerHTML = `<div class="query-muted">No structured filters. Use the search bar or add one here.</div>`;
+        return;
+      }
+      filterList.innerHTML = state.queryFilterRules.map((rule, index) => {
+        const field = fieldByPath(model, rule.field) || fields[0];
+        const operators = field?.operators || [];
+        return `<div class="query-filter-row" data-filter-index="${index}">
+          <select data-filter-field aria-label="Filter field">${fields.map((candidate) => `<option value="${escapeHtml(candidate.path)}" ${candidate.path === rule.field ? "selected" : ""}>${escapeHtml(candidate.label)}</option>`).join("")}</select>
+          <select data-filter-operator aria-label="Filter operator">${operators.map((operator) => `<option value="${escapeHtml(operator)}" ${operator === rule.operator ? "selected" : ""}>${escapeHtml(operator.replaceAll("_", " "))}</option>`).join("")}</select>
+          <div>${field ? filterValueInput(field, rule) : ""}</div>
+          <button class="btn btn-quiet btn-sm" type="button" data-filter-remove aria-label="Remove filter">Remove</button>
+        </div>`;
+      }).join("");
+      filterList.querySelectorAll("[data-filter-field]").forEach((node) => node.addEventListener("change", (event) => {
+        state.queryLoadedSpec = null;
+        const index = Number(event.target.closest("[data-filter-index]").dataset.filterIndex);
+        const field = fieldByPath(model, event.target.value) || fields[0];
+        state.queryFilterRules[index] = { field: field.path, operator: field.operators[0] || "eq", value: "" };
+        renderQueryControls();
+      }));
+      filterList.querySelectorAll("[data-filter-operator]").forEach((node) => node.addEventListener("change", (event) => {
+        state.queryLoadedSpec = null;
+        const index = Number(event.target.closest("[data-filter-index]").dataset.filterIndex);
+        state.queryFilterRules[index].operator = event.target.value;
+        renderQueryControls();
+      }));
+      filterList.querySelectorAll("[data-filter-value]").forEach((node) => node.addEventListener("input", (event) => {
+        state.queryLoadedSpec = null;
+        const index = Number(event.target.closest("[data-filter-index]").dataset.filterIndex);
+        state.queryFilterRules[index].value = event.target.value;
+      }));
+      filterList.querySelectorAll("[data-filter-remove]").forEach((node) => node.addEventListener("click", (event) => {
+        state.queryLoadedSpec = null;
+        state.queryFilterRules.splice(Number(event.target.closest("[data-filter-index]").dataset.filterIndex), 1);
+        renderQueryControls();
+      }));
+    }
+
+    function filterAst(model) {
+      const nodes = state.queryFilterRules.flatMap((rule) => {
+        const field = fieldByPath(model, rule.field);
+        if (!field || !rule.operator) return [];
+        const noValue = ["is_empty", "is_not_empty", "today", "yesterday", "this_week", "this_month"].includes(rule.operator);
+        if (!noValue && !String(rule.value || "").trim()) return [];
+        let value = rule.value;
+        if (["in", "not_in", "between"].includes(rule.operator)) value = String(rule.value || "").split(",").map((item) => item.trim()).filter(Boolean);
+        return [{ type: "condition", field: field.path, operator: rule.operator, ...(noValue ? {} : { value }) }];
+      });
+      if (nodes.length === 0) return null;
+      return nodes.length === 1 ? nodes[0] : { type: "and", children: nodes };
+    }
+
+    function querySpec(model) {
+      if (state.queryLoadedSpec && state.queryLoadedSpec.model === model.technical_name && !$("query-search-input").value.trim() && state.queryFilterRules.length === 0) return state.queryLoadedSpec;
+      const fields = queryFields(model);
+      const aggregate = state.queryAggregate === "count"
+        ? { function: "count", alias: "count_rows" }
+        : state.queryAggregate.includes(":")
+          ? { function: state.queryAggregate.split(":")[0], field: state.queryAggregate.split(":")[1], alias: `${state.queryAggregate.split(":")[0]}_${state.queryAggregate.split(":")[1].replaceAll(".", "_")}` }
+          : null;
+      return {
+        version: 1,
+        model: model.technical_name,
+        where: filterAst(model),
+        fields: fields.map((field) => field.path),
+        order_by: state.querySortField ? [{ field: state.querySortField, direction: state.querySortDirection }] : [],
+        group_by: state.queryGroupField ? [state.queryGroupField] : [],
+        aggregates: aggregate ? [aggregate] : [],
+        pagination: { limit: 50, offset: 0 }
+      };
+    }
+
+    function nestedRowValue(value, parts) {
+      if (!parts.length) return value;
+      if (Array.isArray(value)) return value.map((item) => nestedRowValue(item, parts)).filter((item) => item !== undefined && item !== null);
+      if (!value || typeof value !== "object") return undefined;
+      return nestedRowValue(value[parts[0]], parts.slice(1));
+    }
+
+    function rowFieldValue(row, field) {
+      if (!field?.relation_path) return row[field?.column_name];
+      return nestedRowValue(row, [field.relation_path, field.column_name]);
+    }
+
+    function displayCellValue(value) {
+      if (Array.isArray(value)) return value.map(displayCellValue).join(", ");
+      if (value === null || value === undefined || value === "") return "—";
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    }
+
+    function renderQueryResults(result) {
+      const model = state.queryModel;
+      const fields = queryFields(model);
+      const tableWrap = $("query-table-wrap");
+      const stateNode = $("query-state");
+      const rows = Array.isArray(result?.rows) ? result.rows : [];
+      $("query-result-meta").textContent = `${rows.length} shown · ${Number(result?.total || 0)} total`;
+      $("query-result-scope").textContent = state.activeScope === "STORE"
+        ? `${state.currentOrg?.name || "Organization"} / ${state.activeStore?.name || "Store"}`
+        : `${state.currentOrg?.name || "Organization"} · organization scope`;
+      const summaryEntries = Object.entries(result?.aggregates || {});
+      const groups = Array.isArray(result?.groups) ? result.groups : [];
+      const summary = $("query-summary");
+      summary.innerHTML = [...summaryEntries.map(([key, value]) => `<span class="query-summary-item"><strong>${escapeHtml(key)}</strong>: ${escapeHtml(displayCellValue(value))}</span>`), ...groups.slice(0, 12).map((group) => `<span class="query-summary-item"><strong>${escapeHtml(group.key)}</strong>: ${escapeHtml(group.count)}${group.aggregates ? ` · ${escapeHtml(JSON.stringify(group.aggregates))}` : ""}</span>`)].join("");
+      summary.hidden = !summaryEntries.length && !groups.length;
+
+      if (!rows.length) {
+        tableWrap.hidden = true;
+        stateNode.hidden = false;
+        stateNode.className = "query-state";
+        stateNode.textContent = "No records match this query. Try a broader term or remove a filter.";
+        return;
+      }
+
+      $("query-results-head").innerHTML = `<tr>${fields.map((field) => `<th scope="col"><button class="query-sort-header" type="button" data-query-sort="${escapeHtml(field.path)}">${escapeHtml(field.label)}${state.querySortField === field.path ? ` ${state.querySortDirection === "asc" ? "↑" : "↓"}` : ""}</button></th>`).join("")}</tr>`;
+      $("query-results-head").querySelectorAll("[data-query-sort]").forEach((button) => button.addEventListener("click", () => {
+        state.queryLoadedSpec = null;
+        state.querySortDirection = state.querySortField === button.dataset.querySort && state.querySortDirection === "asc" ? "desc" : "asc";
+        state.querySortField = button.dataset.querySort;
+        runQuery();
+      }));
+      $("query-results-body").innerHTML = rows.map((row) => `<tr>${fields.map((field) => {
+        const display = displayCellValue(rowFieldValue(row, field));
+        return `<td title="${escapeHtml(display)}">${field.field_type === "char" || field.field_type === "selection" ? escapeHtml(display) : `<code>${escapeHtml(display)}</code>`}</td>`;
+      }).join("")}</tr>`).join("");
+      tableWrap.hidden = false;
+      stateNode.hidden = true;
+    }
+
+    function renderQueryModelOptions() {
+      const select = $("query-model-select");
+      select.innerHTML = state.queryModels.map((model) => `<option value="${escapeHtml(model.technical_name)}">${escapeHtml(model.label)} · ${escapeHtml(model.technical_name)}</option>`).join("");
+      if (state.queryModel) select.value = state.queryModel.technical_name;
+    }
+
+    async function loadQuerySavedAndHistory() {
+      if (!state.currentOrg || !state.queryModel) return;
+      try {
+        const [savedResponse, historyResponse] = await Promise.all([
+          apiFetch(`/api/v1/query/saved?model=${encodeURIComponent(state.queryModel.technical_name)}`, { headers: { "x-organization-id": state.currentOrg.id } }),
+          apiFetch(`/api/v1/query/history?model=${encodeURIComponent(state.queryModel.technical_name)}&limit=5`, { headers: { "x-organization-id": state.currentOrg.id } })
+        ]);
+        const saved = Array.isArray(savedResponse?.savedQueries) ? savedResponse.savedQueries : [];
+        const history = Array.isArray(historyResponse?.history) ? historyResponse.history : [];
+        $("query-saved-list").innerHTML = saved.length ? saved.map((item) => `<div class="query-list-item"><div><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.scope)} · ${escapeHtml(item.updated_at)}</span></div><button class="btn btn-quiet btn-sm" type="button" data-load-saved="${escapeHtml(item.id)}">Load</button></div>`).join("") : "No saved views yet.";
+        $("query-history-list").innerHTML = history.length ? `<strong>Recent runs</strong>${history.map((item) => `<div class="query-list-item"><div><strong>${escapeHtml(item.model)}</strong><span>${escapeHtml(item.result_count)} rows · ${escapeHtml(item.created_at)}</span></div></div>`).join("")}` : "No query history yet.";
+        $("query-saved-list").querySelectorAll("[data-load-saved]").forEach((button) => button.addEventListener("click", async () => {
+          const item = saved.find((candidate) => candidate.id === button.dataset.loadSaved);
+          if (!item) return;
+          state.queryLoadedSpec = item.query;
+          state.querySelectedFields = item.query.fields || state.querySelectedFields;
+          state.querySortField = item.query.order_by?.[0]?.field || state.querySortField;
+          state.querySortDirection = item.query.order_by?.[0]?.direction || state.querySortDirection;
+          state.queryGroupField = item.query.group_by?.[0] || "";
+          const aggregate = item.query.aggregates?.[0];
+          state.queryAggregate = aggregate?.function === "count" ? "count" : aggregate?.field ? `${aggregate.function}:${aggregate.field}` : "";
+          renderQueryControls();
+          await runQuery();
+        }));
+      } catch (error) {
+        $("query-saved-list").textContent = error.message || "Saved views are unavailable.";
+        $("query-history-list").textContent = "";
+      }
+    }
+
+    async function loadQueryView() {
+      if (!state.currentOrg) return;
+      const stateNode = $("query-state");
+      if (state.queryModels.length === 0) {
+        stateNode.hidden = false;
+        stateNode.className = "query-state";
+        stateNode.textContent = "Loading query metadata…";
+        try {
+          const result = await apiFetch("/api/v1/query/models", { headers: { "x-organization-id": state.currentOrg.id } });
+          state.queryModels = Array.isArray(result.models) ? result.models : [];
+          state.queryModel = state.queryModels.find((model) => model.technical_name === "product.product") || state.queryModels[0] || null;
+          renderQueryModelOptions();
+          resetQueryControls();
+          renderQueryControls();
+        } catch (err) {
+          stateNode.className = "query-state error";
+          stateNode.textContent = err.message || "Query metadata is unavailable.";
+          return;
+        }
+      }
+      await runQuery();
+      await loadQuerySavedAndHistory();
+    }
+
+    async function runQuery() {
+      const select = $("query-model-select");
+      const selectedModel = state.queryModels.find((model) => model.technical_name === select.value) || state.queryModel;
+      if (!selectedModel) return;
+      state.queryModel = selectedModel;
+      const stateNode = $("query-state");
+      stateNode.hidden = false;
+      stateNode.className = "query-state";
+      stateNode.textContent = "Running a scoped query…";
+      $("query-table-wrap").hidden = true;
+      $("query-run-button").disabled = true;
+      try {
+        const searchText = $("query-search-input").value.trim();
+        const response = await apiFetch("/api/v1/query/execute", {
+          method: "POST",
+          headers: { "x-organization-id": state.currentOrg.id },
+          body: JSON.stringify({
+            query: querySpec(selectedModel),
+            ...(searchText ? { searchText } : {}),
+            ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {})
+          })
+        });
+        state.queryRows = response.rows || [];
+        renderQueryResults(response);
+      } catch (err) {
+        stateNode.hidden = false;
+        stateNode.className = "query-state error";
+        stateNode.textContent = err.message || "The query could not be completed.";
+        $("query-result-meta").textContent = "Query failed";
+      } finally {
+        $("query-run-button").disabled = false;
+      }
+    }
+
+    function combineQueryWhere(left, right) {
+      if (!left) return right;
+      if (!right) return left;
+      return { type: "and", children: [left, right] };
+    }
+
+    async function saveCurrentQuery() {
+      if (!state.queryModel) return;
+      const name = window.prompt("Save this query as", `${state.queryModel.label} view`);
+      if (!name?.trim()) return;
+      const query = querySpec(state.queryModel);
+      const searchText = $("query-search-input").value.trim();
+      try {
+        if (searchText) {
+          const parsed = await apiFetch("/api/v1/query/parse", { method: "POST", body: JSON.stringify({ searchText }) });
+          query.where = combineQueryWhere(query.where, parsed.where || null);
+        }
+        await apiFetch("/api/v1/query/saved", {
+          method: "POST",
+          headers: { "x-organization-id": state.currentOrg.id },
+          body: JSON.stringify({ name: name.trim(), scope: "PRIVATE", query, ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {}) })
+        });
+        toast("Saved query created for your account.");
+        await loadQuerySavedAndHistory();
+      } catch (err) {
+        toast(err.message || "Could not save this query", true);
+      }
+    }
+
+    function downloadText(fileName, content, contentType) {
+      const url = URL.createObjectURL(new Blob([content], { type: contentType }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadBlob(fileName, blob) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function downloadExportFile(id, fallbackName, contentType) {
+      const response = await fetch(`${API_BASE}/api/v1/query/exports/${encodeURIComponent(id)}/download`, { credentials: "include" });
+      if (!response.ok) throw new Error(`Export download failed (${response.status})`);
+      const disposition = response.headers.get("content-disposition") || "";
+      const fileName = disposition.match(/filename="?([^";]+)"?/i)?.[1] || fallbackName;
+      downloadBlob(fileName, await response.blob() || new Blob([], { type: contentType }));
+    }
+
+    async function exportCurrentQuery(format) {
+      if (!state.queryModel) return;
+      const button = format === "CSV" ? $("query-export-csv") : format === "JSON" ? $("query-export-json") : $("query-export-xlsx");
+      button.disabled = true;
+      $("query-job-state").textContent = `Preparing ${format} export…`;
+      try {
+        const response = await apiFetch("/api/v1/query/exports", {
+          method: "POST",
+          headers: { "x-organization-id": state.currentOrg.id },
+          body: JSON.stringify({ query: querySpec(state.queryModel), format, idempotencyKey: crypto.randomUUID(), selectedFields: queryFields(state.queryModel).map((field) => field.path), ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {}) })
+        });
+        const job = response.exportJob;
+        let latestJob = job;
+        for (let attempt = 0; attempt < 20 && latestJob.status !== "COMPLETED" && latestJob.status !== "FAILED"; attempt += 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 250));
+          latestJob = (await apiFetch(`/api/v1/query/exports/${encodeURIComponent(job.id)}`)).exportJob;
+        }
+        if (latestJob.status !== "COMPLETED") throw new Error(latestJob.error_message || "Export job did not complete.");
+        if (format === "XLSX") {
+          await downloadExportFile(job.id, latestJob.file_name, latestJob.content_type);
+        } else {
+          const content = await apiFetch(`/api/v1/query/exports/${encodeURIComponent(job.id)}/download`);
+          downloadText(latestJob.file_name, content, latestJob.content_type);
+        }
+        $("query-job-state").textContent = `${format} export completed with ${latestJob.total_rows} rows.`;
+      } catch (error) {
+        $("query-job-state").textContent = error.message || "Export failed.";
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [], cell = "", quoted = false;
+      for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        const next = text[index + 1];
+        if (char === '"' && quoted && next === '"') { cell += '"'; index += 1; continue; }
+        if (char === '"') { quoted = !quoted; continue; }
+        if (char === "," && !quoted) { row.push(cell); cell = ""; continue; }
+        if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && next === "\n") index += 1;
+          row.push(cell); cell = "";
+          if (row.some((value) => value !== "")) rows.push(row);
+          row = [];
+          continue;
+        }
+        cell += char;
+      }
+      if (cell || row.length) { row.push(cell); rows.push(row); }
+      const columns = (rows.shift() || []).map((value) => value.trim());
+      return { columns, rows: rows.map((values) => Object.fromEntries(columns.map((column, index) => [column, values[index] ?? ""]))) };
+    }
+
+    async function handleImportFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const parsed = parseCsv(await file.text());
+        if (!parsed.columns.length || !parsed.rows.length) throw new Error("CSV must contain a header and at least one row.");
+        state.queryImport = { file, ...parsed };
+        state.queryImportJobId = null;
+        state.queryImportDetail = null;
+        $("query-import-mapping").hidden = true;
+        $("query-import-preview").disabled = false;
+        $("query-job-state").textContent = `${file.name}: ${parsed.rows.length} rows ready for metadata mapping.`;
+      } catch (error) {
+        state.queryImport = null;
+        $("query-import-preview").disabled = true;
+        $("query-job-state").textContent = error.message || "Could not read the CSV file.";
+      }
+    }
+
+    function importableFields(model) {
+      return (model?.fields || [])
+        .filter((field) => field.capabilities?.import)
+        .sort((left, right) => Number(left.sequence || 0) - Number(right.sequence || 0));
+    }
+
+    function renderImportMappingEditor(job, detail) {
+      const mappingNode = $("query-import-mapping");
+      const model = state.queryModel;
+      const fields = importableFields(model);
+      const mappingBySource = new Map((detail.mappings || []).map((mapping) => [mapping.source, mapping.field]));
+      const columns = state.queryImport?.columns || [];
+      mappingNode.hidden = false;
+      mappingNode.innerHTML = `
+        <div class="query-import-mapping-head">
+          <div><strong>Map uploaded columns</strong><span>Review inferred fields before validation. Skip columns that should not be imported.</span></div>
+          <span>${escapeHtml(job.valid_rows)} valid · ${escapeHtml(job.failed_rows)} row errors</span>
+        </div>
+        ${columns.map((column) => `<div class="query-import-mapping-row">
+          <label title="${escapeHtml(column)}">${escapeHtml(column)}</label>
+          <select data-import-mapping-source="${escapeHtml(column)}" aria-label="Map ${escapeHtml(column)}">
+            <option value="">Skip column</option>
+            ${fields.map((field) => `<option value="${escapeHtml(field.path)}" ${mappingBySource.get(column) === field.path ? "selected" : ""}>${escapeHtml(field.label)} · ${escapeHtml(field.path)}</option>`).join("")}
+          </select>
+        </div>`).join("")}
+        <div class="query-import-mapping-actions">
+          <button class="btn btn-secondary btn-sm" type="button" id="query-import-save-mapping">Validate mapping</button>
+          ${job.status === "READY" ? `<button class="btn btn-primary btn-sm" type="button" id="query-import-confirm">Confirm import</button>` : ""}
+          ${(detail.errors || []).length ? `<button class="btn btn-quiet btn-sm" type="button" id="query-import-errors">Download errors</button>` : ""}
+        </div>`;
+      $("query-import-save-mapping")?.addEventListener("click", () => saveImportMappings(job.id));
+      $("query-import-confirm")?.addEventListener("click", () => confirmSelectedImport(job.id));
+      $("query-import-errors")?.addEventListener("click", () => downloadImportErrors(job.id));
+    }
+
+    async function saveImportMappings(id) {
+      const button = $("query-import-save-mapping");
+      if (button) button.disabled = true;
+      try {
+        const mappings = Array.from($("query-import-mapping").querySelectorAll("[data-import-mapping-source]"))
+          .map((node) => ({ source: node.dataset.importMappingSource, field: node.value }))
+          .filter((mapping) => mapping.field);
+        const detail = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}/mappings`, {
+          method: "PATCH",
+          headers: { "x-organization-id": state.currentOrg.id },
+          body: JSON.stringify({ mappings })
+        });
+        state.queryImportJobId = id;
+        state.queryImportDetail = detail;
+        const job = detail.importJob;
+        $("query-job-state").innerHTML = `<strong>${escapeHtml(job.status)}</strong>: ${escapeHtml(job.valid_rows)} valid of ${escapeHtml(job.total_rows)} rows.${(detail.errors || []).length ? ` ${escapeHtml(detail.errors.length)} validation errors.` : " Mapping is ready."}`;
+        renderImportMappingEditor(job, detail);
+      } catch (error) {
+        $("query-job-state").textContent = error.message || "Could not validate the import mapping.";
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+
+    async function previewSelectedImport() {
+      if (!state.queryImport || !state.queryModel) return;
+      $("query-import-preview").disabled = true;
+      try {
+        const response = await apiFetch("/api/v1/query/imports", {
+          method: "POST",
+          headers: { "x-organization-id": state.currentOrg.id },
+          body: JSON.stringify({ model: state.queryModel.technical_name, sourceFileName: state.queryImport.file.name, sourceContentType: state.queryImport.file.type || "text/csv", idempotencyKey: `${state.queryImport.file.name}-${state.queryImport.file.size}-${state.queryImport.file.lastModified}`, columns: state.queryImport.columns, rows: state.queryImport.rows, ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {}) })
+        });
+        const job = response.importJob;
+        const detail = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(job.id)}`, { headers: { "x-organization-id": state.currentOrg.id } });
+        state.queryImportJobId = job.id;
+        state.queryImportDetail = detail;
+        const errorNote = detail.errors?.length ? ` ${detail.errors.length} validation errors.` : "";
+        $("query-job-state").textContent = `${job.status}: ${job.valid_rows} valid of ${job.total_rows} rows.${errorNote}`;
+        renderImportMappingEditor(job, detail);
+      } catch (error) {
+        $("query-job-state").textContent = error.message || "Import preview failed.";
+      } finally {
+        $("query-import-preview").disabled = false;
+      }
+    }
+
+    async function confirmSelectedImport(id) {
+      const button = $("query-import-confirm");
+      if (button) button.disabled = true;
+      try {
+        const response = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}/confirm`, { method: "POST", headers: { "x-organization-id": state.currentOrg.id } });
+        let latestJob = response.importJob;
+        for (let attempt = 0; attempt < 40 && latestJob.status !== "COMPLETED" && latestJob.status !== "FAILED"; attempt += 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 250));
+          latestJob = (await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}`)).importJob;
+        }
+        if (latestJob.status !== "COMPLETED") throw new Error(latestJob.error_message || "Import job did not complete.");
+        $("query-job-state").textContent = `Import completed: ${latestJob.processed_rows} rows written.`;
+        await runQuery();
+      } catch (error) {
+        $("query-job-state").textContent = error.message || "Import failed.";
+        if (button) button.disabled = false;
+      }
+    }
+
+    async function downloadImportErrors(id) {
+      try {
+        const content = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}/errors/download`);
+        downloadText(`aevo-import-errors-${id}.csv`, content, "text/csv");
+      } catch (error) {
+        $("query-job-state").textContent = error.message || "Could not download import errors.";
+      }
+    }
+
+    async function loadAppsView() {
+      try {
+        const res = await apiFetch("/api/v1/hub/apps", { headers: { "x-organization-id": state.currentOrg.id } });
+        const apps = res.apps || [];
+        $("all-apps-grid").innerHTML = apps.map((a) => `
+          <div class="app-item-card">
+            <div class="app-item-top">
+              <span class="status-pill active"><span class="status-dot"></span><span>Available</span></span>
+            </div>
+            <h3>${escapeHtml(a.name || a.id)}</h3>
+            <p>${escapeHtml(a.description || "Operational module for Aevo Ecosystem.")}</p>
+          </div>
+        `).join("");
+      } catch (err) {
+        $("all-apps-grid").innerHTML = `<div class="empty-state">Could not load applications.</div>`;
+      }
+    }
+
+    async function loadDevicesView() {
+      try {
+        const query = state.activeScope === "STORE" && state.activeStore ? `?storeId=${encodeURIComponent(state.activeStore.id)}` : "";
+        const res = await apiFetch(`/api/v1/hub/devices${query}`, { headers: { "x-organization-id": state.currentOrg.id } });
+        const devices = res.devices || [];
+        $("all-devices-table").innerHTML = devices.length ? devices.map((d) => `
+          <tr>
+            <td><strong>${escapeHtml(d.name)}</strong></td>
+            <td><code>${escapeHtml(d.mode)}</code></td>
+            <td>${escapeHtml(state.stores.find((s) => s.id === d.storeId)?.name || d.storeId || "Main")}</td>
+            <td>${escapeHtml(d.lastActiveAt || "—")}</td>
+            <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(d.status || "ACTIVE")}</span></span></td>
+          </tr>
+        `).join("") : `<tr><td colspan="5" class="empty-state">No terminals found.</td></tr>`;
+      } catch (err) {
+        $("all-devices-table").innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load terminals.</td></tr>`;
+      }
+    }
+
+    async function loadBillingView() {
+      try {
+        const res = await apiFetch("/api/v1/hub/billing/current", { headers: { "x-organization-id": state.currentOrg.id } });
+        const sub = res.subscription || {};
+        const plan = res.plan || {};
+        $("billing-table").innerHTML = `
+          <tr>
+            <td><strong>${escapeHtml(plan.name || "Business Plan")}</strong></td>
+            <td>${escapeHtml(plan.billing_interval || "Monthly")}</td>
+            <td>${escapeHtml(sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : "Active")}</td>
+            <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(sub.status || "ACTIVE")}</span></span></td>
+          </tr>
+        `;
+      } catch (err) {
+        $("billing-table").innerHTML = `<tr><td colspan="4" class="empty-state">Could not load subscription details.</td></tr>`;
+      }
+    }
+
+    // App Initialization
+    async function init() {
+      try {
+        const me = await apiFetch("/api/auth/me");
+        state.user = me.effectiveUser || me.user;
+        state.principal = me.principal;
+
+        $("user-email").textContent = state.user.email || "Account";
+        $("user-role").textContent = state.principal?.role || "Member";
+        $("user-avatar").textContent = (state.user.displayName || state.user.email || "A").charAt(0).toUpperCase();
+
+        const orgRes = await apiFetch("/api/v1/hub/organizations");
+        state.organizations = orgRes.organizations || [];
+
+        if (!state.organizations.length) {
+          window.location.replace("/organize?setup=true");
+          return;
+        }
+
+        const savedOrgId = localStorage.getItem("aevo.hub.orgId");
+        state.currentOrg = state.organizations.find((o) => o.id === savedOrgId) || state.organizations[0];
+        localStorage.setItem("aevo.hub.orgId", state.currentOrg.id);
+
+        $("flyout-org-name").textContent = state.currentOrg.name;
+
+        // Fetch stores for active org
+        const storesRes = await apiFetch(`/api/v1/hub/stores?organizationId=${encodeURIComponent(state.currentOrg.id)}`, {
+          headers: { "x-organization-id": state.currentOrg.id }
+        });
+        state.stores = storesRes.stores || [];
+        $("flyout-store-count").textContent = state.stores.length;
+
+        // Populate Stores list in Context Flyout
+        const flyoutStoresList = $("flyout-stores-list");
+        if (state.stores.length === 0) {
+          flyoutStoresList.innerHTML = `<div style="padding: 8px 10px; font-size: 0.72rem; color: var(--muted);">No stores registered</div>`;
+        } else {
+          flyoutStoresList.innerHTML = state.stores.map((s) => `
+            <button class="flyout-item flyout-store-btn" data-store-id="${escapeHtml(s.id)}" type="button" role="menuitem">
+              <svg viewBox="0 0 24 24"><path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+              <div class="flyout-item-text">
+                <span class="flyout-item-title">${escapeHtml(s.name)}</span>
+                <span class="flyout-item-sub">Store Workspace · ${escapeHtml(s.code)}</span>
+              </div>
+            </button>
+          `).join("");
+
+          flyoutStoresList.querySelectorAll(".flyout-store-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              contextFlyout.classList.remove("open");
+              contextBtn.setAttribute("aria-expanded", "false");
+              setScope("STORE", btn.dataset.storeId);
+            });
+          });
+        }
+
+        // Role-Based Scope Routing:
+        // - Store Manager defaults directly to Store Workspace
+        // - Owner and Organization Manager default to Organization Workspace
+        const savedScope = localStorage.getItem("aevo.hub.scope");
+        const savedStoreId = localStorage.getItem("aevo.hub.storeId");
+
+        const savedStore = state.stores.find((store) => store.id === savedStoreId);
+        if (state.principal?.role === "STORE_MANAGER" || (savedScope === "STORE" && savedStore)) {
+          setScope("STORE", savedStore?.id || state.stores[0]?.id);
+        } else {
+          setScope("ORGANIZATION");
+        }
+      } catch (err) {
+        if (err instanceof AuthApiError && err.status === 401) {
+          window.location.replace("/login");
+          return;
+        }
+        toast(err.message || "Failed to initialize workspace", true);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

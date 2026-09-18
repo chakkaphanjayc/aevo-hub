@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["bun"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@aevo/contracts": ["packages/contracts/src/index.ts"],
+      "@aevo/query": ["packages/query/src/index.ts"],
+      "@aevo/db": ["packages/db/src/index.ts"],
+      "@aevo/auth": ["packages/auth/src/index.ts"],
+      "@aevo/entitlements": ["packages/entitlements/src/index.ts"],
+      "@aevo/ordering": ["packages/ordering/src/index.ts"],
+      "@aevo/realtime": ["packages/realtime/src/index.ts"],
+      "@aevo/reporting": ["packages/reporting/src/index.ts"],
+      "@aevo/push": ["packages/push/src/index.ts"],
+      "@aevo/line": ["packages/line/src/index.ts"],
+      "@aevo/odoo": ["packages/odoo/src/index.ts"],
+      "@aevo/hub-client": ["packages/sdk/src/index.ts"]
+    }
+  },
+  "include": [
+    "apps/**/*",
+    "packages/**/*",
+    "scripts/**/*",
+    "test/**/*"
+  ]
+}

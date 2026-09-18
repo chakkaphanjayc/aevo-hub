@@ -1,0 +1,34 @@
+{
+  "name": "aevo-hub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run apps/gateway/src/index.ts",
+    "dev:gateway": "bun run apps/gateway/src/index.ts",
+    "dev:web": "bun run apps/web/src/server.ts",
+    "dev:worker": "bun run apps/worker/src/index.ts",
+    "db:migrate": "bun run scripts/migrate.ts",
+    "db:query": "bun run scripts/sql.ts",
+    "db:seed": "bun run scripts/seed.ts",
+    "test": "bun test",
+    "typecheck": "bun x tsc --noEmit",
+    "build": "bun run build:gateway",
+    "build:gateway": "bun build apps/gateway/src/index.ts --target bun --outdir dist"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.2.0",
+    "@elysiajs/swagger": "^1.2.0",
+    "@supabase/supabase-js": "^2.49.1",
+    "elysia": "^1.2.23",
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.8.2"
+  }
+}
