@@ -1,0 +1,16 @@
+{
+  "name": "@aevo/db",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aevo/contracts": "workspace:*",
+    "@aevo/query": "workspace:*",
+    "@aevo/ordering": "workspace:*",
+    "@supabase/supabase-js": "^2.49.1"
+  }
+}
