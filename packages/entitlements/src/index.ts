@@ -1,10 +1,6 @@
-import type {
-  OrganizationEntitlement,
-  PlanEntitlement,
-  ResolvedEntitlements,
-  UsageCounter
-} from "@aevo/contracts";
+import type { ResolvedEntitlements } from "@aevo/contracts";
 import type { Database } from "@aevo/db";
+import { throwDatabaseError } from "@aevo/db";
 
 export class EntitlementError extends Error {
   readonly code: string;
@@ -29,26 +25,90 @@ export class EntitlementError extends Error {
 
 type Row = Record<string, unknown>;
 
+function isRow(value: unknown): value is Row {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function mapResolvedEntitlements(value: unknown, organizationId: string): ResolvedEntitlements | null {
+  if (!isRow(value)) return null;
+
+  const features: Record<string, boolean> = {};
+  const limits: Record<string, number | null> = {};
+  const usage: Record<string, number> = {};
+  const rawFeatures = isRow(value.features) ? value.features : {};
+  const rawLimits = isRow(value.limits) ? value.limits : {};
+  const rawUsage = isRow(value.usage) ? value.usage : {};
+
+  for (const [key, enabled] of Object.entries(rawFeatures)) features[key] = enabled === true;
+  for (const [key, limit] of Object.entries(rawLimits)) {
+    if (limit === null || limit === undefined) {
+      limits[key] = null;
+    } else {
+      const parsed = Number(limit);
+      limits[key] = Number.isFinite(parsed) ? parsed : null;
+    }
+  }
+  for (const [key, count] of Object.entries(rawUsage)) {
+    const parsed = Number(count);
+    usage[key] = Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return {
+    organizationId,
+    planId: String(value.planId ?? "starter"),
+    status: String(value.status ?? "ACTIVE"),
+    features,
+    limits,
+    usage
+  };
+}
+
+function isMissingEntitlementRoutine(error: { code?: string } | null): boolean {
+  return Boolean(error && ["PGRST202", "42883"].includes(error.code ?? ""));
+}
+
 export async function resolveOrganizationEntitlements(
   database: Database,
   organizationId: string
 ): Promise<ResolvedEntitlements> {
-  // 1. Fetch active subscription
-  const subRes = await database.client
-    .from("subscriptions")
-    .select("id,plan_id,status,trial_end,current_period_end,grace_period_ends_at")
-    .eq("organization_id", organizationId)
-    .maybeSingle();
+  // The read model collapses subscription, resolved features, limits, and
+  // current usage into one database round trip. Keep the query fallback so a
+  // rolling deployment remains compatible before the migration is applied.
+  const rpcResult = await database.client.rpc("hub_organization_entitlements", {
+    p_organization_id: organizationId
+  });
+  if (!rpcResult.error) {
+    const resolved = mapResolvedEntitlements(rpcResult.data, organizationId);
+    if (!resolved) throw new Error("Organization entitlement read model returned an invalid payload");
+    return resolved;
+  }
+  if (!isMissingEntitlementRoutine(rpcResult.error)) {
+    throwDatabaseError(rpcResult.error, "organization entitlement read model");
+  }
+
+  // Fallback for deployments that have not run the read-model migration yet.
+  const [subRes, entRes, usageRes] = await Promise.all([
+    database.client
+      .from("subscriptions")
+      .select("id,plan_id,status,trial_end,current_period_end,grace_period_ends_at")
+      .eq("organization_id", organizationId)
+      .maybeSingle(),
+    database.client
+      .from("organization_entitlements")
+      .select("feature_key,is_enabled,limit_value,custom_override")
+      .eq("organization_id", organizationId),
+    database.client
+      .from("usage_counters")
+      .select("feature_key,current_count")
+      .eq("organization_id", organizationId)
+  ]);
+  throwDatabaseError(subRes.error, "load organization subscription");
+  throwDatabaseError(entRes.error, "load organization entitlements");
+  throwDatabaseError(usageRes.error, "load organization usage");
 
   const sub = subRes.data as Row | null;
   const planId = sub ? String(sub.plan_id) : "starter";
   const status = sub ? String(sub.status) : "ACTIVE";
-
-  // 2. Fetch organization entitlements (includes custom overrides)
-  const entRes = await database.client
-    .from("organization_entitlements")
-    .select("feature_key,is_enabled,limit_value,custom_override")
-    .eq("organization_id", organizationId);
 
   const features: Record<string, boolean> = {};
   const limits: Record<string, number | null> = {};
@@ -80,12 +140,6 @@ export async function resolveOrganizationEntitlements(
       }
     }
   }
-
-  // 3. Fetch current usage counters
-  const usageRes = await database.client
-    .from("usage_counters")
-    .select("feature_key,current_count")
-    .eq("organization_id", organizationId);
 
   const usage: Record<string, number> = {};
   if (usageRes.data && Array.isArray(usageRes.data)) {

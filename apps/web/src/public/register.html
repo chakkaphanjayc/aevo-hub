@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create your Aevo ID — Aevo Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/shared.css">
   <style>
     body {
@@ -88,47 +88,48 @@
       <a href="/" class="brand-group" style="display:inline-flex; margin-bottom:14px;">
         <div class="brand-mark" style="width:36px; height:36px;">A</div>
       </a>
-      <h2 class="auth-title">Create your Aevo ID</h2>
-      <p class="auth-subtitle">ศูนย์กลางจัดการร้านค้า แอป และระบบธุรกิจของคุณ</p>
+      <div class="locale-switcher" data-locale-switcher id="register-locale-switcher"></div>
+      <h2 class="auth-title" data-i18n="auth.register.title">Create your Aevo ID</h2>
+      <p class="auth-subtitle" data-i18n="auth.register.subtitle">ศูนย์กลางจัดการร้านค้า แอป และระบบธุรกิจของคุณ</p>
     </div>
 
     <form id="form-register" class="auth-form">
       <div class="input-field-group">
-        <label for="reg-fullname">ชื่อ-นามสกุล (Full Name) *</label>
-        <input type="text" id="reg-fullname" required placeholder="เช่น สมชาย วงศ์สว่าง" autocomplete="name" />
+        <label for="reg-fullname"><span data-i18n="auth.register.name">ชื่อ-นามสกุล</span> *</label>
+        <input type="text" id="reg-fullname" required placeholder="เช่น สมชาย วงศ์สว่าง" data-i18n-placeholder="auth.register.namePlaceholder" autocomplete="name" />
       </div>
 
       <div class="input-field-group">
-        <label for="reg-email">อีเมล (Work Email) *</label>
+        <label for="reg-email"><span data-i18n="auth.register.email">อีเมล</span> *</label>
         <input type="email" id="reg-email" required placeholder="owner@business.com" autocomplete="email" />
       </div>
 
       <div class="input-field-group">
-        <label for="reg-password">รหัสผ่าน (Password) *</label>
-        <input type="password" id="reg-password" required minlength="8" placeholder="ขั้นต่ำ 8 ตัวอักษร" autocomplete="new-password" />
+        <label for="reg-password"><span data-i18n="auth.register.password">รหัสผ่าน</span> *</label>
+        <input type="password" id="reg-password" required minlength="8" placeholder="ขั้นต่ำ 8 ตัวอักษร" data-i18n-placeholder="auth.register.passwordPlaceholder" autocomplete="new-password" />
       </div>
 
       <div class="input-field-group">
-        <label for="reg-confirm-password">ยืนยันรหัสผ่าน (Confirm Password) *</label>
-        <input type="password" id="reg-confirm-password" required minlength="8" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autocomplete="new-password" />
+        <label for="reg-confirm-password"><span data-i18n="auth.register.confirm">ยืนยันรหัสผ่าน</span> *</label>
+        <input type="password" id="reg-confirm-password" required minlength="8" placeholder="พิมพ์รหัสผ่านอีกครั้ง" data-i18n-placeholder="auth.register.confirmPlaceholder" autocomplete="new-password" />
       </div>
 
       <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.78rem; color:var(--text-muted); cursor:pointer; margin-top:2px;">
         <input type="checkbox" id="reg-terms" required style="margin-top:2px;">
-        <span>ฉันยอมรับ Terms of Service และ Privacy Policy ของ Aevo Hub</span>
+        <span data-i18n="auth.register.terms">ฉันยอมรับ Terms of Service และ Privacy Policy ของ Aevo Hub</span>
       </label>
 
       <button type="submit" id="btn-submit" class="pill-btn pill-btn-primary" style="width:100%; padding:10px; margin-top:6px;">
-        <span>สร้างบัญชี & ตั้งค่าธุรกิจ →</span>
+        <span data-i18n="auth.register.submit">สร้างบัญชี & ตั้งค่าธุรกิจ →</span>
       </button>
     </form>
 
     <div class="auth-foot">
-      มีบัญชีอยู่แล้ว? <a href="/login">ลงชื่อเข้าใช้ (Sign In) →</a>
+      <span data-i18n="auth.register.hasAccount">มีบัญชีอยู่แล้ว?</span> <a href="/login" data-i18n="auth.register.signIn">ลงชื่อเข้าใช้ (Sign In) →</a>
     </div>
 
     <div style="text-align:center;">
-      <a href="/" style="font-size:0.78rem; color:var(--text-light); text-decoration:none;">← กลับสู่หน้าหลัก Aevo Hub</a>
+      <a href="/" data-i18n="auth.register.back" style="font-size:0.78rem; color:var(--text-light); text-decoration:none;">← กลับสู่หน้าหลัก Aevo Hub</a>
     </div>
   </div>
 
@@ -137,6 +138,10 @@
 
   <script type="module">
     import { apiFetch, redirectIfAuthenticated } from "/auth.js";
+    import { createI18n } from "/i18n.js";
+
+    const i18n = createI18n({ apiFetch });
+    void i18n.init();
 
     function showToast(msg, isError = false) {
       const container = document.getElementById("toast-tray");
@@ -168,7 +173,7 @@
       }
 
       submitBtn.disabled = true;
-      submitBtn.textContent = "Creating Account...";
+      submitBtn.textContent = i18n.t("common.loading");
       try {
         const data = await apiFetch("/api/v1/hub/onboarding/register", {
           method: "POST",
@@ -176,12 +181,12 @@
         });
         showToast(`Welcome, ${data.user?.displayName || email}! Redirecting...`);
         setTimeout(() => {
-        window.location.assign("/organize?setup=true");
+        window.location.assign("/setup");
         }, 500);
       } catch (err) {
         showToast(err instanceof Error ? err.message : "Registration failed", true);
         submitBtn.disabled = false;
-        submitBtn.innerHTML = "<span>สร้างบัญชี & ตั้งค่าธุรกิจ →</span>";
+        submitBtn.innerHTML = `<span>${i18n.t("auth.register.submit")}</span>`;
       }
     };
   </script>

@@ -131,24 +131,7 @@ describe("Aevo Hub: Onboarding & server-resolved entitlements", () => {
     expect(res.session.completedSteps).toContain("RESOURCES");
   });
 
-  it("9. 1-Click Demo Data Generation: seeds demo products, venue, orders and bookings", async () => {
-    const res = await client.hub.onboarding.generateDemoData({
-      organizationId: testOrgId,
-      storeId: testStoreId,
-      businessType: "sport"
-    });
-
-    expect(res.success).toBe(true);
-    expect(res.demoData.categoriesCreated).toBeGreaterThan(0);
-    expect(res.demoData.productsCreated).toBeGreaterThan(0);
-    expect(res.demoData.venuesCreated).toBeGreaterThan(0);
-    expect(res.demoData.resourcesCreated).toBeGreaterThan(0);
-    expect(res.demoData.ordersCreated).toBeGreaterThan(0);
-    expect(res.demoData.bookingsCreated).toBeGreaterThan(0);
-    expect(res.demoData.isDemoData).toBe(true);
-  });
-
-  it("10. Setup Progress Checklist: reports progress percent and step completion", async () => {
+  it("9. Setup Progress Checklist: reports progress percent and step completion", async () => {
     const res = await client.hub.onboarding.getChecklist(testOrgId, testStoreId);
     expect(res.success).toBe(true);
     expect(res.checklist.items.length).toBeGreaterThanOrEqual(6);
@@ -162,16 +145,7 @@ describe("Aevo Hub: Onboarding & server-resolved entitlements", () => {
     expect(storeItem?.status).toBe("COMPLETED");
   });
 
-  it("11. 1-Click Demo Data Cleanup: deletes only demo data without affecting config", async () => {
-    const res = await client.hub.onboarding.clearDemoData(testOrgId, testStoreId);
-    expect(res.success).toBe(true);
-    expect(res.deletedCounts.products).toBeGreaterThan(0);
-    expect(res.deletedCounts.categories).toBeGreaterThan(0);
-    expect(res.deletedCounts.venues).toBeGreaterThan(0);
-    expect(res.deletedCounts.resources).toBeGreaterThan(0);
-  });
-
-  it("12. Completes Onboarding: sets session is_completed and transitions organization", async () => {
+  it("10. Completes Onboarding: sets session is_completed and transitions organization", async () => {
     const res = await client.hub.onboarding.complete(testSessionId);
     expect(res.success).toBe(true);
     expect(res.session.isCompleted).toBe(true);

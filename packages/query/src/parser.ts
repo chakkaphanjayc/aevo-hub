@@ -17,6 +17,51 @@ const comparisonOperators: Readonly<Record<string, QueryOperator>> = {
   "<=": "lte"
 };
 
+const namedOperators: Readonly<Record<string, QueryOperator>> = {
+  contains: "contains",
+  has: "contains",
+  not_contains: "not_contains",
+  notcontains: "not_contains",
+  starts_with: "starts_with",
+  starts: "starts_with",
+  ends_with: "ends_with",
+  ends: "ends_with",
+  eq: "eq",
+  exact: "eq",
+  equals: "eq",
+  neq: "neq",
+  not_equal: "neq",
+  gt: "gt",
+  gte: "gte",
+  lt: "lt",
+  lte: "lte",
+  in: "in",
+  not_in: "not_in",
+  between: "between",
+  empty: "is_empty",
+  is_empty: "is_empty",
+  not_empty: "is_not_empty",
+  is_not_empty: "is_not_empty",
+  before: "before",
+  after: "after",
+  on: "on",
+  today: "today",
+  yesterday: "yesterday",
+  this_week: "this_week",
+  this_month: "this_month"
+};
+
+const noValueOperators = new Set<QueryOperator>([
+  "is_empty",
+  "is_not_empty",
+  "today",
+  "yesterday",
+  "this_week",
+  "this_month"
+]);
+
+const listOperators = new Set<QueryOperator>(["in", "not_in", "between"]);
+
 function isWhitespace(character: string): boolean {
   return /\s/u.test(character);
 }
@@ -122,7 +167,7 @@ function notNode(child: QueryNode): QueryNotNode {
 }
 
 function isKeyword(token: Token, keyword: string): boolean {
-  return token.kind === "word" && token.value.toUpperCase() === keyword;
+  return token.kind === "word" && token.value.replace(/^\/+/, "").toUpperCase() === keyword;
 }
 
 function startsPrimary(token: Token): boolean {
@@ -201,6 +246,20 @@ class QueryParser {
       if (!comparison) throw new QuerySyntaxError(`Unsupported comparison '${this.peek().value}'`, this.peek().position);
       operator = comparison;
       this.cursor += 1;
+    } else if (this.peek().kind === "word") {
+      const namedOperator = namedOperators[this.peek().value.toLowerCase()];
+      const next = this.tokens[this.cursor + 1];
+      const hasNamedValue = namedOperator && next?.kind === "colon";
+      const isNamedNoValue = namedOperator && noValueOperators.has(namedOperator);
+      if (hasNamedValue || isNamedNoValue) {
+        operator = namedOperator;
+        this.cursor += 1;
+        if (hasNamedValue) this.match("colon");
+      }
+    }
+
+    if (noValueOperators.has(operator)) {
+      return { type: "condition", field: fieldToken.value, operator };
     }
 
     const value = this.peek();
@@ -208,6 +267,13 @@ class QueryParser {
       throw new QuerySyntaxError(`Expected a value for '${fieldToken.value}'`, value.position);
     }
     this.cursor += 1;
+    if (listOperators.has(operator)) {
+      const values = value.value.split(",").map((item) => item.trim()).filter(Boolean);
+      if (values.length === 0 || (operator === "between" && values.length !== 2)) {
+        throw new QuerySyntaxError(`Operator '${operator}' requires ${operator === "between" ? "two" : "at least one"} comma-separated values`, value.position);
+      }
+      return { type: "condition", field: fieldToken.value, operator, value: values };
+    }
     return { type: "condition", field: fieldToken.value, operator, value: value.value };
   }
 

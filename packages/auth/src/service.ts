@@ -64,7 +64,7 @@ export class AuthService {
       .select("display_name,status")
       .eq("id", data.user.id)
       .maybeSingle();
-    if (profileResult.error || profileResult.data?.status === "DISABLED") return null;
+    if (profileResult.error || !profileResult.data || profileResult.data.status === "DISABLED") return null;
     const metadata = data.user.user_metadata as Record<string, unknown> | undefined;
     const profileDisplayName = typeof profileResult.data?.display_name === "string"
       ? profileResult.data.display_name.trim()
@@ -81,10 +81,43 @@ export class AuthService {
     };
   }
 
+  /**
+   * Resolve an identity from an already validated application session.
+   *
+   * Browser requests carry an opaque app-session cookie. The session manager
+   * has already checked its hash, revocation and expiry before this method is
+   * called, so asking Supabase Auth to validate the same access token again
+   * only adds a remote network round trip. The profile status check remains
+   * here so disabling a user immediately invalidates the application session
+   * read path as well.
+   */
+  async resolveIdentityByUserId(userId: string): Promise<AuthenticatedUser | null> {
+    if (!userId) return null;
+    const profileResult = await this.database.client
+      .from("user_profiles")
+      .select("id,email,display_name,status")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileResult.error || !profileResult.data || profileResult.data.status === "DISABLED") return null;
+
+    const email = typeof profileResult.data.email === "string"
+      ? profileResult.data.email.trim()
+      : "";
+    if (!email) return null;
+    const displayName = typeof profileResult.data.display_name === "string"
+      ? profileResult.data.display_name.trim()
+      : "";
+    return {
+      userId: String(profileResult.data.id),
+      email,
+      ...(displayName ? { displayName } : {})
+    };
+  }
+
   async resolve(accessToken: string, organizationId?: string) {
     const identity = await this.resolveIdentity(accessToken);
     if (!identity) return null;
-    return resolvePrincipal(this.database, identity.userId, organizationId);
+    return resolvePrincipal(this.database, identity.userId, organizationId, identity);
   }
 
   async refresh(refreshToken: string): Promise<AuthSession> {

@@ -8,7 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run apps/gateway/src/index.ts",
+    "dev": "bun run scripts/dev.ts",
+    "dev:all": "bun run scripts/dev.ts",
     "dev:gateway": "bun run apps/gateway/src/index.ts",
     "dev:web": "bun run apps/web/src/server.ts",
     "dev:worker": "bun run apps/worker/src/index.ts",

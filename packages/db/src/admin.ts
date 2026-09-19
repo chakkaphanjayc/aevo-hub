@@ -30,6 +30,19 @@ export interface AdminOrganizationSummary {
   createdAt: string;
 }
 
+export interface AdminStoreSummary {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  name: string;
+  code: string;
+  timezone: string;
+  currency: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface AdminUserSummary {
   id: string;
   email: string;
@@ -42,6 +55,50 @@ export interface AdminUserSummary {
     role: string;
     storeIds: string[];
   }>;
+}
+
+type JsonRecord = Record<string, unknown>;
+
+const defaultFeatureFlags: Record<string, boolean> = {
+  pos: true,
+  kiosk: true,
+  booking: true,
+  crm: true,
+  inventory: true,
+  odoo: false
+};
+
+function asRecord(value: unknown): JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as JsonRecord
+    : {};
+}
+
+function asRelationRecord(value: unknown): JsonRecord {
+  if (Array.isArray(value)) return asRecord(value[0]);
+  return asRecord(value);
+}
+
+function asRelationRecords(value: unknown): JsonRecord[] {
+  return Array.isArray(value) ? value.map(asRecord) : [];
+}
+
+function asBooleanRecord(value: unknown): Record<string, boolean> {
+  const record = asRecord(value);
+  return Object.fromEntries(
+    Object.entries(record).filter(([, flag]) => typeof flag === "boolean")
+  ) as Record<string, boolean>;
+}
+
+function countByOrganization(value: unknown): Map<string, number> {
+  const counts = new Map<string, number>();
+  if (!Array.isArray(value)) return counts;
+  for (const row of value) {
+    const organizationId = asRecord(row).organization_id;
+    if (typeof organizationId !== "string") continue;
+    counts.set(organizationId, (counts.get(organizationId) ?? 0) + 1);
+  }
+  return counts;
 }
 
 export async function getPlatformOverview(database: Database): Promise<PlatformOverview> {
@@ -100,39 +157,33 @@ export async function listAdminOrganizations(database: Database): Promise<AdminO
     }
 
     const rows = orgsResult.data || [];
-    const summaries: AdminOrganizationSummary[] = [];
+    const organizationIds = rows.map((org) => String(org.id));
+    const [storesResult, membershipsResult] = organizationIds.length
+      ? await Promise.all([
+          database.client.from("stores").select("organization_id").in("organization_id", organizationIds),
+          database.client.from("memberships").select("organization_id").in("organization_id", organizationIds)
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
 
-    // For each org, fetch store count and member count
-    for (const org of rows) {
-      const [storesCountRes, membersCountRes] = await Promise.all([
-        database.client.from("stores").select("id", { count: "exact", head: true }).eq("organization_id", org.id),
-        database.client.from("memberships").select("id", { count: "exact", head: true }).eq("organization_id", org.id)
-      ]);
+    if (storesResult.error) return throwDatabaseError(storesResult.error, "count organization stores");
+    if (membershipsResult.error) return throwDatabaseError(membershipsResult.error, "count organization members");
 
-      summaries.push({
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        legalName: org.legal_name,
-        businessType: org.business_type,
-        status: org.status || "ACTIVE",
-        maxUsers: Number(org.max_users ?? 10),
-        maxStores: Number(org.max_stores ?? 5),
-        featureFlags: (org.feature_flags as Record<string, boolean>) || {
-          pos: true,
-          kiosk: true,
-          booking: true,
-          crm: true,
-          inventory: true,
-          odoo: false
-        },
-        storesCount: storesCountRes.count ?? 0,
-        membersCount: membersCountRes.count ?? 0,
-        createdAt: org.created_at
-      });
-    }
-
-    return summaries;
+    const storeCounts = countByOrganization(storesResult.data);
+    const memberCounts = countByOrganization(membershipsResult.data);
+    return rows.map((org) => ({
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      legalName: org.legal_name,
+      businessType: org.business_type,
+      status: org.status || "ACTIVE",
+      maxUsers: Number(org.max_users ?? 10),
+      maxStores: Number(org.max_stores ?? 5),
+      featureFlags: { ...defaultFeatureFlags, ...asBooleanRecord(org.feature_flags) },
+      storesCount: storeCounts.get(org.id) ?? 0,
+      membersCount: memberCounts.get(org.id) ?? 0,
+      createdAt: org.created_at
+    }));
   } catch (error) {
     return throwDatabaseError(error, "Failed to list admin organizations");
   }
@@ -185,7 +236,7 @@ export async function updateAdminOrganization(
         status: org.status || "ACTIVE",
         maxUsers: Number(org.max_users ?? 10),
         maxStores: Number(org.max_stores ?? 5),
-        featureFlags: (org.feature_flags as Record<string, boolean>) || {},
+        featureFlags: { ...defaultFeatureFlags, ...asBooleanRecord(org.feature_flags) },
         storesCount: storesCountRes.count ?? 0,
         membersCount: membersCountRes.count ?? 0,
         createdAt: org.created_at
@@ -214,40 +265,101 @@ export async function listAdminUsers(database: Database): Promise<AdminUserSumma
     }
 
     const users = usersResult.data || [];
-    const results: AdminUserSummary[] = [];
+    const userIds = users.map((user) => String(user.id));
+    const membershipsResult = userIds.length
+      ? await database.client
+          .from("memberships")
+          .select(`
+            user_id,
+            organization_id,
+            role_id,
+            roles:role_id ( code ),
+            organizations:organization_id ( name ),
+            membership_stores ( store_id )
+          `)
+          .in("user_id", userIds)
+      : { data: [], error: null };
 
-    for (const u of users) {
-      const membershipsResult = await database.client
-        .from("memberships")
-        .select(`
-          organization_id,
-          role_id,
-          roles:role_id ( code ),
-          organizations:organization_id ( name ),
-          membership_stores ( store_id )
-        `)
-        .eq("user_id", u.id);
-
-      const memList = (membershipsResult.data || []).map((m: any) => ({
-        organizationId: m.organization_id,
-        organizationName: m.organizations?.name || m.organization_id,
-        role: m.roles?.code || "MEMBER",
-        storeIds: (m.membership_stores || []).map((s: any) => s.store_id)
-      }));
-
-      results.push({
-        id: u.id,
-        email: u.email,
-        displayName: u.display_name || "",
-        status: u.status || "ACTIVE",
-        createdAt: u.created_at,
-        memberships: memList
-      });
+    if (membershipsResult.error) return throwDatabaseError(membershipsResult.error, "list user memberships");
+    const membershipsByUser = new Map<string, JsonRecord[]>();
+    for (const value of membershipsResult.data ?? []) {
+      const membership = asRecord(value);
+      const userId = typeof membership.user_id === "string" ? membership.user_id : "";
+      if (!userId) continue;
+      const memberships = membershipsByUser.get(userId) ?? [];
+      memberships.push(membership);
+      membershipsByUser.set(userId, memberships);
     }
 
-    return results;
+    return users.map((user) => {
+      const memberships = (membershipsByUser.get(user.id) ?? []).map((membership) => {
+        const organizationId = String(membership.organization_id ?? "");
+        const organization = asRelationRecord(membership.organizations);
+        const role = asRelationRecord(membership.roles);
+        return {
+          organizationId,
+          organizationName: String(organization.name ?? organizationId),
+          role: String(role.code ?? "MEMBER"),
+          storeIds: asRelationRecords(membership.membership_stores)
+            .map((store) => String(store.store_id ?? ""))
+            .filter(Boolean)
+        };
+      });
+
+      return {
+        id: user.id,
+        email: user.email,
+        displayName: user.display_name || "",
+        status: user.status || "ACTIVE",
+        createdAt: user.created_at,
+        memberships
+      };
+    });
   } catch (error) {
     return throwDatabaseError(error, "Failed to list admin users");
+  }
+}
+
+export async function listAdminStores(database: Database): Promise<AdminStoreSummary[]> {
+  try {
+    const storesResult = await database.client
+      .from("stores")
+      .select("id,organization_id,name,code,timezone,currency,status,created_at")
+      .order("created_at", { ascending: false });
+    if (storesResult.error) return throwDatabaseError(storesResult.error, "Failed to list stores");
+
+    const stores = storesResult.data ?? [];
+    const organizationIds = [...new Set(stores.map((store) => String(store.organization_id)))];
+    const organizationsResult = organizationIds.length
+      ? await database.client.from("organizations").select("id,name,slug").in("id", organizationIds)
+      : { data: [], error: null };
+    if (organizationsResult.error) return throwDatabaseError(organizationsResult.error, "Resolve store organizations");
+
+    const organizationMap = new Map(
+      (organizationsResult.data ?? []).map((organization) => [
+        String(organization.id),
+        { name: String(organization.name), slug: String(organization.slug) }
+      ])
+    );
+
+    return stores.map((store) => {
+      const organizationId = String(store.organization_id);
+      const organization = organizationMap.get(organizationId);
+      return {
+        id: String(store.id),
+        organizationId,
+        organizationName: organization?.name ?? organizationId,
+        organizationSlug: organization?.slug ?? "",
+        name: String(store.name),
+        code: String(store.code),
+        timezone: String(store.timezone ?? "Asia/Bangkok"),
+        currency: String(store.currency ?? "THB"),
+        status: String(store.status ?? "ACTIVE"),
+        createdAt: String(store.created_at)
+      };
+    });
+  } catch (error) {
+    return throwDatabaseError(error, "Failed to list admin stores");
   }
 }
 
@@ -269,36 +381,6 @@ export async function updateAdminUserStatus(
     return { success: true, userId, status };
   } catch (error) {
     return throwDatabaseError(error, "Failed to update admin user status");
-  }
-}
-
-export async function setOperatingMode(
-  database: Database,
-  mode: "production" | "testing",
-  unlimited = false
-): Promise<{ success: boolean; mode: string; unlimited: boolean }> {
-  try {
-    const payload = {
-      mode,
-      unlimited: mode === "testing" ? unlimited : false,
-      updated_at: new Date().toISOString()
-    };
-
-    const result = await database.client
-      .from("system_settings")
-      .upsert({
-        key: "operating_mode",
-        value: payload,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "key" });
-
-    if (result.error) {
-      return throwDatabaseError(result.error, "Failed to set operating mode");
-    }
-
-    return { success: true, mode, unlimited: payload.unlimited };
-  } catch (error) {
-    return throwDatabaseError(error, "Failed to set operating mode");
   }
 }
 

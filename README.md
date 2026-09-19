@@ -61,6 +61,7 @@ flowchart TB
 │           └── public/
 │               ├── workspace.html # Operational dashboard
 │               ├── organize.html  # Organization and store management
+│               ├── setup.html     # Required Setup & readiness wizard
 │               ├── admin.html     # Protected platform administration
 │               └── auth.js        # Cookie session + CSRF client helper
 ├── packages/
@@ -70,7 +71,7 @@ flowchart TB
 ├── scripts/
 │   ├── migrate.ts               # Standalone SQL migration runner (PostgreSQL 17)
 │   ├── sql.ts                   # CLI arbitrary SQL query runner
-│   └── seed.ts                  # Seeds 7 ecosystem apps, demo org, and store
+│   └── seed.ts                  # Seeds the canonical ecosystem apps only
 ├── supabase/
 │   └── migrations/              # Versioned SQL migration files
 └── test/
@@ -121,6 +122,13 @@ bun run dev:web
 ```
 
 ---
+
+### Connected local development
+
+For a local session with Aevo Play and Aevo POS, use the ecosystem launcher at
+`../LOCAL_DEVELOPMENT.md`. Hub stays on `http://localhost:4321` with its API
+on `http://localhost:4000`; the launcher passes Play/POS URLs into the Hub
+workspace so the app cards can open the connected local surfaces.
 
 ## 📡 Canonical API Gateway Surfaces
 
@@ -256,9 +264,25 @@ gateway surfaces.
 เมื่อรัน `bun run dev:web`:
 - **Workspace (`http://localhost:4321/workspace`)**: พื้นที่ปฏิบัติการสำหรับแอป อุปกรณ์ และการเรียกเก็บเงิน
 - **Organization (`http://localhost:4321/organize`)**: จัดการโปรไฟล์ สาขา สมาชิก และสิทธิ์การเข้าถึง
+- **Setup & readiness (`http://localhost:4321/setup`)**: wizard แบบบังคับสำหรับ user ที่ยังไม่มี organization ก่อนเข้าสู่ workspace
 - **Query Workbench (`http://localhost:4321/workspace`)**: ค้นหาและบันทึกมุมมองข้อมูลผ่าน Query AST
 
 การเปลี่ยน schema ใช้ versioned migrations (`bun run db:migrate`) และการตรวจสอบฐานข้อมูลใช้ CLI เท่านั้น ไม่มี arbitrary SQL endpoint หรือ SQL console ในเว็บ/SDK
+
+### Read Path และการลดเวลาโหลดหน้า
+
+ตารางธุรกิจหลักยังเป็น source of truth เดิม แต่เส้นทางอ่านของ Hub ใช้ read model ใน PostgreSQL เพื่อลด round-trip และไม่ให้หน้าเว็บยิง query ที่ยังไม่ถูกใช้งาน:
+
+- `hub_user_organizations` รวม membership, organization และ role เป็นการอ่านครั้งเดียว
+- `hub_user_navigation_favorites` ตรวจ store scope ตาม RBAC ใน database ก่อนคืนรายการ pin
+- `hub_organization_entitlements` รวม subscription, feature limits และ usage เป็น JSON read model เดียว
+- overview metrics ใช้ RPC ที่ aggregate ใน PostgreSQL แทนการดึง order/device จำนวนมากมา sum ใน Node.js
+- application catalog และ query metadata มี in-process cache แบบมีอายุ พร้อม dedupe คำขอที่กำลังทำงาน
+- session-cookie path ตรวจ app session + profile โดยตรง จึงไม่เรียก Supabase Auth `getUser()` ซ้ำทุก page request; bearer-token path ยังตรวจ JWT ตามเดิม
+
+RPC read model ทั้งหมดเปิด execute เฉพาะ `service_role`; gateway ยัง authenticate, resolve membership/store, ตรวจ permission และ entitlement ก่อนส่งผลให้ client เสมอ การ hydrate ฝั่งเว็บจะแสดง bootstrap/fallback rows ก่อน แล้ว warm profile, favorites และ universal-search metadata เบื้องหลัง พร้อม fallback สำหรับ rolling deployment ที่ยังไม่ได้ติดตั้ง migration ล่าสุด
+
+Migration สำหรับ read path คือ `20260919120000_performance_read_path.sql` และควร deploy ด้วย `bun run db:migrate` ก่อนวัด latency ของ authenticated page load
 
 ### Authentication
 

@@ -46,6 +46,39 @@ describe("Aevo Query AST", () => {
     expect(() => parseQueryText("price:>" )).toThrow(QuerySyntaxError);
   });
 
+  test("parses slash boolean commands and named filter operators", () => {
+    expect(parseQueryText("item /and test")).toEqual({
+      type: "and",
+      children: [
+        { type: "text", value: "item" },
+        { type: "text", value: "test" }
+      ]
+    });
+    expect(parseQueryText('name:"test" /and gate')).toEqual({
+      type: "and",
+      children: [
+        { type: "condition", field: "name", operator: "contains", value: "test" },
+        { type: "text", value: "gate" }
+      ]
+    });
+    expect(parseQueryText('name:"test AND se"')).toEqual({
+      type: "condition", field: "name", operator: "contains", value: "test AND se"
+    });
+    expect(parseQueryText("name:starts_with:test AND description:not_contains:obsolete")).toEqual({
+      type: "and",
+      children: [
+        { type: "condition", field: "name", operator: "starts_with", value: "test" },
+        { type: "condition", field: "description", operator: "not_contains", value: "obsolete" }
+      ]
+    });
+    expect(parseQueryText("base_price_minor:between:100,200")).toEqual({
+      type: "condition", field: "base_price_minor", operator: "between", value: ["100", "200"]
+    });
+    expect(parseQueryText("created_at:today")).toEqual({
+      type: "condition", field: "created_at", operator: "today"
+    });
+  });
+
   test("validates and normalizes field values against metadata", () => {
     const normalized = validateQuerySpec({
       version: 1,

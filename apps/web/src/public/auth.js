@@ -115,31 +115,37 @@ export async function getCurrentUser(force = false) {
   return currentUserPromise;
 }
 
-export async function redirectIfAuthenticated(nextPath = null) {
-  const me = await getCurrentUser().catch(() => null);
-  if (!me) return false;
+export function getDefaultAuthenticatedPath(bootstrap) {
+  const organizations = Array.isArray(bootstrap?.organizations) ? bootstrap.organizations : [];
+  if (organizations.length === 0) return "/setup";
 
+  const role = String(bootstrap?.principal?.role || "");
+  const hasOrganizationLayerAccess = organizations.some((organization) => ["OWNER", "ADMIN", "ORGANIZATION_MANAGER"].includes(String(organization?.role || "")));
+  if (hasOrganizationLayerAccess || ["OWNER", "ADMIN", "ORGANIZATION_MANAGER"].includes(role)) return "/organize";
+
+  const stores = Array.isArray(bootstrap?.stores) ? bootstrap.stores : [];
+  if (stores.length > 0) return `/workspace?storeId=${encodeURIComponent(stores[0].id)}`;
+  const organizationId = organizations[0]?.id;
+  return organizationId ? `/setup?organizationId=${encodeURIComponent(organizationId)}` : "/setup";
+}
+
+export async function redirectIfAuthenticated(nextPath = null) {
   const safeNext = typeof nextPath === "string" && nextPath.startsWith("/") && !nextPath.startsWith("//")
     ? nextPath
     : null;
   if (safeNext) {
+    const me = await getCurrentUser().catch(() => null);
+    if (!me) return false;
     window.location.replace(safeNext);
     return true;
   }
 
   try {
-    const organizations = await apiFetch("/api/v1/hub/organizations");
-    const activeOrganization = organizations?.organizations?.[0];
-    if (!activeOrganization) {
-      window.location.replace("/organize?setup=true");
-      return true;
-    }
-    const stores = await apiFetch(`/api/v1/hub/stores?organizationId=${encodeURIComponent(activeOrganization.id)}`, {
-      headers: { "x-organization-id": activeOrganization.id }
-    });
-    window.location.replace(stores?.stores?.length ? "/workspace" : "/organize?setup=true");
-  } catch {
-    window.location.replace("/workspace");
+    const bootstrap = await apiFetch("/api/v1/hub/bootstrap");
+    window.location.replace(getDefaultAuthenticatedPath(bootstrap));
+  } catch (error) {
+    if (error instanceof AuthApiError && error.status === 401) return false;
+    window.location.replace("/setup");
   }
   return true;
 }
@@ -190,8 +196,9 @@ export async function setupImpersonationBanner() {
   `;
   banner.innerHTML = `
     <div style="display:flex; align-items:center; gap:8px;">
-      <span>⚠ IMPERSONATING TENANT SESSION</span>
-      <span style="font-weight:400; opacity:0.85;">(Ephemeral session with strict 30-min TTL)</span>
+      <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M12 3 3.5 19h17L12 3Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span>Impersonating tenant session</span>
+      <span style="font-weight:400; opacity:0.85;">(Ephemeral session with strict 30-minute TTL)</span>
     </div>
     <button type="button" id="btn-exit-impersonation" style="
       background: #f59e0b;
@@ -202,7 +209,7 @@ export async function setupImpersonationBanner() {
       padding: 4px 12px;
       border-radius: 9999px;
       cursor: pointer;
-    ">Exit Impersonation ✕</button>
+    ">Exit impersonation</button>
   `;
 
   document.body.prepend(banner);

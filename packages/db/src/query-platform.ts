@@ -1,5 +1,4 @@
 import type {
-  Permission,
   QueryFieldCapabilities,
   QueryFieldMetadata,
   QueryJobStatus,
@@ -20,7 +19,9 @@ import type {
   QueryImportMappingRecord,
   SavedQueryRecord,
   SavedQueryScope,
-  SessionPrincipal
+  SessionPrincipal,
+  PlatformPermission,
+  PlatformRole
 } from "@aevo/contracts";
 import { queryFieldTypes, queryOperators, savedQueryScopes } from "@aevo/contracts";
 import { compileQuery, validateImportRows, validateQuerySpec, type ImportMapping, type ImportSourceRow, type QueryPlan } from "@aevo/query";
@@ -36,6 +37,24 @@ const QUERY_METADATA_CACHE_TTL_MS = 30_000;
 const queryMetadataCache = new WeakMap<Database, { expiresAt: number; models: QueryModelMetadata[] }>();
 const QUERY_JOB_MAX_ATTEMPTS = 3;
 const QUERY_JOB_STALE_AFTER_MS = 15 * 60 * 1000;
+
+/**
+ * Platform administration has a separate RBAC boundary from organization
+ * memberships. Keeping this principal distinct prevents a platform query from
+ * accidentally inheriting an organization scope or tenant permission.
+ */
+export interface PlatformQueryPrincipal {
+  userId: string;
+  email: string;
+  platformRole: PlatformRole;
+  permissions: PlatformPermission[];
+}
+
+type QueryPrincipal = SessionPrincipal | PlatformQueryPrincipal;
+
+function isPlatformQueryPrincipal(principal: QueryPrincipal): principal is PlatformQueryPrincipal {
+  return "platformRole" in principal;
+}
 
 export class QueryPlatformError extends Error {
   readonly status: number;
@@ -276,11 +295,15 @@ export async function getQueryModel(database: Database, technicalName: string): 
   return model;
 }
 
-function hasPermission(principal: SessionPrincipal, permission: string): boolean {
-  return principal.permissions.includes(permission as Permission);
+export async function listPlatformQueryModels(database: Database): Promise<QueryModelMetadata[]> {
+  return (await listQueryModels(database)).filter((model) => model.tenant_scope === "PLATFORM");
 }
 
-function assertModelReadPermission(principal: SessionPrincipal, model: QueryModelMetadata): void {
+function hasPermission(principal: QueryPrincipal, permission: string): boolean {
+  return principal.permissions.some((candidate) => candidate === permission);
+}
+
+function assertModelReadPermission(principal: QueryPrincipal, model: QueryModelMetadata): void {
   if (!hasPermission(principal, model.read_permission)) {
     throw new QueryPlatformError(403, "QUERY_PERMISSION_REQUIRED", `Permission '${model.read_permission}' is required to read '${model.technical_name}'`);
   }
@@ -303,7 +326,7 @@ function collectQueryFieldPaths(node: QueryNode | null | undefined, model: Query
   for (const child of node.children) collectQueryFieldPaths(child, model, paths);
 }
 
-function assertQueryFieldPermissions(principal: SessionPrincipal, model: QueryModelMetadata, query: QuerySpecV1): void {
+function assertQueryFieldPermissions(principal: QueryPrincipal, model: QueryModelMetadata, query: QuerySpecV1): void {
   const paths = new Set<string>([
     ...(query.fields ?? []),
     ...(query.order_by ?? []).map((item) => item.field),
@@ -319,7 +342,7 @@ function assertQueryFieldPermissions(principal: SessionPrincipal, model: QueryMo
   }
 }
 
-function assertImportFieldPermissions(principal: SessionPrincipal, model: QueryModelMetadata, mappings: ImportMapping[]): void {
+function assertImportFieldPermissions(principal: QueryPrincipal, model: QueryModelMetadata, mappings: ImportMapping[]): void {
   for (const mapping of mappings) {
     const field = model.fields.find((candidate) => candidate.path === mapping.field);
     if (field?.write_permission && !hasPermission(principal, field.write_permission)) {
@@ -446,7 +469,7 @@ const MAX_ANALYSIS_ROWS = 10_000;
 
 async function fetchQueryRows(
   database: Database,
-  principal: SessionPrincipal,
+  principal: QueryPrincipal,
   model: QueryModelMetadata,
   plan: QueryPlan,
   allowedStoreIds: string[] | null,
@@ -454,8 +477,11 @@ async function fetchQueryRows(
 ): Promise<{ rows: Row[]; total: number }> {
   let query = database.client
     .from(plan.table_name)
-    .select(selectColumns(plan), { count: "exact" })
-    .eq("organization_id", principal.organizationId);
+    .select(selectColumns(plan), { count: "exact" });
+
+  if (!isPlatformQueryPrincipal(principal)) {
+    query = query.eq("organization_id", principal.organizationId);
+  }
 
   const hasStoreColumn = model.fields.some((field) => field.column_name === "store_id");
   if (requestedStoreId && model.table_name === "stores") query = query.eq("id", requestedStoreId);
@@ -518,25 +544,39 @@ function mapQueryHistory(row: Row): QueryHistoryRecord {
   };
 }
 
-export async function executeQuery(
+async function executeQueryForScope(
   database: Database,
-  principal: SessionPrincipal,
+  principal: QueryPrincipal,
   input: unknown,
-  requestedStoreId?: string
+  requestedStoreId: string | undefined,
+  scope: "TENANT" | "PLATFORM"
 ): Promise<QueryExecutionResult> {
   const startedAt = performance.now();
   if (!input || typeof input !== "object") throw new QueryPlatformError(400, "QUERY_INVALID", "Query must be an object");
   const modelName = String((input as Record<string, unknown>).model ?? "");
   const model = await getQueryModel(database, modelName);
   assertModelReadPermission(principal, model);
-  if (model.tenant_scope === "PLATFORM") throw new QueryPlatformError(403, "QUERY_PLATFORM_SCOPE", "Platform models are not available to tenant queries");
+  const isPlatformScope = scope === "PLATFORM";
+  if (isPlatformScope && (!isPlatformQueryPrincipal(principal) || model.tenant_scope !== "PLATFORM")) {
+    throw new QueryPlatformError(403, "QUERY_PLATFORM_SCOPE", "Only platform models are available to platform queries");
+  }
+  if (!isPlatformScope && model.tenant_scope === "PLATFORM") {
+    throw new QueryPlatformError(403, "QUERY_PLATFORM_SCOPE", "Platform models are not available to tenant queries");
+  }
+  if (isPlatformScope && requestedStoreId) {
+    throw new QueryPlatformError(400, "PLATFORM_STORE_SCOPE_INVALID", "Platform queries cannot be scoped to a store");
+  }
 
   const normalized = validateQuerySpec(input, model);
   assertQueryFieldPermissions(principal, model, normalized);
-  const timezone = await resolveQueryTimezone(database, principal, requestedStoreId);
+  const timezone = isPlatformScope
+    ? "UTC"
+    : await resolveQueryTimezone(database, principal as SessionPrincipal, requestedStoreId);
   const compileOptions = { timezone };
   const plan = compileQuery(normalized, model, compileOptions);
-  const allowedStoreIds = await resolveAllowedStoreIds(database, principal, requestedStoreId);
+  const allowedStoreIds = isPlatformScope
+    ? null
+    : await resolveAllowedStoreIds(database, principal as SessionPrincipal, requestedStoreId);
   const result = await fetchQueryRows(database, principal, model, plan, allowedStoreIds, requestedStoreId);
   const rows = result.rows;
   const total = result.total;
@@ -560,7 +600,9 @@ export async function executeQuery(
     const groups = buildGroups(analysisResult.rows, model, normalized.group_by ?? [], normalized.aggregates ?? []);
     const aggregates = calculateAggregates(analysisResult.rows, model, normalized.aggregates ?? []);
     const output = { model: model.technical_name, query: normalized, rows, total, groups, aggregates };
-    await recordQueryHistory(database, principal, requestedStoreId, normalized, total, Math.round(performance.now() - startedAt));
+    if (!isPlatformScope) {
+      await recordQueryHistory(database, principal as SessionPrincipal, requestedStoreId, normalized, total, Math.round(performance.now() - startedAt));
+    }
     return output;
   }
   const output = {
@@ -571,8 +613,27 @@ export async function executeQuery(
     groups: [],
     aggregates: {}
   };
-  await recordQueryHistory(database, principal, requestedStoreId, normalized, output.total, Math.round(performance.now() - startedAt));
+  if (!isPlatformScope) {
+    await recordQueryHistory(database, principal as SessionPrincipal, requestedStoreId, normalized, output.total, Math.round(performance.now() - startedAt));
+  }
   return output;
+}
+
+export async function executeQuery(
+  database: Database,
+  principal: SessionPrincipal,
+  input: unknown,
+  requestedStoreId?: string
+): Promise<QueryExecutionResult> {
+  return executeQueryForScope(database, principal, input, requestedStoreId, "TENANT");
+}
+
+export async function executePlatformQuery(
+  database: Database,
+  principal: PlatformQueryPrincipal,
+  input: unknown
+): Promise<QueryExecutionResult> {
+  return executeQueryForScope(database, principal, input, undefined, "PLATFORM");
 }
 
 export async function listQueryHistory(

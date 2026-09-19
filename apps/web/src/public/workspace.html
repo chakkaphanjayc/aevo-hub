@@ -7,7 +7,7 @@
   <title>Workspace — Aevo Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared.css" />
   <style>
     :root {
@@ -26,8 +26,8 @@
       --shadow: 0 4px 20px rgba(25, 32, 25, 0.05);
       --shadow-flyout: 0 12px 36px rgba(25, 32, 25, 0.12);
       --radius: 12px;
-      --sans: 'Plus Jakarta Sans', 'Noto Sans Thai', sans-serif;
-      --serif: 'Newsreader', Georgia, serif;
+      --sans: 'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif;
+      --serif: 'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif;
       --mono: 'Fira Code', monospace;
     }
 
@@ -360,6 +360,16 @@
       color: var(--brand-dark);
       font: 600 0.65rem var(--mono);
     }
+
+    .pinned-nav-list { display: grid; gap: 3px; }
+    .pinned-nav-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px 7px 10px; color: var(--muted); border-radius: 8px; }
+    .pinned-nav-item:hover { color: var(--brand-dark); background: rgba(255,255,255,.7); }
+    .pinned-nav-item a { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; font-size: .72rem; }
+    .pinned-nav-item a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pinned-nav-item svg { width: 15px; height: 15px; flex: 0 0 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+    .pinned-nav-item button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; color: currentColor; background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+    .pinned-nav-item button:hover { background: var(--brand-wash); }
+    .pinned-nav-item button svg { width: 13px; height: 13px; }
 
     .user-footer {
       margin-top: auto;
@@ -743,6 +753,7 @@
       background: #fafbf9;
       border: 1px solid var(--line);
       border-radius: 10px;
+      cursor: pointer;
       transition: transform 0.12s ease, border-color 0.12s ease;
       text-decoration: none;
       color: inherit;
@@ -752,6 +763,12 @@
       transform: translateY(-2px);
       border-color: #c9d6c3;
       background: #fff;
+    }
+
+    .launcher-card:focus-visible {
+      outline: none;
+      border-color: var(--brand-primary);
+      box-shadow: 0 0 0 3px rgba(91,123,88,.18), var(--glass-shadow-raised);
     }
 
     .launcher-top {
@@ -896,336 +913,367 @@
     }
 
     /* Universal query workbench */
-    .query-workbench {
-      display: grid;
-      gap: 16px;
+
+    /* Liquid-glass workspace material pass. Navigation, controls, and data
+       panels share one tactile surface language without changing behavior. */
+    .sidebar {
+      background: var(--sidebar-bg);
+      border-right-color: rgba(255, 255, 255, 0.72);
+      box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.56), 8px 0 26px rgba(45, 74, 48, 0.035);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
     }
 
-    .query-toolbar {
-      display: grid;
-      grid-template-columns: minmax(180px, 0.35fr) minmax(260px, 1fr) auto auto;
-      gap: 10px;
-      align-items: end;
+    .brand-header,
+    .context-box,
+    .user-footer {
+      border-color: rgba(255, 255, 255, 0.62);
     }
 
-    .query-field {
-      display: grid;
-      gap: 6px;
+    .context-trigger,
+    .context-flyout {
+      background: var(--surface-strong);
+      border-color: rgba(255, 255, 255, 0.72);
+      box-shadow: var(--glass-rim), var(--glass-shadow-raised);
+      -webkit-backdrop-filter: var(--glass-blur-heavy);
+      backdrop-filter: var(--glass-blur-heavy);
     }
 
-    .query-field label {
-      color: var(--faint);
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-    }
-
-    .query-field select,
-    .query-field input {
-      width: 100%;
-      min-height: 42px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: var(--surface);
-      color: var(--ink);
-      padding: 0 12px;
-    }
-
-    .query-field input::placeholder {
-      color: var(--faint);
-    }
-
-    .query-helper {
-      margin-top: 12px;
-      color: var(--muted);
-      font-size: 0.78rem;
-      line-height: 1.55;
-    }
-
-    .query-helper code,
-    .query-result-meta code {
-      color: var(--brand-dark);
-      font-family: var(--mono);
-      font-size: 0.75rem;
-    }
-
-    .query-state {
-      padding: 26px 18px;
-      color: var(--muted);
-      text-align: center;
-      font-size: 0.82rem;
-    }
-
-    .query-state.error {
-      color: var(--danger);
-    }
-
-    .query-result-meta {
-      color: var(--muted);
-      font-size: 0.76rem;
-    }
-
-    .query-table th,
-    .query-table td {
-      max-width: 260px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .query-table td code {
-      color: var(--brand-dark);
-      font-family: var(--mono);
-      font-size: 0.72rem;
-    }
-
-    .query-controls {
-      display: grid;
-      gap: 16px;
-      margin-top: 18px;
-      padding-top: 16px;
-      border-top: 1px solid var(--line);
-    }
-
-    .query-control-section {
-      display: grid;
-      gap: 10px;
-    }
-
-    .query-control-heading {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .query-control-heading strong {
-      display: block;
-      color: var(--ink);
-      font-size: 0.78rem;
-    }
-
-    .query-control-heading span {
-      display: block;
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 0.7rem;
-    }
-
-    .query-control-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .query-filter-list {
-      display: grid;
-      gap: 8px;
-    }
-
-    .query-filter-row {
-      display: grid;
-      grid-template-columns: minmax(150px, 0.9fr) minmax(130px, 0.65fr) minmax(160px, 1fr) auto;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .query-filter-row select,
-    .query-filter-row input {
-      min-height: 40px;
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--ink);
-      padding: 0 10px;
-      font-size: 0.75rem;
-    }
-
-    .query-field-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .query-field-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      min-height: 36px;
-      padding: 0 10px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      color: var(--ink);
-      background: var(--surface-subtle);
-      font-size: 0.7rem;
-      cursor: pointer;
-    }
-
-    .query-field-chip:has(input:checked) {
-      border-color: var(--brand-dark);
+    .nav-item.active {
       background: var(--brand-tint);
+      border-radius: var(--radius-pill);
+      box-shadow: var(--glass-rim), 0 5px 14px rgba(45, 74, 48, 0.06);
     }
 
-    .query-muted,
-    .query-list-state {
-      color: var(--muted);
-      font-size: 0.74rem;
-      line-height: 1.5;
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.58);
+      border-radius: var(--radius-pill);
     }
 
-    .query-summary {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 0 18px 14px;
+    .topbar {
+      background: var(--surface-strong);
+      border-bottom-color: rgba(255, 255, 255, 0.72);
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.64), 0 4px 18px rgba(45, 74, 48, 0.035);
+      -webkit-backdrop-filter: var(--glass-blur-heavy);
+      backdrop-filter: var(--glass-blur-heavy);
     }
 
-    .query-summary-item {
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
+    .btn {
+      border-color: rgba(255, 255, 255, 0.72);
+      min-height: 40px;
+      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.78), 0 4px 14px rgba(45, 74, 48, 0.04);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #446847 0%, #2f4e32 100%);
+      border-color: transparent;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 6px 16px rgba(45, 74, 48, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(180deg, #4e7351 0%, #29462d 100%);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.42), 0 8px 20px rgba(45, 74, 48, 0.28);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
       background: var(--surface-subtle);
-      color: var(--ink);
-      font-size: 0.72rem;
+      border-color: rgba(255, 255, 255, 0.72);
     }
 
-    .query-secondary-grid {
+    .metric-card,
+    .panel,
+    .launcher-card,
+    .app-item-card {
+      border-color: rgba(255, 255, 255, 0.7);
+      box-shadow: var(--glass-rim), var(--glass-shadow);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+    }
+
+    .metric-card,
+    .panel,
+    .app-item-card {
+      background: var(--surface-card);
+    }
+
+    .launcher-card {
+      background: var(--surface-subtle);
+    }
+
+    .launcher-card:hover {
+      border-color: rgba(111, 145, 105, 0.4);
+      background: var(--surface-strong);
+      box-shadow: var(--glass-rim), var(--glass-shadow-raised);
+    }
+
+    .panel-header {
+      border-color: rgba(160, 177, 156, 0.2);
+    }
+
+    th {
+      background: rgba(240, 244, 238, 0.7);
+      border-color: rgba(160, 177, 156, 0.2);
+    }
+
+    td { border-bottom-color: rgba(160, 177, 156, 0.16); }
+
+    @media (max-width: 640px) {
+      .topbar { flex-wrap: wrap; padding-block: 10px; }
+      .topbar-right { margin-left: auto; }
+      .security-badge { display: none; }
+    }
+
+    @media (max-width: 360px) {
+      .content { padding-inline: 12px; }
+      .topbar { align-items: flex-start; }
+      .topbar-right { width: 100%; margin-left: 0; }
+      .topbar-right .btn { flex: 1; }
+      .page-head h1 { font-size: 1.85rem; }
+    }
+
+    @supports not ((backdrop-filter: blur(1px))) {
+      .sidebar,
+      .context-trigger,
+      .context-flyout,
+      .topbar,
+      .metric-card,
+      .panel,
+      .launcher-card,
+      .app-item-card {
+        background: var(--surface-opaque);
+      }
+    }
+
+    /* The rail is independent from the workspace document flow. Its height is
+       tied to the viewport, while its collapsed state keeps a discoverable
+       icon-only navigation surface. */
+    :root {
+      --sidebar-expanded: 264px;
+      --sidebar-collapsed: 76px;
+    }
+
+    .shell {
+      display: block;
+      min-height: 100dvh;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: var(--sidebar-expanded);
+      height: 100dvh;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      transition: width 180ms ease;
+    }
+
+    .main {
+      width: calc(100% - var(--sidebar-expanded));
+      min-height: 100dvh;
+      margin-left: var(--sidebar-expanded);
+      transition: width 180ms ease, margin-left 180ms ease;
+    }
+
+    .sidebar-toggle {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 16px;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      padding: 0;
+      color: var(--brand-dark);
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      border-radius: 12px;
+      box-shadow: var(--glass-rim), 0 4px 14px rgba(45, 74, 48, 0.06);
+      cursor: pointer;
+      transition: background 140ms ease, transform 140ms ease;
     }
 
-    .query-secondary-grid .panel {
+    .sidebar-toggle:hover {
+      background: rgba(255, 255, 255, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .sidebar-toggle-icon {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: transform 180ms ease;
+    }
+
+    .topbar-sidebar-toggle {
+      display: grid;
+    }
+
+    .topbar-left,
+    .topbar-scope-crumb {
       min-width: 0;
     }
 
-    .query-list-state {
-      display: grid;
-      gap: 8px;
-      padding: 0 18px 18px;
-    }
-
-    .query-list-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 9px 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface-subtle);
-    }
-
-    .query-list-item strong,
-    .query-list-item span {
-      display: block;
-    }
-
-    .query-list-item strong { font-size: 0.74rem; }
-    .query-list-item span { color: var(--muted); font-size: 0.68rem; margin-top: 2px; }
-
-    .query-job-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 0 18px 14px;
-    }
-
-    .query-file-button { cursor: pointer; }
-
-    .query-import-mapping {
-      display: grid;
-      gap: 10px;
-      margin: 0 18px 18px;
-      padding: 14px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: var(--surface-subtle);
-    }
-
-    .query-import-mapping-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .query-import-mapping-head strong {
-      display: block;
-      font-size: 0.78rem;
-    }
-
-    .query-import-mapping-head span {
-      display: block;
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 0.7rem;
-      line-height: 1.45;
-    }
-
-    .query-import-mapping-row {
-      display: grid;
-      grid-template-columns: minmax(120px, 0.8fr) minmax(160px, 1fr);
-      align-items: center;
-      gap: 8px;
-    }
-
-    .query-import-mapping-row label {
-      color: var(--muted);
-      font-size: 0.72rem;
+    .topbar-scope-crumb strong {
+      min-width: 0;
+      max-width: min(36vw, 420px);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .query-import-mapping-row select {
-      min-height: 36px;
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--ink);
-      padding: 0 9px;
-      font-size: 0.72rem;
+    .brand-header .sidebar-toggle {
+      margin-left: auto;
     }
 
-    .query-import-mapping-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding-top: 4px;
+    .context-icon {
+      display: none;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      color: var(--brand-dark);
     }
 
-    @media (max-width: 980px) {
-      .query-toolbar {
-        grid-template-columns: 1fr 1fr;
+    .context-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+    }
+
+    .sidebar-collapsed .sidebar {
+      width: var(--sidebar-collapsed);
+    }
+
+    .sidebar-collapsed .main {
+      width: calc(100% - var(--sidebar-collapsed));
+      margin-left: var(--sidebar-collapsed);
+    }
+
+    .sidebar-collapsed .brand-header {
+      justify-content: center;
+      padding-inline: 18px;
+    }
+
+    .sidebar-collapsed .brand-title,
+    .sidebar-collapsed .context-trigger-info,
+    .sidebar-collapsed .user-info {
+      display: none;
+    }
+
+    .sidebar-collapsed .brand-header .sidebar-toggle {
+      margin-left: 0;
+    }
+
+    .sidebar-collapsed .sidebar-toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    .sidebar-collapsed .context-box {
+      padding-inline: 10px;
+    }
+
+    .sidebar-collapsed .context-trigger {
+      justify-content: center;
+      gap: 0;
+      padding-inline: 0;
+    }
+
+    .sidebar-collapsed .context-icon {
+      display: grid;
+    }
+
+    .sidebar-collapsed .context-trigger > svg {
+      display: none;
+    }
+
+    .sidebar-collapsed .context-flyout {
+      position: fixed;
+      top: 74px;
+      left: calc(var(--sidebar-collapsed) + 8px);
+      right: auto;
+      width: min(280px, calc(100vw - var(--sidebar-collapsed) - 24px));
+    }
+
+    .sidebar-collapsed .nav {
+      padding-inline: 10px;
+    }
+
+    .sidebar-collapsed .nav-label {
+      height: 8px;
+      margin-block: 8px 4px !important;
+      padding: 0;
+      overflow: hidden;
+      font-size: 0;
+    }
+
+    .sidebar-collapsed .nav-item {
+      justify-content: center;
+      gap: 0;
+      padding-inline: 10px;
+    }
+
+    .sidebar-collapsed .nav-item > span {
+      display: none;
+    }
+
+    .sidebar-collapsed .nav-item > svg {
+      margin: 0;
+    }
+
+    .sidebar-collapsed .pinned-nav-item { justify-content: center; padding-inline: 10px; }
+    .sidebar-collapsed .pinned-nav-item a { justify-content: center; flex: 1; }
+    .sidebar-collapsed .pinned-nav-item a span,
+    .sidebar-collapsed .pinned-nav-item button { display: none; }
+
+    .sidebar-collapsed .user-footer {
+      justify-content: center;
+      padding-inline: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: var(--sidebar-collapsed);
       }
-      .query-toolbar .btn {
+
+      .main,
+      .sidebar-collapsed .main {
+        width: calc(100% - var(--sidebar-collapsed));
+        margin-left: var(--sidebar-collapsed);
+      }
+
+      .shell:not(.sidebar-collapsed) .sidebar {
+        width: min(280px, calc(100vw - 16px));
+        box-shadow: 12px 0 30px rgba(25, 32, 25, 0.12);
+      }
+
+      .shell:not(.sidebar-collapsed) .main {
         width: 100%;
+        margin-left: 0;
       }
-      .query-control-grid,
-      .query-secondary-grid {
-        grid-template-columns: 1fr 1fr;
+
+      .topbar {
+        padding-inline: 16px;
       }
-      .query-filter-row {
-        grid-template-columns: 1fr 1fr;
+
+      .topbar-scope-crumb > span {
+        display: none;
       }
     }
 
-    @media (max-width: 640px) {
-      .query-toolbar {
-        grid-template-columns: 1fr;
-      }
-      .query-control-grid,
-      .query-secondary-grid,
-      .query-filter-row {
-        grid-template-columns: 1fr;
-      }
-      .query-control-heading {
-        align-items: flex-start;
-        flex-direction: column;
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar,
+      .main,
+      .sidebar-toggle-icon,
+      .sidebar-toggle {
+        transition: none;
       }
     }
   </style>
@@ -1240,11 +1288,15 @@
           <strong>Aevo Hub</strong>
           <span>Unified Operations</span>
         </div>
+        <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar">
+          <svg class="sidebar-toggle-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
       </div>
 
       <!-- Hierarchical Unified Context Switcher -->
       <div class="context-box">
         <button class="context-trigger" id="context-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Switch workspace scope">
+          <span class="context-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M8 8h8M8 12h5M8 16h3"></path></svg></span>
           <div class="context-trigger-info">
             <span class="context-scope-pill" id="current-scope-badge">ORGANIZATION</span>
             <strong class="context-name" id="current-scope-name">Loading…</strong>
@@ -1272,11 +1324,11 @@
           </div>
 
           <div class="flyout-footer">
-            <a class="flyout-action" href="/organize?tab=stores">
+            <a class="flyout-action" href="/organize?tab=stores&organizationId=" id="flyout-add-store">
               <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span>+ Add Store</span>
             </a>
-            <a class="flyout-action" href="/organize">
+            <a class="flyout-action" href="/organize?tab=settings&scope=organization" id="flyout-manage-organization">
               <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               <span>Manage Organization</span>
             </a>
@@ -1303,21 +1355,25 @@
     </aside>
 
     <!-- Main Operational Workspace Shell -->
-    <main class="main">
+    <main class="main" id="workspace-main" aria-busy="true">
       <header class="topbar">
         <div class="topbar-left">
+          <button class="sidebar-toggle topbar-sidebar-toggle" id="topbar-sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar">
+            <svg class="sidebar-toggle-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
           <div class="topbar-scope-crumb">
-            <span>Current Scope:</span>
+            <span data-i18n="nav.currentScope">Current Scope:</span>
             <strong id="topbar-scope-label">Organization Workspace</strong>
           </div>
         </div>
         <div class="topbar-right">
+          <div class="locale-switcher" data-locale-switcher id="workspace-locale-switcher"></div>
           <div class="security-badge">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span>SECURE SCOPED WORKSPACE</span>
+            <span data-i18n="nav.secureWorkspace">SECURE SCOPED WORKSPACE</span>
           </div>
           <a class="btn btn-secondary btn-sm" href="/organize">
-            <span>Manage Organization</span>
+            <span data-i18n="nav.manageOrganization">Manage Organization</span>
           </a>
         </div>
       </header>
@@ -1343,22 +1399,22 @@
           <div class="metric-grid">
             <div class="metric-card">
               <span class="metric-label">Connected Stores</span>
-              <strong class="metric-value" id="org-kpi-stores">—</strong>
+              <strong class="metric-value" id="org-kpi-stores"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading stores</span></strong>
               <span class="metric-foot">Active retail &amp; venue locations</span>
             </div>
             <div class="metric-card">
               <span class="metric-label">Active Applications</span>
-              <strong class="metric-value" id="org-kpi-apps">—</strong>
+              <strong class="metric-value" id="org-kpi-apps"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading applications</span></strong>
               <span class="metric-foot">Subscribed business modules</span>
             </div>
             <div class="metric-card">
               <span class="metric-label">Team Members</span>
-              <strong class="metric-value" id="org-kpi-members">—</strong>
+              <strong class="metric-value" id="org-kpi-members"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading members</span></strong>
               <span class="metric-foot">Managers and store personnel</span>
             </div>
             <div class="metric-card">
               <span class="metric-label">Sales Today</span>
-              <strong class="metric-value" id="org-kpi-revenue">฿0</strong>
+              <strong class="metric-value" id="org-kpi-revenue"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading revenue</span></strong>
               <span class="metric-foot">Gross revenue across all stores</span>
             </div>
           </div>
@@ -1372,6 +1428,7 @@
               </div>
               <a class="btn btn-secondary btn-sm" href="/organize?tab=stores">+ New Store</a>
             </div>
+            <div id="org-stores-search" data-query-label="Stores" data-query-hint="Search stores by name, code, status, or field expression."></div>
             <div class="table-wrap">
               <table>
                 <thead>
@@ -1386,7 +1443,9 @@
                   </tr>
                 </thead>
                 <tbody id="org-stores-table">
-                  <tr><td colspan="7" class="empty-state">Loading stores network…</td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="7"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="7"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="7"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
                 </tbody>
               </table>
             </div>
@@ -1402,7 +1461,9 @@
               <button class="btn btn-secondary btn-sm" id="btn-browse-apps">Browse Applications</button>
             </div>
             <div class="app-grid" id="org-apps-summary">
-              <!-- Populated via JS -->
+              <div class="app-item-card aevo-loading-card"><span class="aevo-skeleton aevo-skeleton--pill" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></div>
+              <div class="app-item-card aevo-loading-card"><span class="aevo-skeleton aevo-skeleton--pill" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></div>
+              <div class="app-item-card aevo-loading-card"><span class="aevo-skeleton aevo-skeleton--pill" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></div>
             </div>
           </div>
         </section>
@@ -1415,22 +1476,22 @@
           <div class="metric-grid">
             <div class="metric-card">
               <span class="metric-label">Sales Today</span>
-              <strong class="metric-value" id="store-kpi-sales">฿0</strong>
+              <strong class="metric-value" id="store-kpi-sales"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading sales</span></strong>
               <span class="metric-foot">Paid orders at this store</span>
             </div>
             <div class="metric-card">
               <span class="metric-label">Orders Today</span>
-              <strong class="metric-value" id="store-kpi-orders">0</strong>
+              <strong class="metric-value" id="store-kpi-orders"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading orders</span></strong>
               <span class="metric-foot">Completed and in-flight tickets</span>
             </div>
             <div class="metric-card">
               <span class="metric-label">Bookings Today</span>
-              <strong class="metric-value" id="store-kpi-bookings">0</strong>
+              <strong class="metric-value" id="store-kpi-bookings"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading bookings</span></strong>
               <span class="metric-foot">Court &amp; table reservations</span>
             </div>
             <div class="metric-card">
               <span class="metric-label">Hardware Terminals</span>
-              <strong class="metric-value" id="store-kpi-devices">0 / 0</strong>
+              <strong class="metric-value" id="store-kpi-devices"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading terminals</span></strong>
               <span class="metric-foot">Active devices connected</span>
             </div>
           </div>
@@ -1503,6 +1564,7 @@
               </div>
               <button class="btn btn-secondary btn-sm" id="btn-refresh-devices">Refresh</button>
             </div>
+            <div id="store-devices-search" data-query-label="Branch terminals" data-query-hint="Search this branch's terminals by name, mode, status, or last active time."></div>
             <div class="table-wrap">
               <table>
                 <thead>
@@ -1514,7 +1576,9 @@
                   </tr>
                 </thead>
                 <tbody id="store-devices-table">
-                  <tr><td colspan="4" class="empty-state">Loading branch devices…</td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="4"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="4"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="4"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
                 </tbody>
               </table>
             </div>
@@ -1533,122 +1597,9 @@
               </div>
             </div>
             <div class="app-grid" id="all-apps-grid">
-              <div class="empty-state">Loading applications catalog…</div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ==================================================================
-             VIEW 3: UNIVERSAL QUERY WORKBENCH
-             ================================================================== -->
-        <section class="view" id="view-query" aria-label="Universal Query Workbench">
-          <div class="query-workbench">
-            <div class="panel">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <h2>Universal Query Workbench</h2>
-                  <p>Search products, orders, and stores with one organization-scoped query language.</p>
-                </div>
-                <span class="status-pill active"><span class="status-dot"></span><span>AST v1</span></span>
-              </div>
-              <div class="query-toolbar">
-                <div class="query-field">
-                  <label for="query-model-select">Data model</label>
-                  <select id="query-model-select" aria-label="Data model">
-                    <option value="">Loading models…</option>
-                  </select>
-                </div>
-                <div class="query-field">
-                  <label for="query-search-input">Search and filter</label>
-                  <input id="query-search-input" type="search" autocomplete="off" placeholder='name:"สกรู" AND base_price_minor:>100' aria-describedby="query-helper" />
-                </div>
-                <button class="btn btn-primary btn-sm" id="query-run-button" type="button">Run Query</button>
-                <button class="btn btn-secondary btn-sm" id="query-save-button" type="button">Save View</button>
-              </div>
-              <p class="query-helper" id="query-helper">Use natural text or field expressions. Examples: <code>สกรู AND ขาว</code>, <code>status:ACTIVE</code>, <code>total_minor:>10000</code>.</p>
-              <div class="query-controls" aria-label="Structured query controls">
-                <div class="query-control-section">
-                  <div class="query-control-heading">
-                    <div><strong>Filters</strong><span>Build the same AST as the search language.</span></div>
-                    <button class="btn btn-secondary btn-sm" id="query-add-filter" type="button">Add filter</button>
-                  </div>
-                  <div id="query-filter-list" class="query-filter-list" aria-live="polite">
-                    <div class="query-muted">No structured filters. Use the search bar or add one here.</div>
-                  </div>
-                </div>
-                <div class="query-control-grid">
-                  <div class="query-field">
-                    <label for="query-sort-select">Sort by</label>
-                    <select id="query-sort-select"></select>
-                  </div>
-                  <div class="query-field">
-                    <label for="query-sort-direction">Direction</label>
-                    <select id="query-sort-direction">
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
-                  </div>
-                  <div class="query-field">
-                    <label for="query-group-select">Group by</label>
-                    <select id="query-group-select"><option value="">No grouping</option></select>
-                  </div>
-                  <div class="query-field">
-                    <label for="query-aggregate-select">Aggregate</label>
-                    <select id="query-aggregate-select"><option value="">No aggregate</option></select>
-                  </div>
-                </div>
-                <div class="query-control-section query-fields-section">
-                  <div class="query-control-heading">
-                    <div><strong>Visible and export fields</strong><span>Only metadata-permitted fields can be selected.</span></div>
-                    <button class="btn btn-quiet btn-sm" id="query-select-all-fields" type="button">Select readable</button>
-                  </div>
-                  <div id="query-field-list" class="query-field-list"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <h2>Query Results</h2>
-                  <p id="query-result-scope">Current organization scope</p>
-                </div>
-                <span class="query-result-meta" id="query-result-meta">Ready</span>
-              </div>
-              <div id="query-summary" class="query-summary" hidden></div>
-              <div id="query-state" class="query-state" role="status">Choose a model to load query results.</div>
-              <div class="table-wrap" id="query-table-wrap" hidden>
-                <table class="query-table">
-                  <thead id="query-results-head"></thead>
-                  <tbody id="query-results-body"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="query-secondary-grid">
-              <div class="panel">
-                <div class="panel-header">
-                  <div class="panel-title"><h2>Saved views &amp; history</h2><p>Reuse validated AST definitions within your current organization.</p></div>
-                  <button class="btn btn-quiet btn-sm" id="query-refresh-history" type="button">Refresh</button>
-                </div>
-                <div id="query-saved-list" class="query-list-state">Loading saved views…</div>
-                <div id="query-history-list" class="query-list-state"></div>
-              </div>
-              <div class="panel">
-                <div class="panel-header">
-                  <div class="panel-title"><h2>Import &amp; export</h2><p>Use the same model metadata for mapped imports and scoped exports.</p></div>
-                </div>
-                <div class="query-job-actions">
-                  <button class="btn btn-secondary btn-sm" id="query-export-csv" type="button">Export CSV</button>
-                  <button class="btn btn-secondary btn-sm" id="query-export-json" type="button">Export JSON</button>
-                  <button class="btn btn-secondary btn-sm" id="query-export-xlsx" type="button">Export Excel</button>
-                  <label class="btn btn-secondary btn-sm query-file-button" for="query-import-file">Choose CSV</label>
-                  <input id="query-import-file" type="file" accept=".csv,text/csv" hidden />
-                  <button class="btn btn-primary btn-sm" id="query-import-preview" type="button" disabled>Preview import</button>
-                </div>
-                <div id="query-job-state" class="query-list-state" role="status">No import or export job has been started.</div>
-                <div id="query-import-mapping" class="query-import-mapping" hidden></div>
-              </div>
+              <div class="app-item-card aevo-loading-card"><span class="aevo-skeleton aevo-skeleton--pill" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></div>
+              <div class="app-item-card aevo-loading-card"><span class="aevo-skeleton aevo-skeleton--pill" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></div>
+              <div class="app-item-card aevo-loading-card"><span class="aevo-skeleton aevo-skeleton--pill" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></div>
             </div>
           </div>
         </section>
@@ -1659,12 +1610,13 @@
         <section class="view" id="view-devices" aria-label="Hardware Devices">
           <div class="panel">
             <div class="panel-header">
-              <div class="panel-title">
+             <div class="panel-title">
                 <h2>Hardware Registers &amp; Terminals</h2>
                 <p>Managed peripherals and active paired stations.</p>
               </div>
               <button class="btn btn-primary btn-sm" id="btn-reload-devices">Refresh</button>
             </div>
+            <div id="all-devices-search" data-query-label="Hardware terminals" data-query-hint="Search terminals by name, mode, status, or use store.name:value for an assigned store."></div>
             <div class="table-wrap">
               <table>
                 <thead>
@@ -1677,7 +1629,9 @@
                   </tr>
                 </thead>
                 <tbody id="all-devices-table">
-                  <tr><td colspan="5" class="empty-state">Loading terminals…</td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="5"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="5"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="5"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
                 </tbody>
               </table>
             </div>
@@ -1707,7 +1661,8 @@
                   </tr>
                 </thead>
                 <tbody id="billing-table">
-                  <tr><td colspan="4" class="empty-state">Loading billing details…</td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="4"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+                  <tr class="aevo-table-loading-row"><td colspan="4"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
                 </tbody>
               </table>
             </div>
@@ -1717,10 +1672,18 @@
     </main>
   </div>
 
-  <div class="toast-tray" id="toast-tray" aria-live="polite"></div>
+  <div class="toast-tray" id="toast-tray" role="status" aria-live="polite"></div>
 
   <script type="module">
-    import { apiFetch, API_BASE, signOut, AuthApiError } from "/auth.js";
+    import { apiFetch, signOut, AuthApiError } from "/auth.js";
+    import { createFavoritesClient } from "/favorites.js";
+    import { createUniversalSearch } from "/query-ui.js";
+    import { createI18n } from "/i18n.js";
+    import { attachGlassSelection } from "/glass-selection.js";
+
+    const i18n = createI18n({ apiFetch });
+    const localeReady = i18n.init();
+    const workspaceNavSelection = attachGlassSelection(document.getElementById("sidebar-nav"), { itemSelector: ".nav-item[data-view]" });
 
     // Application Global Scope State
     const state = {
@@ -1733,30 +1696,59 @@
       activeStore: null,
       activeView: "org-overview",
       apps: [],
+      appsLoaded: false,
       subscriptions: [],
       orgStats: null,
       storeStats: null,
-      queryModels: [],
-      queryModel: null,
-      queryRows: [],
-      queryFilterRules: [],
-      querySelectedFields: [],
-      querySortField: "",
-      querySortDirection: "asc",
-      queryGroupField: "",
-      queryAggregate: "",
-      queryImport: null,
-      queryImportJobId: null,
-      queryImportDetail: null,
-      queryLoadedSpec: null
+      storeStatsStoreId: null,
+      storeStatsLoadedAt: 0,
+      orgStatsOrganizationId: null,
+      orgStatsLoadedAt: 0,
+      billingLoadedAt: 0,
+      allDevicesLoadedKey: "",
+      queryStoreResult: null,
+      storeDeviceResult: null,
+      storeDevicesFallback: [],
+      allDeviceResult: null,
+      allDeviceQueryFailed: false,
+      favorites: []
     };
+
+    let orgStoreSearch;
+    let storeDeviceSearch;
+    let allDeviceSearch;
+    let favoritesClient;
+    let organizationOverviewPromise;
+    let organizationOverviewKey;
+    let storeOverviewPromise;
+    let storeOverviewKey;
 
     const $ = (id) => document.getElementById(id);
     const escapeHtml = (val) => String(val ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
 
+    const shell = document.querySelector(".shell");
+    const sidebarToggleButtons = [$("sidebar-toggle"), $("topbar-sidebar-toggle")].filter(Boolean);
+    function setSidebarCollapsed(collapsed) {
+      shell.classList.toggle("sidebar-collapsed", collapsed);
+      localStorage.setItem("aevo.hub.sidebarCollapsed", String(collapsed));
+      sidebarToggleButtons.forEach((button) => {
+        const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
+        button.setAttribute("aria-expanded", String(!collapsed));
+        button.setAttribute("aria-label", label);
+        button.setAttribute("title", label);
+      });
+    }
+    const savedSidebarState = localStorage.getItem("aevo.hub.sidebarCollapsed");
+    setSidebarCollapsed(savedSidebarState === null
+      ? window.matchMedia("(max-width: 768px)").matches
+      : savedSidebarState === "true");
+    sidebarToggleButtons.forEach((button) => button.addEventListener("click", () => {
+      setSidebarCollapsed(!shell.classList.contains("sidebar-collapsed"));
+    }));
+
     function formatCurrency(minor) {
       const val = (Number(minor) || 0) / 100;
-      return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(val);
+      return new Intl.NumberFormat(i18n.getIntlLocale(), { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(val);
     }
 
     function toast(message, isError = false) {
@@ -1770,6 +1762,8 @@
     // Context Switcher Flyout Toggle
     const contextBtn = $("context-btn");
     const contextFlyout = $("context-flyout");
+    contextFlyout.classList.add("scope-selection");
+    const contextSelection = attachGlassSelection(contextFlyout, { itemSelector: ".flyout-item" });
 
     contextBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1793,7 +1787,11 @@
     $("btn-scope-org").addEventListener("click", () => {
       contextFlyout.classList.remove("open");
       contextBtn.setAttribute("aria-expanded", "false");
-      setScope("ORGANIZATION");
+      if (["OWNER", "ADMIN", "ORGANIZATION_MANAGER"].includes(String(state.principal?.role || ""))) {
+        window.location.assign(`/organize?organizationId=${encodeURIComponent(state.currentOrg?.id || "")}&tab=overview`);
+      } else {
+        setScope("ORGANIZATION");
+      }
     });
 
     // Sign out
@@ -1809,6 +1807,9 @@
 
       if (scope === "ORGANIZATION") {
         state.activeStore = null;
+        state.allDeviceResult = null;
+        state.allDeviceQueryFailed = false;
+        state.allDevicesLoadedKey = "";
         localStorage.removeItem("aevo.hub.storeId");
         $("current-scope-badge").textContent = "ORGANIZATION";
         $("current-scope-name").textContent = state.currentOrg?.name || "Organization";
@@ -1816,7 +1817,7 @@
         $("topbar-scope-label").textContent = `${state.currentOrg?.name || "Organization"} (Brand Scope)`;
         renderSidebarNav("ORGANIZATION");
         showView("org-overview");
-        loadOrganizationOverview();
+        void loadOrganizationOverview();
       } else {
         const store = state.stores.find((s) => s.id === storeId) || state.stores[0];
         if (!store) {
@@ -1824,6 +1825,10 @@
           return;
         }
         state.activeStore = store;
+        state.storeDeviceResult = null;
+        state.allDeviceResult = null;
+        state.allDeviceQueryFailed = false;
+        state.allDevicesLoadedKey = "";
         localStorage.setItem("aevo.hub.storeId", store.id);
         $("current-scope-badge").textContent = "STORE";
         $("current-scope-name").textContent = store.name;
@@ -1831,8 +1836,15 @@
         $("topbar-scope-label").textContent = `${state.currentOrg?.name} / ${store.name}`;
         renderSidebarNav("STORE");
         showView("store-overview");
-        loadStoreOverview(store.id);
+        void loadStoreOverview(store.id);
       }
+      const orgId = state.currentOrg?.id;
+      const storeSettingsLink = $("store-settings-link");
+      if (storeSettingsLink && state.activeStore) storeSettingsLink.href = `/organize?tab=settings&scope=store&organizationId=${encodeURIComponent(orgId || "")}&storeId=${encodeURIComponent(state.activeStore.id)}`;
+      const addStoreLink = $("flyout-add-store");
+      if (addStoreLink && orgId) addStoreLink.href = `/organize?tab=stores&organizationId=${encodeURIComponent(orgId)}`;
+      const manageOrganizationLink = $("flyout-manage-organization");
+      if (manageOrganizationLink && orgId) manageOrganizationLink.href = `/organize?tab=settings&scope=organization&organizationId=${encodeURIComponent(orgId)}`;
       updateFlyoutActiveState();
     }
 
@@ -1841,6 +1853,31 @@
       document.querySelectorAll(".flyout-store-btn").forEach((btn) => {
         btn.classList.toggle("active", state.activeScope === "STORE" && btn.dataset.storeId === state.activeStore?.id);
       });
+      contextSelection?.sync();
+    }
+
+    function renderWorkspaceFavorites() {
+      const container = $("workspace-favorites-list");
+      if (!container) return;
+      if (!state.favorites.length) {
+        container.innerHTML = '<div style="padding:7px 10px;color:var(--faint);font-size:.66rem;">Pin an organization, store, or menu from Organize.</div>';
+        return;
+      }
+      const pinIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 6 6M8 8l8 8M5 19l4-4 6-6 4-4-2-2-4 4-6 6-4 4 2 2Z"/><path d="m4 20 4-1"/></svg>';
+      container.innerHTML = state.favorites.map((favorite) => `<div class="pinned-nav-item"><a href="${escapeHtml(favorite.href)}" title="${escapeHtml(favorite.label)}">${pinIcon}<span>${escapeHtml(favorite.label)}</span></a><button type="button" data-remove-workspace-favorite="${escapeHtml(favorite.id)}" aria-label="Unpin ${escapeHtml(favorite.label)}" title="Unpin">${pinIcon}</button></div>`).join("");
+      container.querySelectorAll("[data-remove-workspace-favorite]").forEach((button) => button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        button.disabled = true;
+        try {
+          await apiFetch(`/api/v1/hub/favorites/${encodeURIComponent(button.dataset.removeWorkspaceFavorite)}`, { method: "DELETE" });
+          state.favorites = state.favorites.filter((favorite) => favorite.id !== button.dataset.removeWorkspaceFavorite);
+          renderWorkspaceFavorites();
+        } catch (error) {
+          toast(error.message || "Could not remove pin", true);
+          button.disabled = false;
+        }
+      }));
     }
 
     // Render Navigation based on Scope
@@ -1848,74 +1885,77 @@
       const nav = $("sidebar-nav");
       if (scope === "ORGANIZATION") {
         nav.innerHTML = `
-          <div class="nav-label">Workspace</div>
+          <div class="nav-label" data-i18n="nav.workspace">Workspace</div>
           <button class="nav-item active" data-view="org-overview" type="button">
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            <span>Overview</span>
+            <span data-i18n="nav.overview">Overview</span>
           </button>
           <button class="nav-item" data-view="apps" type="button">
             <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            <span>Applications</span>
+            <span data-i18n="nav.applications">Applications</span>
             <span class="count-pill" id="nav-apps-count">—</span>
-          </button>
-          <button class="nav-item" data-view="query" type="button">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/></svg>
-            <span>Query Workbench</span>
           </button>
           <button class="nav-item" data-view="devices" type="button">
             <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
-            <span>Hardware Network</span>
+            <span data-i18n="nav.hardware">Hardware Network</span>
           </button>
 
-          <div class="nav-label" style="margin-top: 10px;">Business</div>
+          <div class="nav-label" style="margin-top: 10px;" data-i18n="nav.business">Business</div>
           <button class="nav-item" data-view="billing" type="button">
             <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            <span>Billing &amp; Plans</span>
+            <span data-i18n="nav.billingPlans">Billing &amp; Plans</span>
           </button>
 
-          <div class="nav-label" style="margin-top: 10px;">Brand Settings</div>
-          <a class="nav-item" href="/organize">
+          <div class="nav-label" style="margin-top: 10px;" data-i18n="nav.brandSettings">Brand Settings</div>
+          <a class="nav-item" href="/organize?tab=settings&scope=organization">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            <span>Manage Organization</span>
+            <span data-i18n="nav.manageOrganization">Manage Organization</span>
           </a>
         `;
       } else {
         nav.innerHTML = `
-          <div class="nav-label">Store Workspace</div>
+          <div class="nav-label" data-i18n="nav.storeWorkspace">Store Workspace</div>
           <button class="nav-item active" data-view="store-overview" type="button">
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            <span>Store Pulse</span>
+            <span data-i18n="nav.storePulse">Store Pulse</span>
           </button>
 
-          <div class="nav-label" style="margin-top: 10px;">Applications</div>
+          <div class="nav-label" style="margin-top: 10px;" data-i18n="nav.applications">Applications</div>
           <button class="nav-item" data-action="launch-pos" type="button">
             <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            <span>POS Register</span>
+            <span data-i18n="nav.posRegister">POS Register</span>
           </button>
           <button class="nav-item" data-action="launch-kiosk" type="button">
             <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
-            <span>Self Kiosk</span>
+            <span data-i18n="nav.selfKiosk">Self Kiosk</span>
           </button>
           <button class="nav-item" data-action="launch-booking" type="button">
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span>Bookings &amp; Venues</span>
+            <span data-i18n="nav.bookings">Bookings &amp; Venues</span>
           </button>
 
-          <div class="nav-label" style="margin-top: 10px;">Operations</div>
-          <button class="nav-item" data-view="query" type="button">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/></svg>
-            <span>Query Workbench</span>
-          </button>
+          <div class="nav-label" style="margin-top: 10px;" data-i18n="nav.operations">Operations</div>
           <button class="nav-item" data-view="devices" type="button">
             <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
-            <span>Store Devices</span>
+            <span data-i18n="nav.storeDevices">Store Devices</span>
           </button>
-          <a class="nav-item" href="/organize?tab=stores">
+          <a class="nav-item" id="store-settings-link" href="/organize?tab=settings&scope=store">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            <span>Store Settings</span>
+            <span data-i18n="nav.storeSettings">Store Settings</span>
           </a>
         `;
       }
+
+      nav.insertAdjacentHTML("beforeend", `<div class="nav-label" style="margin-top: 10px;" data-i18n="nav.pinned">${i18n.t("nav.pinned")}</div><div class="pinned-nav-list" id="workspace-favorites-list"></div>`);
+      i18n.translate(nav);
+      renderWorkspaceFavorites();
+
+      nav.querySelectorAll(".nav-item").forEach((item) => {
+        const label = item.querySelector("span:not(.count-pill)")?.textContent?.trim();
+        if (!label) return;
+        item.setAttribute("aria-label", label);
+        item.setAttribute("title", label);
+      });
 
       // Reattach nav events
       nav.querySelectorAll("button[data-view]").forEach((btn) => {
@@ -1925,28 +1965,80 @@
       nav.querySelectorAll("button[data-action]").forEach((btn) => {
         btn.addEventListener("click", () => handleNavAction(btn.dataset.action));
       });
+      syncNavigationState();
+      workspaceNavSelection?.sync();
+    }
+
+    function syncNavigationState() {
+      document.querySelectorAll(".nav-item[data-view]").forEach((item) => {
+        if (item.classList.contains("active")) item.setAttribute("aria-current", "page");
+        else item.removeAttribute("aria-current");
+      });
+    }
+
+    function openConnectedApp(url, label) {
+      if (!url) {
+        toast(`${label} is not configured for this environment.`, true);
+        return;
+      }
+      toast(`Opening ${label}...`);
+      const target = window.open(url, "_blank", "noopener,noreferrer");
+      if (!target) window.location.assign(url);
+    }
+
+    function connectedAppUrl(app, path = "") {
+      const configured = window.__AEVO_APP_URLS__?.[app];
+      return configured ? `${configured.replace(/\/$/, "")}${path}` : "";
+    }
+
+    function bindConnectedAppLaunchers() {
+      const launchers = {
+        "launch-pos-card": "launch-pos",
+        "launch-kiosk-card": "launch-kiosk",
+        "launch-booking-card": "launch-booking"
+      };
+      Object.entries(launchers).forEach(([id, action]) => {
+        const card = $(id);
+        if (!card || card.dataset.connectedAppBound === "true") return;
+        card.dataset.connectedAppBound = "true";
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("aria-label", `Open ${action.replace("launch-", "Aevo ")}`);
+        card.addEventListener("click", () => handleNavAction(action));
+        card.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleNavAction(action);
+          }
+        });
+      });
     }
 
     function handleNavAction(action) {
       if (action === "launch-pos") {
-        toast("Opening POS Register terminal session...");
+        const storeQuery = state.activeStore?.id ? `?storeId=${encodeURIComponent(state.activeStore.id)}` : "";
+        openConnectedApp(connectedAppUrl("pos", `/staff/pos${storeQuery}`), "Aevo POS");
       } else if (action === "launch-kiosk") {
-        toast("Switching device to Kiosk Self-Order mode...");
+        const storeCode = state.activeStore?.code ? encodeURIComponent(state.activeStore.code) : "MAIN";
+        openConnectedApp(connectedAppUrl("pos", `/kiosk/${storeCode}`), "Aevo POS Kiosk");
       } else if (action === "launch-booking") {
-        toast("Loading Bookings & Court reservations...");
+        openConnectedApp(connectedAppUrl("play", "/venues"), "Aevo Play");
       }
     }
+
+    bindConnectedAppLaunchers();
 
     function showView(viewId) {
       state.activeView = viewId;
       document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${viewId}`));
       document.querySelectorAll(".nav-item[data-view]").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === viewId));
+      syncNavigationState();
+      workspaceNavSelection?.sync();
 
       const titles = {
         "org-overview": ["Aevo Hub / Brand Overview", "Organization Overview", "Real-time metrics, active subscriptions, and store network performance."],
         "store-overview": [`Aevo Hub / ${state.activeStore?.name || "Store"}`, `${state.activeStore?.name || "Store"} Workspace`, "Daily branch operations, live checkouts, and device health."],
         "apps": ["Aevo Hub / Applications", "Business Modules", "Turn applications on and off to support your business requirements."],
-        "query": ["Aevo Hub / Query Platform", "Universal Query Workbench", "Search, filter, sort, and group tenant data through one validated query contract."],
         "devices": ["Aevo Hub / Hardware", "Hardware & Terminals", "Registers, self-service kiosks, and thermal printers connected to your stores."],
         "billing": ["Aevo Hub / Business", "Billing & Subscriptions", "Keep your organization plan, trial period, and payment methods in view."]
       };
@@ -1958,47 +2050,16 @@
       }
 
       if (viewId === "apps") loadAppsView();
-      if (viewId === "query") loadQueryView();
       if (viewId === "devices") loadDevicesView();
       if (viewId === "billing") loadBillingView();
     }
 
     // Quick Browse Apps Link
     $("btn-browse-apps").addEventListener("click", () => showView("apps"));
-    $("btn-refresh-devices").addEventListener("click", () => loadDevicesView());
-    $("btn-reload-devices").addEventListener("click", () => loadDevicesView());
-    $("query-model-select").addEventListener("change", () => {
-      state.queryModel = state.queryModels.find((model) => model.technical_name === $("query-model-select").value) || null;
-      resetQueryControls();
-      renderQueryControls();
+    $("btn-refresh-devices").addEventListener("click", () => {
+      if (state.activeStore) void loadStoreOverview(state.activeStore.id, true);
     });
-    $("query-run-button").addEventListener("click", () => runQuery());
-    $("query-search-input").addEventListener("keydown", (event) => {
-      if (event.key === "Enter") runQuery();
-    });
-    $("query-save-button").addEventListener("click", () => saveCurrentQuery());
-    $("query-add-filter").addEventListener("click", () => {
-      const firstField = filterableFields(state.queryModel)[0];
-      if (!firstField) return;
-      state.queryLoadedSpec = null;
-      state.queryFilterRules.push({ field: firstField.path, operator: firstField.operators[0] || "eq", value: "" });
-      renderQueryControls();
-    });
-    $("query-sort-select").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.querySortField = event.target.value; });
-    $("query-sort-direction").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.querySortDirection = event.target.value; });
-    $("query-group-select").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.queryGroupField = event.target.value; });
-    $("query-aggregate-select").addEventListener("change", (event) => { state.queryLoadedSpec = null; state.queryAggregate = event.target.value; });
-    $("query-select-all-fields").addEventListener("click", () => {
-      state.queryLoadedSpec = null;
-      state.querySelectedFields = readableFields(state.queryModel).map((field) => field.path);
-      renderQueryControls();
-    });
-    $("query-refresh-history").addEventListener("click", () => loadQuerySavedAndHistory());
-    $("query-export-csv").addEventListener("click", () => exportCurrentQuery("CSV"));
-    $("query-export-json").addEventListener("click", () => exportCurrentQuery("JSON"));
-    $("query-export-xlsx").addEventListener("click", () => exportCurrentQuery("XLSX"));
-    $("query-import-file").addEventListener("change", handleImportFile);
-    $("query-import-preview").addEventListener("click", () => previewSelectedImport());
+    $("btn-reload-devices").addEventListener("click", () => void loadDevicesView(true));
 
     // Billing Portal
     $("btn-billing-portal").addEventListener("click", async () => {
@@ -2019,643 +2080,293 @@
     });
 
     // Data Loaders
-    async function loadOrganizationOverview() {
-      try {
-        const [overviewRes, appsRes] = await Promise.all([
-          apiFetch("/api/v1/hub/overview/organization", { headers: { "x-organization-id": state.currentOrg.id } }),
-          apiFetch("/api/v1/hub/apps", { headers: { "x-organization-id": state.currentOrg.id } })
-        ]);
-
-        const stats = overviewRes.stats || {};
-        state.orgStats = stats;
-        state.apps = appsRes.apps || [];
-
-        $("org-kpi-stores").textContent = stats.totalStores ?? state.stores.length;
-        $("org-kpi-apps").textContent = stats.activeApps ?? "0";
-        $("org-kpi-members").textContent = stats.totalMembers ?? "0";
-        $("org-kpi-revenue").textContent = formatCurrency(stats.todayRevenueMinor ?? 0);
-
-        if ($("nav-apps-count")) $("nav-apps-count").textContent = state.apps.length;
-
-        // Render Store Performance Roster
-        const tbody = $("org-stores-table");
-        if (!stats.storePerformance || stats.storePerformance.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No stores registered. Create your first location to get started.</td></tr>`;
-        } else {
-          tbody.innerHTML = stats.storePerformance.map((s) => `
-            <tr>
-              <td><strong>${escapeHtml(s.name)}</strong></td>
-              <td><code>${escapeHtml(s.code)}</code></td>
-              <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(s.status)}</span></span></td>
-              <td class="tabular">${formatCurrency(s.todayRevenueMinor)}</td>
-              <td class="tabular">${s.todayOrdersCount}</td>
-              <td class="tabular">${s.activeDevicesCount} active</td>
-              <td>
-                <button class="btn btn-secondary btn-sm btn-enter-store" data-store-id="${escapeHtml(s.storeId)}" type="button">
-                  Enter Store Workspace →
-                </button>
-              </td>
-            </tr>
-          `).join("");
-
-          tbody.querySelectorAll(".btn-enter-store").forEach((btn) => {
-            btn.addEventListener("click", () => setScope("STORE", btn.dataset.storeId));
-          });
-        }
-
-        // Render Apps Summary Cards
-        const appsSummary = $("org-apps-summary");
-        appsSummary.innerHTML = state.apps.slice(0, 3).map((app) => `
-          <div class="app-item-card">
-            <div class="app-item-top">
-              <span class="status-pill active"><span class="status-dot"></span><span>Active</span></span>
-            </div>
-            <h3>${escapeHtml(app.name || app.id)}</h3>
-            <p>${escapeHtml(app.description || "Integrated Aevo business module.")}</p>
-          </div>
-        `).join("");
-      } catch (err) {
-        toast(err.message || "Failed to load organization metrics", true);
-      }
+    function formatDateTime(value, fallback = "Active") {
+      if (!value) return fallback;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString(i18n.getIntlLocale());
     }
 
-    async function loadStoreOverview(storeId) {
-      try {
-        const [storeRes, devicesRes] = await Promise.all([
-          apiFetch(`/api/v1/hub/overview/store?storeId=${encodeURIComponent(storeId)}`, { headers: { "x-organization-id": state.currentOrg.id } }),
-          apiFetch(`/api/v1/hub/devices?storeId=${encodeURIComponent(storeId)}`, { headers: { "x-organization-id": state.currentOrg.id } })
-        ]);
-
-        const stats = storeRes.stats || {};
-        state.storeStats = stats;
-
-        $("store-kpi-sales").textContent = formatCurrency(stats.todaySalesMinor ?? 0);
-        $("store-kpi-orders").textContent = stats.todayOrders ?? 0;
-        $("store-kpi-bookings").textContent = stats.todayBookings ?? 0;
-        $("store-kpi-devices").textContent = `${stats.devicesOnline ?? 0} / ${stats.devicesTotal ?? 0}`;
-
-        const devices = devicesRes.devices || [];
-        const tbody = $("store-devices-table");
-        if (!devices.length) {
-          tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No devices registered at this branch yet.</td></tr>`;
-        } else {
-          tbody.innerHTML = devices.map((d) => `
-            <tr>
-              <td><strong>${escapeHtml(d.name)}</strong></td>
-              <td><code>${escapeHtml(d.mode)}</code></td>
-              <td>${escapeHtml(d.lastActiveAt || "Active")}</td>
-              <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(d.status || "ACTIVE")}</span></span></td>
-            </tr>
-          `).join("");
-        }
-      } catch (err) {
-        toast(err.message || "Failed to load store overview", true);
-      }
+    function relatedStoreName(value) {
+      if (Array.isArray(value)) return value.map(relatedStoreName).filter(Boolean).join(", ");
+      if (value && typeof value === "object") return String(value.name || value.id || "");
+      return String(value || "");
     }
 
-    function readableFields(model) {
-      return (model?.fields || [])
-        .filter((field) => field.capabilities?.export || field.capabilities?.search || field.capabilities?.filter)
-        .sort((left, right) => Number(left.sequence || 0) - Number(right.sequence || 0));
+    function setViewLoading(viewId, busy) {
+      const view = $(viewId);
+      if (!view) return;
+      view.setAttribute("aria-busy", String(busy));
+      view.classList.toggle("aevo-refreshing", busy);
     }
 
-    function queryFields(model) {
-      const available = readableFields(model);
-      const selected = new Set(state.querySelectedFields.length ? state.querySelectedFields : available.slice(0, 8).map((field) => field.path));
-      return available.filter((field) => selected.has(field.path));
+    function renderTableError(tableId, colSpan, message, retry) {
+      const tbody = $(tableId);
+      if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="${colSpan}"><div class="aevo-loading-state aevo-loading-state--error" role="alert"><span>${escapeHtml(message)}</span><button type="button" data-table-retry>Try again</button></div></td></tr>`;
+      tbody.querySelector("[data-table-retry]")?.addEventListener("click", retry);
     }
 
-    function filterableFields(model) {
-      return readableFields(model).filter((field) => field.capabilities?.filter);
-    }
-
-    function sortableFields(model) {
-      return readableFields(model).filter((field) => field.capabilities?.sort);
-    }
-
-    function groupableFields(model) {
-      return readableFields(model).filter((field) => field.capabilities?.group);
-    }
-
-    function fieldByPath(model, path) {
-      return (model?.fields || []).find((field) => field.path === path);
-    }
-
-    function resetQueryControls() {
-      const model = state.queryModel;
-      const available = readableFields(model);
-      state.querySelectedFields = available.slice(0, 8).map((field) => field.path);
-      state.queryFilterRules = [];
-      state.querySortField = model?.default_order?.find((item) => sortableFields(model).some((field) => field.path === item.field))?.field || sortableFields(model)[0]?.path || "";
-      state.querySortDirection = model?.default_order?.find((item) => item.field === state.querySortField)?.direction || "asc";
-      state.queryGroupField = "";
-      state.queryAggregate = "";
-      state.queryLoadedSpec = null;
-    }
-
-    function filterValueInput(field, rule) {
-      if (["is_empty", "is_not_empty", "today", "yesterday", "this_week", "this_month"].includes(rule.operator)) return "<span class=\"query-filter-no-value\">No value</span>";
-      const type = ["integer", "decimal", "money", "percentage", "rating"].includes(field?.field_type) ? "number" : field?.field_type === "date" || field?.field_type === "datetime" ? "date" : "text";
-      return `<input type="${type}" value="${escapeHtml(rule.value || "")}" data-filter-value aria-label="Filter value" placeholder="Value" />`;
-    }
-
-    function renderQueryControls() {
-      const model = state.queryModel;
-      if (!model) return;
-      const selectedFields = new Set(state.querySelectedFields);
-      $("query-field-list").innerHTML = readableFields(model).map((field) => `<label class="query-field-chip"><input type="checkbox" data-query-field value="${escapeHtml(field.path)}" ${selectedFields.has(field.path) ? "checked" : ""} />${escapeHtml(field.label)}</label>`).join("");
-      $("query-field-list").querySelectorAll("[data-query-field]").forEach((node) => node.addEventListener("change", () => {
-        state.queryLoadedSpec = null;
-        state.querySelectedFields = Array.from($("query-field-list").querySelectorAll("[data-query-field]:checked")).map((item) => item.value);
-        if (!state.querySelectedFields.length) node.checked = true;
-      }));
-
-      const sortFields = sortableFields(model);
-      $("query-sort-select").innerHTML = sortFields.map((field) => `<option value="${escapeHtml(field.path)}">${escapeHtml(field.label)}</option>`).join("") || `<option value="">No sortable fields</option>`;
-      $("query-sort-select").value = state.querySortField;
-      $("query-sort-direction").value = state.querySortDirection;
-      const groupFields = groupableFields(model);
-      $("query-group-select").innerHTML = `<option value="">No grouping</option>${groupFields.map((field) => `<option value="${escapeHtml(field.path)}">${escapeHtml(field.label)}</option>`).join("")}`;
-      $("query-group-select").value = state.queryGroupField;
-      const aggregateFields = readableFields(model).filter((field) => field.capabilities?.aggregate);
-      $("query-aggregate-select").innerHTML = `<option value="">No aggregate</option><option value="count">Count rows</option>${aggregateFields.map((field) => `<option value="sum:${escapeHtml(field.path)}">Sum ${escapeHtml(field.label)}</option><option value="avg:${escapeHtml(field.path)}">Average ${escapeHtml(field.label)}</option><option value="min:${escapeHtml(field.path)}">Minimum ${escapeHtml(field.label)}</option><option value="max:${escapeHtml(field.path)}">Maximum ${escapeHtml(field.label)}</option>`).join("")}`;
-      $("query-aggregate-select").value = state.queryAggregate;
-
-      const fields = filterableFields(model);
-      const filterList = $("query-filter-list");
-      if (!state.queryFilterRules.length) {
-        filterList.innerHTML = `<div class="query-muted">No structured filters. Use the search bar or add one here.</div>`;
-        return;
-      }
-      filterList.innerHTML = state.queryFilterRules.map((rule, index) => {
-        const field = fieldByPath(model, rule.field) || fields[0];
-        const operators = field?.operators || [];
-        return `<div class="query-filter-row" data-filter-index="${index}">
-          <select data-filter-field aria-label="Filter field">${fields.map((candidate) => `<option value="${escapeHtml(candidate.path)}" ${candidate.path === rule.field ? "selected" : ""}>${escapeHtml(candidate.label)}</option>`).join("")}</select>
-          <select data-filter-operator aria-label="Filter operator">${operators.map((operator) => `<option value="${escapeHtml(operator)}" ${operator === rule.operator ? "selected" : ""}>${escapeHtml(operator.replaceAll("_", " "))}</option>`).join("")}</select>
-          <div>${field ? filterValueInput(field, rule) : ""}</div>
-          <button class="btn btn-quiet btn-sm" type="button" data-filter-remove aria-label="Remove filter">Remove</button>
-        </div>`;
-      }).join("");
-      filterList.querySelectorAll("[data-filter-field]").forEach((node) => node.addEventListener("change", (event) => {
-        state.queryLoadedSpec = null;
-        const index = Number(event.target.closest("[data-filter-index]").dataset.filterIndex);
-        const field = fieldByPath(model, event.target.value) || fields[0];
-        state.queryFilterRules[index] = { field: field.path, operator: field.operators[0] || "eq", value: "" };
-        renderQueryControls();
-      }));
-      filterList.querySelectorAll("[data-filter-operator]").forEach((node) => node.addEventListener("change", (event) => {
-        state.queryLoadedSpec = null;
-        const index = Number(event.target.closest("[data-filter-index]").dataset.filterIndex);
-        state.queryFilterRules[index].operator = event.target.value;
-        renderQueryControls();
-      }));
-      filterList.querySelectorAll("[data-filter-value]").forEach((node) => node.addEventListener("input", (event) => {
-        state.queryLoadedSpec = null;
-        const index = Number(event.target.closest("[data-filter-index]").dataset.filterIndex);
-        state.queryFilterRules[index].value = event.target.value;
-      }));
-      filterList.querySelectorAll("[data-filter-remove]").forEach((node) => node.addEventListener("click", (event) => {
-        state.queryLoadedSpec = null;
-        state.queryFilterRules.splice(Number(event.target.closest("[data-filter-index]").dataset.filterIndex), 1);
-        renderQueryControls();
-      }));
-    }
-
-    function filterAst(model) {
-      const nodes = state.queryFilterRules.flatMap((rule) => {
-        const field = fieldByPath(model, rule.field);
-        if (!field || !rule.operator) return [];
-        const noValue = ["is_empty", "is_not_empty", "today", "yesterday", "this_week", "this_month"].includes(rule.operator);
-        if (!noValue && !String(rule.value || "").trim()) return [];
-        let value = rule.value;
-        if (["in", "not_in", "between"].includes(rule.operator)) value = String(rule.value || "").split(",").map((item) => item.trim()).filter(Boolean);
-        return [{ type: "condition", field: field.path, operator: rule.operator, ...(noValue ? {} : { value }) }];
-      });
-      if (nodes.length === 0) return null;
-      return nodes.length === 1 ? nodes[0] : { type: "and", children: nodes };
-    }
-
-    function querySpec(model) {
-      if (state.queryLoadedSpec && state.queryLoadedSpec.model === model.technical_name && !$("query-search-input").value.trim() && state.queryFilterRules.length === 0) return state.queryLoadedSpec;
-      const fields = queryFields(model);
-      const aggregate = state.queryAggregate === "count"
-        ? { function: "count", alias: "count_rows" }
-        : state.queryAggregate.includes(":")
-          ? { function: state.queryAggregate.split(":")[0], field: state.queryAggregate.split(":")[1], alias: `${state.queryAggregate.split(":")[0]}_${state.queryAggregate.split(":")[1].replaceAll(".", "_")}` }
-          : null;
-      return {
-        version: 1,
-        model: model.technical_name,
-        where: filterAst(model),
-        fields: fields.map((field) => field.path),
-        order_by: state.querySortField ? [{ field: state.querySortField, direction: state.querySortDirection }] : [],
-        group_by: state.queryGroupField ? [state.queryGroupField] : [],
-        aggregates: aggregate ? [aggregate] : [],
-        pagination: { limit: 50, offset: 0 }
-      };
-    }
-
-    function nestedRowValue(value, parts) {
-      if (!parts.length) return value;
-      if (Array.isArray(value)) return value.map((item) => nestedRowValue(item, parts)).filter((item) => item !== undefined && item !== null);
-      if (!value || typeof value !== "object") return undefined;
-      return nestedRowValue(value[parts[0]], parts.slice(1));
-    }
-
-    function rowFieldValue(row, field) {
-      if (!field?.relation_path) return row[field?.column_name];
-      return nestedRowValue(row, [field.relation_path, field.column_name]);
-    }
-
-    function displayCellValue(value) {
-      if (Array.isArray(value)) return value.map(displayCellValue).join(", ");
-      if (value === null || value === undefined || value === "") return "—";
-      if (typeof value === "object") return JSON.stringify(value);
-      return String(value);
-    }
-
-    function renderQueryResults(result) {
-      const model = state.queryModel;
-      const fields = queryFields(model);
-      const tableWrap = $("query-table-wrap");
-      const stateNode = $("query-state");
-      const rows = Array.isArray(result?.rows) ? result.rows : [];
-      $("query-result-meta").textContent = `${rows.length} shown · ${Number(result?.total || 0)} total`;
-      $("query-result-scope").textContent = state.activeScope === "STORE"
-        ? `${state.currentOrg?.name || "Organization"} / ${state.activeStore?.name || "Store"}`
-        : `${state.currentOrg?.name || "Organization"} · organization scope`;
-      const summaryEntries = Object.entries(result?.aggregates || {});
-      const groups = Array.isArray(result?.groups) ? result.groups : [];
-      const summary = $("query-summary");
-      summary.innerHTML = [...summaryEntries.map(([key, value]) => `<span class="query-summary-item"><strong>${escapeHtml(key)}</strong>: ${escapeHtml(displayCellValue(value))}</span>`), ...groups.slice(0, 12).map((group) => `<span class="query-summary-item"><strong>${escapeHtml(group.key)}</strong>: ${escapeHtml(group.count)}${group.aggregates ? ` · ${escapeHtml(JSON.stringify(group.aggregates))}` : ""}</span>`)].join("");
-      summary.hidden = !summaryEntries.length && !groups.length;
-
+    function renderOrganizationStoreRows() {
+      const tbody = $("org-stores-table");
+      if (!tbody) return;
+      const performance = new Map((state.orgStats?.storePerformance || []).map((item) => [item.storeId, item]));
+      const rows = state.queryStoreResult
+        ? state.queryStoreResult.rows || []
+        : state.orgStats?.storePerformance?.length
+          ? state.orgStats.storePerformance
+          : state.stores;
       if (!rows.length) {
-        tableWrap.hidden = true;
-        stateNode.hidden = false;
-        stateNode.className = "query-state";
-        stateNode.textContent = "No records match this query. Try a broader term or remove a filter.";
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No stores registered. Create your first location to get started.</td></tr>`;
         return;
       }
-
-      $("query-results-head").innerHTML = `<tr>${fields.map((field) => `<th scope="col"><button class="query-sort-header" type="button" data-query-sort="${escapeHtml(field.path)}">${escapeHtml(field.label)}${state.querySortField === field.path ? ` ${state.querySortDirection === "asc" ? "↑" : "↓"}` : ""}</button></th>`).join("")}</tr>`;
-      $("query-results-head").querySelectorAll("[data-query-sort]").forEach((button) => button.addEventListener("click", () => {
-        state.queryLoadedSpec = null;
-        state.querySortDirection = state.querySortField === button.dataset.querySort && state.querySortDirection === "asc" ? "desc" : "asc";
-        state.querySortField = button.dataset.querySort;
-        runQuery();
-      }));
-      $("query-results-body").innerHTML = rows.map((row) => `<tr>${fields.map((field) => {
-        const display = displayCellValue(rowFieldValue(row, field));
-        return `<td title="${escapeHtml(display)}">${field.field_type === "char" || field.field_type === "selection" ? escapeHtml(display) : `<code>${escapeHtml(display)}</code>`}</td>`;
-      }).join("")}</tr>`).join("");
-      tableWrap.hidden = false;
-      stateNode.hidden = true;
+      tbody.innerHTML = rows.map((store) => {
+        const storeId = store.id || store.storeId;
+        const metrics = performance.get(storeId) || {};
+        return `
+          <tr>
+            <td><strong>${escapeHtml(store.name || metrics.name || "Unnamed store")}</strong></td>
+            <td><code>${escapeHtml(store.code || metrics.code || "—")}</code></td>
+            <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(store.status || metrics.status || "ACTIVE")}</span></span></td>
+            <td class="tabular">${formatCurrency(metrics.todayRevenueMinor || 0)}</td>
+            <td class="tabular">${metrics.todayOrdersCount ?? 0}</td>
+            <td class="tabular">${metrics.activeDevicesCount ?? 0} active</td>
+            <td>
+              <button class="btn btn-secondary btn-sm btn-enter-store" data-store-id="${escapeHtml(storeId)}" type="button">
+                Enter Store Workspace →
+              </button>
+            </td>
+          </tr>`;
+      }).join("");
+      tbody.querySelectorAll(".btn-enter-store").forEach((button) => {
+        button.addEventListener("click", () => setScope("STORE", button.dataset.storeId));
+      });
     }
 
-    function renderQueryModelOptions() {
-      const select = $("query-model-select");
-      select.innerHTML = state.queryModels.map((model) => `<option value="${escapeHtml(model.technical_name)}">${escapeHtml(model.label)} · ${escapeHtml(model.technical_name)}</option>`).join("");
-      if (state.queryModel) select.value = state.queryModel.technical_name;
-    }
-
-    async function loadQuerySavedAndHistory() {
-      if (!state.currentOrg || !state.queryModel) return;
-      try {
-        const [savedResponse, historyResponse] = await Promise.all([
-          apiFetch(`/api/v1/query/saved?model=${encodeURIComponent(state.queryModel.technical_name)}`, { headers: { "x-organization-id": state.currentOrg.id } }),
-          apiFetch(`/api/v1/query/history?model=${encodeURIComponent(state.queryModel.technical_name)}&limit=5`, { headers: { "x-organization-id": state.currentOrg.id } })
-        ]);
-        const saved = Array.isArray(savedResponse?.savedQueries) ? savedResponse.savedQueries : [];
-        const history = Array.isArray(historyResponse?.history) ? historyResponse.history : [];
-        $("query-saved-list").innerHTML = saved.length ? saved.map((item) => `<div class="query-list-item"><div><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.scope)} · ${escapeHtml(item.updated_at)}</span></div><button class="btn btn-quiet btn-sm" type="button" data-load-saved="${escapeHtml(item.id)}">Load</button></div>`).join("") : "No saved views yet.";
-        $("query-history-list").innerHTML = history.length ? `<strong>Recent runs</strong>${history.map((item) => `<div class="query-list-item"><div><strong>${escapeHtml(item.model)}</strong><span>${escapeHtml(item.result_count)} rows · ${escapeHtml(item.created_at)}</span></div></div>`).join("")}` : "No query history yet.";
-        $("query-saved-list").querySelectorAll("[data-load-saved]").forEach((button) => button.addEventListener("click", async () => {
-          const item = saved.find((candidate) => candidate.id === button.dataset.loadSaved);
-          if (!item) return;
-          state.queryLoadedSpec = item.query;
-          state.querySelectedFields = item.query.fields || state.querySelectedFields;
-          state.querySortField = item.query.order_by?.[0]?.field || state.querySortField;
-          state.querySortDirection = item.query.order_by?.[0]?.direction || state.querySortDirection;
-          state.queryGroupField = item.query.group_by?.[0] || "";
-          const aggregate = item.query.aggregates?.[0];
-          state.queryAggregate = aggregate?.function === "count" ? "count" : aggregate?.field ? `${aggregate.function}:${aggregate.field}` : "";
-          renderQueryControls();
-          await runQuery();
-        }));
-      } catch (error) {
-        $("query-saved-list").textContent = error.message || "Saved views are unavailable.";
-        $("query-history-list").textContent = "";
+    function renderStoreDeviceRows() {
+      const tbody = $("store-devices-table");
+      if (!tbody) return;
+      const devices = state.storeDeviceResult ? state.storeDeviceResult.rows || [] : state.storeDevicesFallback;
+      if (!devices.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No devices registered at this branch yet.</td></tr>`;
+        return;
       }
+      tbody.innerHTML = devices.map((device) => `
+        <tr>
+          <td><strong>${escapeHtml(device.name || "Unnamed terminal")}</strong></td>
+          <td><code>${escapeHtml(device.mode || "—")}</code></td>
+          <td>${escapeHtml(formatDateTime(device.last_seen_at || device.lastActiveAt))}</td>
+          <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(device.status || "ACTIVE")}</span></span></td>
+        </tr>
+      `).join("");
     }
 
-    async function loadQueryView() {
+    function renderAllDeviceRows() {
+      const tbody = $("all-devices-table");
+      if (!tbody) return;
+      const devices = state.allDeviceResult ? state.allDeviceResult.rows || [] : [];
+      if (!devices.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No terminals found.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = devices.map((device) => `
+        <tr>
+          <td><strong>${escapeHtml(device.name || "Unnamed terminal")}</strong></td>
+          <td><code>${escapeHtml(device.mode || "—")}</code></td>
+          <td>${escapeHtml(relatedStoreName(device.store) || device.store_id || "Main")}</td>
+          <td>${escapeHtml(formatDateTime(device.last_seen_at, "—"))}</td>
+          <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(device.status || "ACTIVE")}</span></span></td>
+        </tr>
+      `).join("");
+    }
+
+    async function ensureStoreDeviceSearch() {
+      if (!state.currentOrg || !state.activeStore || storeDeviceSearch) return;
+      storeDeviceSearch = createUniversalSearch({
+        root: $("store-devices-search"),
+        apiFetch,
+        model: "device.device",
+        deferInitialLoad: true,
+        organizationId: () => state.currentOrg?.id,
+        storeId: () => state.activeStore?.id,
+        fields: ["id", "name", "mode", "last_seen_at", "status"],
+        onResults: (result) => {
+          state.storeDeviceResult = result;
+          renderStoreDeviceRows();
+        }
+      });
+      await storeDeviceSearch.init();
+    }
+
+    async function ensureAllDeviceSearch() {
+      if (allDeviceSearch) {
+        await allDeviceSearch.setContext();
+        return;
+      }
       if (!state.currentOrg) return;
-      const stateNode = $("query-state");
-      if (state.queryModels.length === 0) {
-        stateNode.hidden = false;
-        stateNode.className = "query-state";
-        stateNode.textContent = "Loading query metadata…";
+      allDeviceSearch = createUniversalSearch({
+        root: $("all-devices-search"),
+        apiFetch,
+        model: "device.device",
+        organizationId: () => state.currentOrg?.id,
+        storeId: () => state.activeScope === "STORE" ? state.activeStore?.id : undefined,
+        fields: ["id", "name", "mode", "store.name", "last_seen_at", "status"],
+        onResults: (result) => {
+          state.allDeviceQueryFailed = false;
+          state.allDeviceResult = result;
+          renderAllDeviceRows();
+        },
+        onError: () => {
+          state.allDeviceQueryFailed = true;
+        }
+      });
+      await allDeviceSearch.init();
+    }
+
+    async function initializeUniversalSearches() {
+      if (!state.currentOrg) return;
+      if (orgStoreSearch) return;
+      orgStoreSearch = createUniversalSearch({
+        root: $("org-stores-search"),
+        apiFetch,
+        model: "res.store",
+        deferInitialLoad: true,
+        organizationId: () => state.currentOrg?.id,
+        fields: ["id", "name", "code", "timezone", "status"],
+        onResults: (result) => {
+          state.queryStoreResult = result;
+          renderOrganizationStoreRows();
+        }
+      });
+      await orgStoreSearch.init();
+    }
+
+    async function loadOrganizationOverview(force = false) {
+      if (!state.currentOrg) return;
+      const organizationId = state.currentOrg.id;
+      void initializeUniversalSearches().catch((error) => toast(error.message || "Store search is unavailable", true));
+      const isFresh = state.orgStats
+        && state.orgStatsOrganizationId === organizationId
+        && Date.now() - state.orgStatsLoadedAt < 30_000;
+      if (!force && isFresh) {
+        void initializeUniversalSearches().catch((error) => toast(error.message || "Store search is unavailable", true));
+        return;
+      }
+      if (!force && organizationOverviewPromise && organizationOverviewKey === organizationId) return organizationOverviewPromise;
+      setViewLoading("view-org-overview", true);
+      const promise = (async () => {
         try {
-          const result = await apiFetch("/api/v1/query/models", { headers: { "x-organization-id": state.currentOrg.id } });
-          state.queryModels = Array.isArray(result.models) ? result.models : [];
-          state.queryModel = state.queryModels.find((model) => model.technical_name === "product.product") || state.queryModels[0] || null;
-          renderQueryModelOptions();
-          resetQueryControls();
-          renderQueryControls();
+          const overviewRes = await apiFetch("/api/v1/hub/overview/organization", {
+            headers: { "x-organization-id": organizationId }
+          });
+
+          if (state.currentOrg?.id !== organizationId) return;
+          const stats = overviewRes.stats || {};
+          state.orgStats = stats;
+          state.orgStatsOrganizationId = organizationId;
+          state.orgStatsLoadedAt = Date.now();
+
+          $("org-kpi-stores").textContent = stats.totalStores ?? state.stores.length;
+          $("org-kpi-apps").textContent = stats.activeApps ?? "0";
+          $("org-kpi-members").textContent = stats.totalMembers ?? "0";
+          $("org-kpi-revenue").textContent = formatCurrency(stats.todayRevenueMinor ?? 0);
+
+          if ($("nav-apps-count")) $("nav-apps-count").textContent = state.apps.length;
+
+          renderOrganizationStoreRows();
+
+          // Render Apps Summary Cards
+          const appsSummary = $("org-apps-summary");
+          const summaryApps = state.apps.slice(0, 3);
+          appsSummary.innerHTML = summaryApps.length ? summaryApps.map((app) => `
+            <div class="app-item-card">
+              <div class="app-item-top">
+                <span class="status-pill active"><span class="status-dot"></span><span>Active</span></span>
+              </div>
+              <h3>${escapeHtml(app.name || app.id)}</h3>
+              <p>${escapeHtml(app.description || "Integrated Aevo business module.")}</p>
+            </div>
+          `).join("") : `<div class="empty-state">No active applications yet.</div>`;
+          void initializeUniversalSearches().catch((error) => toast(error.message || "Store search is unavailable", true));
         } catch (err) {
-          stateNode.className = "query-state error";
-          stateNode.textContent = err.message || "Query metadata is unavailable.";
-          return;
+          toast(err.message || "Failed to load organization metrics", true);
+          renderTableError("org-stores-table", 7, "Organization metrics could not be loaded.", () => void loadOrganizationOverview(true));
+        } finally {
+          setViewLoading("view-org-overview", false);
         }
-      }
-      await runQuery();
-      await loadQuerySavedAndHistory();
-    }
-
-    async function runQuery() {
-      const select = $("query-model-select");
-      const selectedModel = state.queryModels.find((model) => model.technical_name === select.value) || state.queryModel;
-      if (!selectedModel) return;
-      state.queryModel = selectedModel;
-      const stateNode = $("query-state");
-      stateNode.hidden = false;
-      stateNode.className = "query-state";
-      stateNode.textContent = "Running a scoped query…";
-      $("query-table-wrap").hidden = true;
-      $("query-run-button").disabled = true;
+      })();
+      organizationOverviewPromise = promise;
+      organizationOverviewKey = organizationId;
       try {
-        const searchText = $("query-search-input").value.trim();
-        const response = await apiFetch("/api/v1/query/execute", {
-          method: "POST",
-          headers: { "x-organization-id": state.currentOrg.id },
-          body: JSON.stringify({
-            query: querySpec(selectedModel),
-            ...(searchText ? { searchText } : {}),
-            ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {})
-          })
-        });
-        state.queryRows = response.rows || [];
-        renderQueryResults(response);
-      } catch (err) {
-        stateNode.hidden = false;
-        stateNode.className = "query-state error";
-        stateNode.textContent = err.message || "The query could not be completed.";
-        $("query-result-meta").textContent = "Query failed";
+        await promise;
       } finally {
-        $("query-run-button").disabled = false;
+        if (organizationOverviewPromise === promise) {
+          organizationOverviewPromise = undefined;
+          organizationOverviewKey = undefined;
+        }
       }
     }
 
-    function combineQueryWhere(left, right) {
-      if (!left) return right;
-      if (!right) return left;
-      return { type: "and", children: [left, right] };
-    }
+    async function loadStoreOverview(storeId, force = false) {
+      if (!state.currentOrg) return;
+      const organizationId = state.currentOrg.id;
+      void ensureStoreDeviceSearch().catch((error) => toast(error.message || "Device search is unavailable", true));
+      const isFresh = state.storeStats
+        && state.storeStatsStoreId === storeId
+        && Date.now() - state.storeStatsLoadedAt < 30_000;
+      if (!force && isFresh) return;
+      const key = `${organizationId}:${storeId}`;
+      if (!force && storeOverviewPromise && storeOverviewKey === key) return storeOverviewPromise;
+      setViewLoading("view-store-overview", true);
+      const promise = (async () => {
+        try {
+          const workspaceRes = await apiFetch(`/api/v1/hub/workspace/store?storeId=${encodeURIComponent(storeId)}`, {
+            headers: { "x-organization-id": organizationId }
+          });
 
-    async function saveCurrentQuery() {
-      if (!state.queryModel) return;
-      const name = window.prompt("Save this query as", `${state.queryModel.label} view`);
-      if (!name?.trim()) return;
-      const query = querySpec(state.queryModel);
-      const searchText = $("query-search-input").value.trim();
+          if (state.currentOrg?.id !== organizationId || state.activeStore?.id !== storeId) return;
+          const stats = workspaceRes.stats || {};
+          state.storeStats = stats;
+          state.storeStatsStoreId = storeId;
+          state.storeStatsLoadedAt = Date.now();
+
+          $("store-kpi-sales").textContent = formatCurrency(stats.todaySalesMinor ?? 0);
+          $("store-kpi-orders").textContent = stats.todayOrders ?? 0;
+          $("store-kpi-bookings").textContent = stats.todayBookings ?? 0;
+          $("store-kpi-devices").textContent = `${stats.devicesOnline ?? 0} / ${stats.devicesTotal ?? 0}`;
+
+          state.storeDevicesFallback = workspaceRes.devices || [];
+          renderStoreDeviceRows();
+          // Metadata and saved searches warm after the fast workspace read;
+          // the fallback device rows remain the first visible result set.
+          void ensureStoreDeviceSearch().catch((error) => toast(error.message || "Device search is unavailable", true));
+        } catch (err) {
+          toast(err.message || "Failed to load store overview", true);
+          renderTableError("store-devices-table", 4, "Store data could not be loaded.", () => void loadStoreOverview(storeId, true));
+        } finally {
+          setViewLoading("view-store-overview", false);
+        }
+      })();
+      storeOverviewPromise = promise;
+      storeOverviewKey = key;
       try {
-        if (searchText) {
-          const parsed = await apiFetch("/api/v1/query/parse", { method: "POST", body: JSON.stringify({ searchText }) });
-          query.where = combineQueryWhere(query.where, parsed.where || null);
-        }
-        await apiFetch("/api/v1/query/saved", {
-          method: "POST",
-          headers: { "x-organization-id": state.currentOrg.id },
-          body: JSON.stringify({ name: name.trim(), scope: "PRIVATE", query, ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {}) })
-        });
-        toast("Saved query created for your account.");
-        await loadQuerySavedAndHistory();
-      } catch (err) {
-        toast(err.message || "Could not save this query", true);
-      }
-    }
-
-    function downloadText(fileName, content, contentType) {
-      const url = URL.createObjectURL(new Blob([content], { type: contentType }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    function downloadBlob(fileName, blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    async function downloadExportFile(id, fallbackName, contentType) {
-      const response = await fetch(`${API_BASE}/api/v1/query/exports/${encodeURIComponent(id)}/download`, { credentials: "include" });
-      if (!response.ok) throw new Error(`Export download failed (${response.status})`);
-      const disposition = response.headers.get("content-disposition") || "";
-      const fileName = disposition.match(/filename="?([^";]+)"?/i)?.[1] || fallbackName;
-      downloadBlob(fileName, await response.blob() || new Blob([], { type: contentType }));
-    }
-
-    async function exportCurrentQuery(format) {
-      if (!state.queryModel) return;
-      const button = format === "CSV" ? $("query-export-csv") : format === "JSON" ? $("query-export-json") : $("query-export-xlsx");
-      button.disabled = true;
-      $("query-job-state").textContent = `Preparing ${format} export…`;
-      try {
-        const response = await apiFetch("/api/v1/query/exports", {
-          method: "POST",
-          headers: { "x-organization-id": state.currentOrg.id },
-          body: JSON.stringify({ query: querySpec(state.queryModel), format, idempotencyKey: crypto.randomUUID(), selectedFields: queryFields(state.queryModel).map((field) => field.path), ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {}) })
-        });
-        const job = response.exportJob;
-        let latestJob = job;
-        for (let attempt = 0; attempt < 20 && latestJob.status !== "COMPLETED" && latestJob.status !== "FAILED"; attempt += 1) {
-          await new Promise((resolve) => window.setTimeout(resolve, 250));
-          latestJob = (await apiFetch(`/api/v1/query/exports/${encodeURIComponent(job.id)}`)).exportJob;
-        }
-        if (latestJob.status !== "COMPLETED") throw new Error(latestJob.error_message || "Export job did not complete.");
-        if (format === "XLSX") {
-          await downloadExportFile(job.id, latestJob.file_name, latestJob.content_type);
-        } else {
-          const content = await apiFetch(`/api/v1/query/exports/${encodeURIComponent(job.id)}/download`);
-          downloadText(latestJob.file_name, content, latestJob.content_type);
-        }
-        $("query-job-state").textContent = `${format} export completed with ${latestJob.total_rows} rows.`;
-      } catch (error) {
-        $("query-job-state").textContent = error.message || "Export failed.";
+        await promise;
       } finally {
-        button.disabled = false;
-      }
-    }
-
-    function parseCsv(text) {
-      const rows = [];
-      let row = [], cell = "", quoted = false;
-      for (let index = 0; index < text.length; index += 1) {
-        const char = text[index];
-        const next = text[index + 1];
-        if (char === '"' && quoted && next === '"') { cell += '"'; index += 1; continue; }
-        if (char === '"') { quoted = !quoted; continue; }
-        if (char === "," && !quoted) { row.push(cell); cell = ""; continue; }
-        if ((char === "\n" || char === "\r") && !quoted) {
-          if (char === "\r" && next === "\n") index += 1;
-          row.push(cell); cell = "";
-          if (row.some((value) => value !== "")) rows.push(row);
-          row = [];
-          continue;
+        if (storeOverviewPromise === promise) {
+          storeOverviewPromise = undefined;
+          storeOverviewKey = undefined;
         }
-        cell += char;
-      }
-      if (cell || row.length) { row.push(cell); rows.push(row); }
-      const columns = (rows.shift() || []).map((value) => value.trim());
-      return { columns, rows: rows.map((values) => Object.fromEntries(columns.map((column, index) => [column, values[index] ?? ""]))) };
-    }
-
-    async function handleImportFile(event) {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      try {
-        const parsed = parseCsv(await file.text());
-        if (!parsed.columns.length || !parsed.rows.length) throw new Error("CSV must contain a header and at least one row.");
-        state.queryImport = { file, ...parsed };
-        state.queryImportJobId = null;
-        state.queryImportDetail = null;
-        $("query-import-mapping").hidden = true;
-        $("query-import-preview").disabled = false;
-        $("query-job-state").textContent = `${file.name}: ${parsed.rows.length} rows ready for metadata mapping.`;
-      } catch (error) {
-        state.queryImport = null;
-        $("query-import-preview").disabled = true;
-        $("query-job-state").textContent = error.message || "Could not read the CSV file.";
-      }
-    }
-
-    function importableFields(model) {
-      return (model?.fields || [])
-        .filter((field) => field.capabilities?.import)
-        .sort((left, right) => Number(left.sequence || 0) - Number(right.sequence || 0));
-    }
-
-    function renderImportMappingEditor(job, detail) {
-      const mappingNode = $("query-import-mapping");
-      const model = state.queryModel;
-      const fields = importableFields(model);
-      const mappingBySource = new Map((detail.mappings || []).map((mapping) => [mapping.source, mapping.field]));
-      const columns = state.queryImport?.columns || [];
-      mappingNode.hidden = false;
-      mappingNode.innerHTML = `
-        <div class="query-import-mapping-head">
-          <div><strong>Map uploaded columns</strong><span>Review inferred fields before validation. Skip columns that should not be imported.</span></div>
-          <span>${escapeHtml(job.valid_rows)} valid · ${escapeHtml(job.failed_rows)} row errors</span>
-        </div>
-        ${columns.map((column) => `<div class="query-import-mapping-row">
-          <label title="${escapeHtml(column)}">${escapeHtml(column)}</label>
-          <select data-import-mapping-source="${escapeHtml(column)}" aria-label="Map ${escapeHtml(column)}">
-            <option value="">Skip column</option>
-            ${fields.map((field) => `<option value="${escapeHtml(field.path)}" ${mappingBySource.get(column) === field.path ? "selected" : ""}>${escapeHtml(field.label)} · ${escapeHtml(field.path)}</option>`).join("")}
-          </select>
-        </div>`).join("")}
-        <div class="query-import-mapping-actions">
-          <button class="btn btn-secondary btn-sm" type="button" id="query-import-save-mapping">Validate mapping</button>
-          ${job.status === "READY" ? `<button class="btn btn-primary btn-sm" type="button" id="query-import-confirm">Confirm import</button>` : ""}
-          ${(detail.errors || []).length ? `<button class="btn btn-quiet btn-sm" type="button" id="query-import-errors">Download errors</button>` : ""}
-        </div>`;
-      $("query-import-save-mapping")?.addEventListener("click", () => saveImportMappings(job.id));
-      $("query-import-confirm")?.addEventListener("click", () => confirmSelectedImport(job.id));
-      $("query-import-errors")?.addEventListener("click", () => downloadImportErrors(job.id));
-    }
-
-    async function saveImportMappings(id) {
-      const button = $("query-import-save-mapping");
-      if (button) button.disabled = true;
-      try {
-        const mappings = Array.from($("query-import-mapping").querySelectorAll("[data-import-mapping-source]"))
-          .map((node) => ({ source: node.dataset.importMappingSource, field: node.value }))
-          .filter((mapping) => mapping.field);
-        const detail = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}/mappings`, {
-          method: "PATCH",
-          headers: { "x-organization-id": state.currentOrg.id },
-          body: JSON.stringify({ mappings })
-        });
-        state.queryImportJobId = id;
-        state.queryImportDetail = detail;
-        const job = detail.importJob;
-        $("query-job-state").innerHTML = `<strong>${escapeHtml(job.status)}</strong>: ${escapeHtml(job.valid_rows)} valid of ${escapeHtml(job.total_rows)} rows.${(detail.errors || []).length ? ` ${escapeHtml(detail.errors.length)} validation errors.` : " Mapping is ready."}`;
-        renderImportMappingEditor(job, detail);
-      } catch (error) {
-        $("query-job-state").textContent = error.message || "Could not validate the import mapping.";
-      } finally {
-        if (button) button.disabled = false;
-      }
-    }
-
-    async function previewSelectedImport() {
-      if (!state.queryImport || !state.queryModel) return;
-      $("query-import-preview").disabled = true;
-      try {
-        const response = await apiFetch("/api/v1/query/imports", {
-          method: "POST",
-          headers: { "x-organization-id": state.currentOrg.id },
-          body: JSON.stringify({ model: state.queryModel.technical_name, sourceFileName: state.queryImport.file.name, sourceContentType: state.queryImport.file.type || "text/csv", idempotencyKey: `${state.queryImport.file.name}-${state.queryImport.file.size}-${state.queryImport.file.lastModified}`, columns: state.queryImport.columns, rows: state.queryImport.rows, ...(state.activeScope === "STORE" && state.activeStore ? { storeId: state.activeStore.id } : {}) })
-        });
-        const job = response.importJob;
-        const detail = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(job.id)}`, { headers: { "x-organization-id": state.currentOrg.id } });
-        state.queryImportJobId = job.id;
-        state.queryImportDetail = detail;
-        const errorNote = detail.errors?.length ? ` ${detail.errors.length} validation errors.` : "";
-        $("query-job-state").textContent = `${job.status}: ${job.valid_rows} valid of ${job.total_rows} rows.${errorNote}`;
-        renderImportMappingEditor(job, detail);
-      } catch (error) {
-        $("query-job-state").textContent = error.message || "Import preview failed.";
-      } finally {
-        $("query-import-preview").disabled = false;
-      }
-    }
-
-    async function confirmSelectedImport(id) {
-      const button = $("query-import-confirm");
-      if (button) button.disabled = true;
-      try {
-        const response = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}/confirm`, { method: "POST", headers: { "x-organization-id": state.currentOrg.id } });
-        let latestJob = response.importJob;
-        for (let attempt = 0; attempt < 40 && latestJob.status !== "COMPLETED" && latestJob.status !== "FAILED"; attempt += 1) {
-          await new Promise((resolve) => window.setTimeout(resolve, 250));
-          latestJob = (await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}`)).importJob;
-        }
-        if (latestJob.status !== "COMPLETED") throw new Error(latestJob.error_message || "Import job did not complete.");
-        $("query-job-state").textContent = `Import completed: ${latestJob.processed_rows} rows written.`;
-        await runQuery();
-      } catch (error) {
-        $("query-job-state").textContent = error.message || "Import failed.";
-        if (button) button.disabled = false;
-      }
-    }
-
-    async function downloadImportErrors(id) {
-      try {
-        const content = await apiFetch(`/api/v1/query/imports/${encodeURIComponent(id)}/errors/download`);
-        downloadText(`aevo-import-errors-${id}.csv`, content, "text/csv");
-      } catch (error) {
-        $("query-job-state").textContent = error.message || "Could not download import errors.";
       }
     }
 
     async function loadAppsView() {
+      setViewLoading("view-apps", true);
       try {
-        const res = await apiFetch("/api/v1/hub/apps", { headers: { "x-organization-id": state.currentOrg.id } });
-        const apps = res.apps || [];
-        $("all-apps-grid").innerHTML = apps.map((a) => `
+        const apps = state.appsLoaded
+          ? state.apps
+          : (await apiFetch("/api/v1/hub/apps", { headers: { "x-organization-id": state.currentOrg.id } })).apps || [];
+        state.apps = apps;
+        state.appsLoaded = true;
+        $("all-apps-grid").innerHTML = apps.length ? apps.map((a) => `
           <div class="app-item-card">
             <div class="app-item-top">
               <span class="status-pill active"><span class="status-dot"></span><span>Available</span></span>
@@ -2663,14 +2374,23 @@
             <h3>${escapeHtml(a.name || a.id)}</h3>
             <p>${escapeHtml(a.description || "Operational module for Aevo Ecosystem.")}</p>
           </div>
-        `).join("");
+        `).join("") : `<div class="empty-state">No applications are available for this organization.</div>`;
       } catch (err) {
-        $("all-apps-grid").innerHTML = `<div class="empty-state">Could not load applications.</div>`;
+        $("all-apps-grid").innerHTML = `<div class="aevo-loading-state aevo-loading-state--error" role="alert"><span>Could not load applications.</span><button type="button" id="apps-retry">Try again</button></div>`;
+        $("apps-retry")?.addEventListener("click", () => void loadAppsView());
+      } finally {
+        setViewLoading("view-apps", false);
       }
     }
 
-    async function loadDevicesView() {
+    async function loadDevicesView(force = false) {
+      const key = `${state.currentOrg?.id || ""}:${state.activeScope}:${state.activeStore?.id || "organization"}`;
+      if (!force && state.allDevicesLoadedKey === key && !state.allDeviceQueryFailed) return;
+      setViewLoading("view-devices", true);
       try {
+        await ensureAllDeviceSearch();
+        state.allDevicesLoadedKey = key;
+        if (!state.allDeviceQueryFailed) return;
         const query = state.activeScope === "STORE" && state.activeStore ? `?storeId=${encodeURIComponent(state.activeStore.id)}` : "";
         const res = await apiFetch(`/api/v1/hub/devices${query}`, { headers: { "x-organization-id": state.currentOrg.id } });
         const devices = res.devices || [];
@@ -2684,11 +2404,15 @@
           </tr>
         `).join("") : `<tr><td colspan="5" class="empty-state">No terminals found.</td></tr>`;
       } catch (err) {
-        $("all-devices-table").innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load terminals.</td></tr>`;
+        renderTableError("all-devices-table", 5, "Terminals could not be loaded.", () => void loadDevicesView(true));
+      } finally {
+        setViewLoading("view-devices", false);
       }
     }
 
-    async function loadBillingView() {
+    async function loadBillingView(force = false) {
+      if (!force && Date.now() - state.billingLoadedAt < 30_000) return;
+      setViewLoading("view-billing", true);
       try {
         const res = await apiFetch("/api/v1/hub/billing/current", { headers: { "x-organization-id": state.currentOrg.id } });
         const sub = res.subscription || {};
@@ -2697,46 +2421,63 @@
           <tr>
             <td><strong>${escapeHtml(plan.name || "Business Plan")}</strong></td>
             <td>${escapeHtml(plan.billing_interval || "Monthly")}</td>
-            <td>${escapeHtml(sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : "Active")}</td>
+            <td>${escapeHtml(sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString(i18n.getIntlLocale()) : "Active")}</td>
             <td><span class="status-pill active"><span class="status-dot"></span><span>${escapeHtml(sub.status || "ACTIVE")}</span></span></td>
           </tr>
         `;
+        state.billingLoadedAt = Date.now();
       } catch (err) {
-        $("billing-table").innerHTML = `<tr><td colspan="4" class="empty-state">Could not load subscription details.</td></tr>`;
+        renderTableError("billing-table", 4, "Subscription details could not be loaded.", () => void loadBillingView(true));
+      } finally {
+        setViewLoading("view-billing", false);
       }
     }
 
     // App Initialization
     async function init() {
       try {
-        const me = await apiFetch("/api/auth/me");
-        state.user = me.effectiveUser || me.user;
-        state.principal = me.principal;
+        await localeReady;
+        const params = new URLSearchParams(window.location.search);
+        const requestedOrgId = params.get("organizationId");
+        const savedOrgId = requestedOrgId || localStorage.getItem("aevo.hub.orgId");
+        const bootstrap = await apiFetch("/api/v1/hub/bootstrap", {
+          headers: savedOrgId ? { "x-organization-id": savedOrgId } : {}
+        });
+        await i18n.init({ userId: bootstrap.user?.userId || bootstrap.user?.id, preference: bootstrap.preferences });
+        state.user = bootstrap.user;
+        state.principal = bootstrap.principal;
+        $("btn-scope-org").hidden = !state.principal?.permissions?.includes("organization.read");
 
         $("user-email").textContent = state.user.email || "Account";
         $("user-role").textContent = state.principal?.role || "Member";
         $("user-avatar").textContent = (state.user.displayName || state.user.email || "A").charAt(0).toUpperCase();
 
-        const orgRes = await apiFetch("/api/v1/hub/organizations");
-        state.organizations = orgRes.organizations || [];
+        state.organizations = bootstrap.organizations || [];
 
         if (!state.organizations.length) {
-          window.location.replace("/organize?setup=true");
+          window.location.replace("/setup");
           return;
         }
 
-        const savedOrgId = localStorage.getItem("aevo.hub.orgId");
-        state.currentOrg = state.organizations.find((o) => o.id === savedOrgId) || state.organizations[0];
+        state.currentOrg = state.organizations.find((o) => o.id === state.principal?.organizationId)
+          || state.organizations.find((o) => o.id === savedOrgId)
+          || state.organizations[0];
         localStorage.setItem("aevo.hub.orgId", state.currentOrg.id);
 
         $("flyout-org-name").textContent = state.currentOrg.name;
 
-        // Fetch stores for active org
-        const storesRes = await apiFetch(`/api/v1/hub/stores?organizationId=${encodeURIComponent(state.currentOrg.id)}`, {
-          headers: { "x-organization-id": state.currentOrg.id }
-        });
-        state.stores = storesRes.stores || [];
+        state.stores = bootstrap.stores || [];
+        state.apps = bootstrap.apps || [];
+        state.appsLoaded = true;
         $("flyout-store-count").textContent = state.stores.length;
+        favoritesClient = createFavoritesClient({
+          apiFetch,
+          onChange: (favorites) => {
+            state.favorites = favorites;
+            renderWorkspaceFavorites();
+          }
+        });
+        void favoritesClient.load().catch((error) => toast(error.message || "Pinned navigation is unavailable", true));
 
         // Populate Stores list in Context Flyout
         const flyoutStoresList = $("flyout-stores-list");
@@ -2765,21 +2506,31 @@
         // Role-Based Scope Routing:
         // - Store Manager defaults directly to Store Workspace
         // - Owner and Organization Manager default to Organization Workspace
+        const requestedView = params.get("view");
         const savedScope = localStorage.getItem("aevo.hub.scope");
-        const savedStoreId = localStorage.getItem("aevo.hub.storeId");
+        const savedStoreId = params.get("storeId") || localStorage.getItem("aevo.hub.storeId");
+
+        const hasOrganizationLayer = ["OWNER", "ADMIN", "ORGANIZATION_MANAGER"].includes(String(state.principal?.role || ""));
+        if (hasOrganizationLayer && !params.get("storeId")) {
+          window.location.replace(`/organize?organizationId=${encodeURIComponent(state.currentOrg?.id || "")}&tab=overview`);
+          return;
+        }
 
         const savedStore = state.stores.find((store) => store.id === savedStoreId);
-        if (state.principal?.role === "STORE_MANAGER" || (savedScope === "STORE" && savedStore)) {
+        if (savedStore && (params.get("storeId") || state.principal?.role === "STORE_MANAGER" || savedScope === "STORE")) {
           setScope("STORE", savedStore?.id || state.stores[0]?.id);
         } else {
           setScope("ORGANIZATION");
         }
+        if (["apps", "devices", "billing"].includes(requestedView || "")) showView(requestedView);
       } catch (err) {
         if (err instanceof AuthApiError && err.status === 401) {
           window.location.replace("/login");
           return;
         }
         toast(err.message || "Failed to initialize workspace", true);
+      } finally {
+        $("workspace-main")?.setAttribute("aria-busy", "false");
       }
     }
 

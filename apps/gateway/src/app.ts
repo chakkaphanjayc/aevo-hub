@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 import { AuthSessionManager, AuthenticationError, AuthService, defineAbilityFor, hasPermission, requirePlatformPermission, SessionManagerError } from "@aevo/auth";
 import type { AuthenticatedUser, ManagedAuthSession } from "@aevo/auth";
 import type { AppConfig } from "@aevo/config";
-import { deviceModes, roles } from "@aevo/contracts";
+import { deviceModes, navigationMenuTargets, platformRolePermissionDefaults, roles } from "@aevo/contracts";
 import type { BillingProvider, DeviceMode, Permission, PlatformPermission, PlatformRole, Role, SessionPrincipal, WaitlistStatus } from "@aevo/contracts";
-import type { Database } from "@aevo/db";
+import type { Database, PlatformQueryPrincipal } from "@aevo/db";
 import {
   canAccessStore,
   resolvePrincipal,
@@ -86,9 +86,16 @@ import {
   addToWaitlist,
   updateWaitlistStatus,
   listUserOrganizations,
+  listNavigationFavorites,
+  listAuthorizedNavigationFavorites,
+  upsertNavigationFavorite,
+  deleteNavigationFavorite,
+  getUserPreferences,
+  updateUserPreferences,
   createOrganization,
   listOrganizationStores,
   createStore,
+  OrganizationLifecycleError,
   updateStore,
   deleteStore,
   getOrganizationProfile,
@@ -115,19 +122,16 @@ import {
   setupOnboardingStore,
   setupOnboardingApps,
   setupOnboardingBooking,
-  generateDemoData,
-  clearDemoData,
   markOnboardingStep,
   getSetupChecklist,
   completeOnboardingSession,
   checkAppEntitlement,
-  isSystemTestingMode,
   getPlatformOverview,
   listAdminOrganizations,
+  listAdminStores,
   updateAdminOrganization,
   listAdminUsers,
   updateAdminUserStatus,
-  setOperatingMode,
   getPlatformUserRole,
   writeStructuredAuditLog,
   createImpersonationSession,
@@ -138,7 +142,9 @@ import {
   syncPlanEntitlements,
   QueryPlatformError,
   listQueryModels,
+  listPlatformQueryModels,
   executeQuery,
+  executePlatformQuery,
   listQueryHistory,
   createSavedQuery,
   listSavedQueries,
@@ -172,6 +178,7 @@ import { parseQueryText, QuerySyntaxError } from "@aevo/query";
 import { createStoreRoomBroadcaster, type RealtimeEventName, type RealtimePayloadMap } from "@aevo/realtime";
 import { calculateDailySummary, calculateHourlySales, calculateProductMix } from "@aevo/reporting";
 import { Elysia, t } from "elysia";
+import { swagger } from "@elysiajs/swagger";
 import { AppError, badRequest, forbidden, unauthorized } from "./errors";
 import {
   clearCsrfCookie,
@@ -190,7 +197,8 @@ import { FixedWindowRateLimiter } from "./rate-limit";
 export interface AppDependencies {
   config: AppConfig;
   database: Database;
-  auth?: Pick<AuthService, "login" | "logout" | "resolve" | "resolveIdentity" | "refresh">;
+  auth?: Pick<AuthService, "login" | "logout" | "resolve" | "resolveIdentity" | "refresh">
+    & Partial<Pick<AuthService, "resolveIdentityByUserId">>;
   billing?: BillingProvider;
 }
 
@@ -201,11 +209,17 @@ export function createApp(dependencies: AppDependencies) {
     idleTimeoutSeconds: config.sessionIdleTimeoutSeconds,
     absoluteTimeoutSeconds: config.sessionAbsoluteTimeoutSeconds
   });
-  const billing: BillingProvider = dependencies.billing ?? (
-    config.stripeSecretKey
-      ? new StripeBillingAdapter({ secretKey: config.stripeSecretKey, webhookSecret: config.stripeWebhookSecret })
-      : new MockBillingAdapter()
-  );
+  let billing = dependencies.billing;
+  if (!billing) {
+    if (config.stripeSecretKey) {
+      billing = new StripeBillingAdapter({ secretKey: config.stripeSecretKey, webhookSecret: config.stripeWebhookSecret });
+    } else if (config.nodeEnv === "production") {
+      throw new Error("STRIPE_SECRET_KEY is required when NODE_ENV=production");
+    } else {
+      // Local/test-only fallback. Production never boots with a mock billing provider.
+      billing = new MockBillingAdapter();
+    }
+  }
   const logger = createLogger(config.logLevel);
   const loginLimiter = new FixedWindowRateLimiter(10, 60_000);
   const registrationLimiter = new FixedWindowRateLimiter(5, 60_000);
@@ -295,7 +309,9 @@ export function createApp(dependencies: AppDependencies) {
       }
     }
 
-    const identity = await auth.resolveIdentity(accessToken);
+    const identity = session && auth.resolveIdentityByUserId
+      ? await auth.resolveIdentityByUserId(session.userId)
+      : await auth.resolveIdentity(accessToken);
     if (!identity) throw unauthorized();
     return { accessToken, identity, session };
   }
@@ -344,13 +360,29 @@ export function createApp(dependencies: AppDependencies) {
     return Object.assign({}, identity, { platformRole: role, role });
   }
 
+  function platformQueryPrincipal(
+    admin: AuthenticatedUser & { platformRole: PlatformRole }
+  ): PlatformQueryPrincipal {
+    return {
+      userId: admin.userId,
+      email: admin.email,
+      platformRole: admin.platformRole,
+      permissions: [...platformRolePermissionDefaults[admin.platformRole]]
+    };
+  }
+
   async function authenticate(request: Request): Promise<SessionPrincipal> {
     const authenticated = await authenticateRequest(request);
     const impersonation = await resolveImpersonationContext(request, authenticated.identity.userId);
     if (impersonation) return impersonation.principal;
 
     const requestedOrganizationId = request.headers.get("x-organization-id") ?? request.headers.get("x-org-id") ?? undefined;
-    const principal = await auth.resolve(authenticated.accessToken, requestedOrganizationId);
+    const principal = await resolvePrincipal(
+      database,
+      authenticated.identity.userId,
+      requestedOrganizationId,
+      authenticated.identity
+    );
     if (!principal) throw unauthorized();
     return principal;
   }
@@ -466,6 +498,14 @@ export function createApp(dependencies: AppDependencies) {
     throw new AppError(status, code, error instanceof Error ? error.message : fallback);
   }
 
+  function rethrowOrganizationLifecycleError(error: unknown): never {
+    if (error instanceof OrganizationLifecycleError) {
+      const status = error.code === "STORE_QUOTA_EXCEEDED" ? 429 : error.code === "STORE_CODE_ALREADY_EXISTS" ? 409 : 422;
+      throw new AppError(status, error.code, error.message);
+    }
+    throw error;
+  }
+
   function idempotencyKey(request: Request): string {
     return request.headers.get("idempotency-key")?.trim() ?? "";
   }
@@ -556,6 +596,27 @@ export function createApp(dependencies: AppDependencies) {
   }
 
   return new Elysia({ name: "aevo-api" })
+    .use(
+      swagger({
+        path: "/swagger",
+        documentation: {
+          info: {
+            title: "Aevo Canonical API Gateway",
+            version: "1.0.0",
+            description: "Central Gateway & Ecosystem Orchestrator API documentation for Aevo POS, Kiosk, Booking, and Hub."
+          },
+          tags: [
+            { name: "Hub", description: "Surface 1: Hub & Subscriptions Platform Management" },
+            { name: "Staff", description: "Surface 2: Staff, Cash, Catalog & Operations" },
+            { name: "Public", description: "Surface 3: Public Consumer & QR Ordering" },
+            { name: "Device", description: "Surface 4: Hardware, Kiosk & KDS Terminals" },
+            { name: "Query", description: "Tenant-Safe Universal Query Platform" },
+            { name: "Auth", description: "Authentication & Session Management" },
+            { name: "Admin", description: "Privileged Platform Administration" }
+          ]
+        }
+      })
+    )
     .derive({ as: "global" }, ({ request, set }) => {
       const requestId = request.headers.get("x-request-id")?.slice(0, 128) || randomUUID();
       set.headers["x-request-id"] = requestId;
@@ -649,7 +710,7 @@ export function createApp(dependencies: AppDependencies) {
       });
       setSessionCookies(set, appSession);
       setCookies(set, [clearSessionCookie(config.impersonationCookieName, secureCookie, cookieSameSite)]);
-      const principal = await auth.resolve(result.accessToken).catch(() => null);
+      const principal = await resolvePrincipal(database, identity.userId, undefined, identity).catch(() => null);
       logger.info("auth.login", { requestId, userId: result.userId });
       return {
         success: true,
@@ -764,7 +825,12 @@ export function createApp(dependencies: AppDependencies) {
     .get("/api/auth/me", async ({ request }) => {
       const authenticated = await authenticateRequest(request);
       const impersonation = await resolveImpersonationContext(request, authenticated.identity.userId);
-      const principal = impersonation?.principal ?? await auth.resolve(authenticated.accessToken).catch(() => null);
+      const principal = impersonation?.principal ?? await resolvePrincipal(
+        database,
+        authenticated.identity.userId,
+        undefined,
+        authenticated.identity
+      ).catch(() => null);
       return {
         user: {
           id: authenticated.identity.userId,
@@ -815,11 +881,160 @@ export function createApp(dependencies: AppDependencies) {
     // ==========================================
     .get("/api/v1/hub/me", async ({ request }) => {
       const authenticated = await authenticateRequest(request);
-      const principal = await auth.resolve(authenticated.accessToken).catch(() => null);
+      const principal = await resolvePrincipal(
+        database,
+        authenticated.identity.userId,
+        undefined,
+        authenticated.identity
+      ).catch(() => null);
       return {
         user: authenticated.identity,
         principal
       };
+    })
+    .get("/api/v1/hub/bootstrap", async ({ request }) => {
+      const authenticated = await authenticateRequest(request);
+      const requestedOrganizationId = request.headers.get("x-organization-id") ?? request.headers.get("x-org-id") ?? undefined;
+      const [organizations, apps, preferences] = await Promise.all([
+        listUserOrganizations(database, authenticated.identity.userId),
+        listApps(database),
+        getUserPreferences(database, authenticated.identity.userId)
+      ]);
+
+      let principal = await resolvePrincipal(
+        database,
+        authenticated.identity.userId,
+        requestedOrganizationId,
+        authenticated.identity
+      );
+      if (!principal && organizations[0]) {
+        principal = await resolvePrincipal(
+          database,
+          authenticated.identity.userId,
+          organizations[0].id,
+          authenticated.identity
+        );
+      }
+
+      return {
+        user: authenticated.identity,
+        principal,
+        organizations,
+        stores: principal ? await listAuthorizedStores(database, principal) : [],
+        apps,
+        preferences
+      };
+    })
+    .get("/api/v1/hub/favorites", async ({ request }) => {
+      const identity = await authenticateIdentity(request);
+      const readModelFavorites = await listAuthorizedNavigationFavorites(database, identity.userId);
+      if (readModelFavorites) return { favorites: readModelFavorites };
+
+      // Safe rolling-deployment fallback. This path keeps the existing
+      // gateway-side authorization checks until the read-model migration is
+      // available on the connected database.
+      const organizations = await listUserOrganizations(database, identity.userId);
+      const organizationPrincipals = await Promise.all(organizations.map((organization) => resolvePrincipal(
+        database,
+        identity.userId,
+        organization.id,
+        identity
+      )));
+      const accessibleStoreIds = new Set((await Promise.all(organizationPrincipals.flatMap((principal) => principal ? [listAuthorizedStores(database, principal)] : [])))
+        .flat()
+        .map((store) => store.id));
+      const favorites = await listNavigationFavorites(database, identity.userId, organizations.map((organization) => organization.id));
+      return {
+        favorites: favorites.filter((favorite) => favorite.kind !== "STORE" || accessibleStoreIds.has(favorite.storeId || ""))
+      };
+    })
+    .post("/api/v1/hub/favorites", async ({ request, body }) => {
+      assertAllowedOrigin(request);
+      const identity = await authenticateIdentity(request);
+
+      if (body.kind === "MENU") {
+        const menuTarget = body.targetKey
+          ? navigationMenuTargets[body.targetKey as keyof typeof navigationMenuTargets]
+          : undefined;
+        if (!menuTarget) throw new AppError(400, "INVALID_FAVORITE_TARGET", "The requested menu cannot be pinned");
+        return {
+          favorite: await upsertNavigationFavorite(database, {
+            userId: identity.userId,
+            kind: "MENU",
+            targetKey: body.targetKey ?? "",
+            label: menuTarget.label,
+            href: menuTarget.href,
+            iconKey: menuTarget.iconKey,
+            position: body.position
+          })
+        };
+      }
+
+      if (!body.targetId) throw new AppError(400, "FAVORITE_TARGET_REQUIRED", "A target identifier is required");
+
+      if (body.kind === "ORGANIZATION") {
+        const organizations = await listUserOrganizations(database, identity.userId);
+        const organization = organizations.find((item) => item.id === body.targetId);
+        if (!organization) throw forbidden();
+        const principal = await resolvePrincipal(database, identity.userId, organization.id, identity);
+        if (!principal || !hasPermission(principal, "organization.read")) throw forbidden();
+        return {
+          favorite: await upsertNavigationFavorite(database, {
+            userId: identity.userId,
+            organizationId: organization.id,
+            kind: "ORGANIZATION",
+            targetKey: `organization:${organization.id}`,
+            label: organization.name,
+            href: `/organize?organizationId=${encodeURIComponent(organization.id)}`,
+            iconKey: "organization",
+            position: body.position
+          })
+        };
+      }
+
+      const storeResult = await database.client
+        .from("stores")
+        .select("id,organization_id,name,code,status")
+        .eq("id", body.targetId)
+        .maybeSingle();
+      throwDatabaseError(storeResult.error, "favorite store lookup");
+      const store = storeResult.data as { id: string; organization_id: string; name: string; code: string; status: string } | null;
+      if (!store || store.status !== "ACTIVE") throw forbidden();
+
+      const principal = await resolvePrincipal(database, identity.userId, store.organization_id, identity);
+      if (!principal || !hasPermission(principal, "store.read") || !await canAccessStore(database, principal, store.id)) {
+        throw forbidden();
+      }
+      return {
+        favorite: await upsertNavigationFavorite(database, {
+          userId: identity.userId,
+          organizationId: store.organization_id,
+          storeId: store.id,
+          kind: "STORE",
+          targetKey: `store:${store.id}`,
+          label: `${store.name} · ${store.code}`,
+          href: `/workspace?storeId=${encodeURIComponent(store.id)}`,
+          iconKey: "store",
+          position: body.position
+        })
+      };
+    }, {
+      body: t.Object({
+        kind: t.Union([t.Literal("ORGANIZATION"), t.Literal("STORE"), t.Literal("MENU")]),
+        targetId: t.Optional(t.String({ format: "uuid" })),
+        targetKey: t.Optional(t.String({ minLength: 1, maxLength: 160 })),
+        position: t.Optional(t.Integer({ minimum: 0, maximum: 10000 }))
+      })
+    })
+    .delete("/api/v1/hub/favorites/:favoriteId", async ({ request, params, set }) => {
+      assertAllowedOrigin(request);
+      const identity = await authenticateIdentity(request);
+      const deleted = await deleteNavigationFavorite(database, identity.userId, params.favoriteId);
+      if (!deleted) throw new AppError(404, "FAVORITE_NOT_FOUND", "Favorite not found");
+      set.status = 204;
+      return "";
+    }, {
+      params: t.Object({ favoriteId: t.String({ format: "uuid" }) })
     })
     .get("/api/v1/hub/organizations", async ({ request }) => {
       const identity = await authenticateIdentity(request);
@@ -872,7 +1087,7 @@ export function createApp(dependencies: AppDependencies) {
       const principal = await authenticate(request);
       const orgId = query.organizationId || principal.organizationId;
       if (orgId !== principal.organizationId) throw forbidden();
-      const stores = await listOrganizationStores(database, orgId);
+      const stores = await listOrganizationStores(database, orgId, principal);
       return { stores };
     }, {
       query: t.Object({
@@ -882,17 +1097,29 @@ export function createApp(dependencies: AppDependencies) {
     .post("/api/v1/hub/stores", async ({ request, body }) => {
       assertAllowedOrigin(request);
       const principal = await authenticate(request);
-      if (!hasPermission(principal, "organization.manage") && !hasPermission(principal, "store.manage")) throw forbidden();
+      if (!hasPermission(principal, "organization.manage") && !hasPermission(principal, "store.create")) throw forbidden();
       const orgId = body.organizationId || principal.organizationId;
       if (orgId !== principal.organizationId) throw forbidden();
-      const store = await createStore(database, orgId, body);
-      return { success: true, store };
+      try {
+        const store = await createStore(database, orgId, body);
+        return { success: true, store };
+      } catch (error) {
+        return rethrowOrganizationLifecycleError(error);
+      }
     }, {
       body: t.Object({
         organizationId: t.Optional(t.String({ format: "uuid" })),
         name: t.String({ minLength: 1, maxLength: 160 }),
         code: t.String({ minLength: 1, maxLength: 32 }),
-        timezone: t.Optional(t.String({ minLength: 1, maxLength: 64 }))
+        timezone: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+        currency: t.Optional(t.String({ minLength: 3, maxLength: 3 })),
+        storeMode: t.Optional(t.Union([
+          t.Literal("POS"), t.Literal("KIOSK"), t.Literal("BOOKING"),
+          t.Literal("POS_BOOKING"), t.Literal("CUSTOM")
+        ])),
+        address: t.Optional(t.String({ maxLength: 500 })),
+        phone: t.Optional(t.String({ maxLength: 50 })),
+        taxId: t.Optional(t.String({ maxLength: 50 }))
       })
     })
     .patch("/api/v1/hub/stores/:storeId", async ({ request, params, body }) => {
@@ -900,9 +1127,14 @@ export function createApp(dependencies: AppDependencies) {
       const principal = await authenticate(request);
       if (!hasPermission(principal, "organization.manage") && !hasPermission(principal, "store.manage")) throw forbidden();
       if (!principal.organizationId) throw forbidden();
-      const store = await updateStore(database, principal.organizationId, params.storeId, body);
-      if (!store) throw new AppError(404, "STORE_NOT_FOUND", "Store not found");
-      return { success: true, store };
+      if (!await canAccessStore(database, principal, params.storeId)) throw forbidden();
+      try {
+        const store = await updateStore(database, principal.organizationId, params.storeId, body);
+        if (!store) throw new AppError(404, "STORE_NOT_FOUND", "Store not found");
+        return { success: true, store };
+      } catch (error) {
+        return rethrowOrganizationLifecycleError(error);
+      }
     }, {
       params: t.Object({ storeId: t.String({ format: "uuid" }) }),
       body: t.Object({
@@ -910,14 +1142,22 @@ export function createApp(dependencies: AppDependencies) {
         code: t.Optional(t.String({ minLength: 1, maxLength: 32 })),
         timezone: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
         currency: t.Optional(t.String({ minLength: 1, maxLength: 8 })),
+        storeMode: t.Optional(t.Union([
+          t.Literal("POS"), t.Literal("KIOSK"), t.Literal("BOOKING"),
+          t.Literal("POS_BOOKING"), t.Literal("CUSTOM")
+        ])),
+        address: t.Optional(t.String({ maxLength: 500 })),
+        phone: t.Optional(t.String({ maxLength: 50 })),
+        taxId: t.Optional(t.String({ maxLength: 50 })),
         status: t.Optional(t.Union([t.Literal("ACTIVE"), t.Literal("INACTIVE")]))
       })
     })
     .delete("/api/v1/hub/stores/:storeId", async ({ request, params }) => {
       assertAllowedOrigin(request);
       const principal = await authenticate(request);
-      if (!hasPermission(principal, "organization.manage")) throw forbidden();
+      if (!hasPermission(principal, "organization.manage") && !hasPermission(principal, "store.delete")) throw forbidden();
       if (!principal.organizationId) throw forbidden();
+      if (!await canAccessStore(database, principal, params.storeId)) throw forbidden();
       await deleteStore(database, principal.organizationId, params.storeId);
       return { success: true, deleted: true };
     }, {
@@ -928,7 +1168,23 @@ export function createApp(dependencies: AppDependencies) {
       const entitlements = await resolveOrganizationEntitlements(database, principal.organizationId);
       return { success: true, entitlements };
     })
-    .get("/api/v1/hub/apps", async () => {
+    .get("/api/v1/me/preferences", async ({ request }) => {
+      const authenticated = await authenticateRequest(request);
+      return { preferences: await getUserPreferences(database, authenticated.identity.userId) };
+    })
+    .patch("/api/v1/me/preferences", async ({ request, body }) => {
+      assertAllowedOrigin(request);
+      const authenticated = await authenticateRequest(request);
+      return {
+        preferences: await updateUserPreferences(database, authenticated.identity.userId, body)
+      };
+    }, {
+      body: t.Object({
+        locale: t.Union([t.Literal("en"), t.Literal("th")])
+      })
+    })
+    .get("/api/v1/hub/apps", async ({ request }) => {
+      await authenticateRequest(request);
       return { success: true, apps: await listApps(database) };
     })
     .get("/api/v1/hub/subscriptions", async ({ request, query }) => {
@@ -956,13 +1212,10 @@ export function createApp(dependencies: AppDependencies) {
       query: t.Object({ storeId: t.Optional(t.String({ format: "uuid" })) })
     })
     .get("/api/v1/hub/operating-mode", async () => {
-      const testing = await isSystemTestingMode(database);
       return {
-        mode: testing ? "testing" : "production",
-        isUnlimitedTesting: testing,
-        description: testing
-          ? "Open Testing Mode: All apps, branches, devices, users and transactions are unrestricted."
-          : "Production Mode: Commercial subscription limits active."
+        mode: "production",
+        isUnlimitedTesting: false,
+        description: "Production Mode: Commercial subscription limits active."
       };
     })
     .get("/api/v1/hub/members", async ({ request }) => {
@@ -1104,10 +1357,25 @@ export function createApp(dependencies: AppDependencies) {
     })
     .get("/api/v1/hub/overview/store", async ({ request, query }) => {
       const principal = await authenticate(request);
-      const storeId = (query as any)?.storeId?.trim();
-      if (!storeId) throw new AppError(400, "BAD_REQUEST", "Missing storeId parameter");
+      const storeId = query.storeId?.trim();
+      if (!storeId || !await canAccessStore(database, principal, storeId)) throw forbidden();
       const stats = await getStoreOverviewMetrics(database, principal.organizationId, storeId);
       return { success: true, stats };
+    }, {
+      query: t.Object({ storeId: t.String({ format: "uuid" }) })
+    })
+    .get("/api/v1/hub/workspace/store", async ({ request, query }) => {
+      const principal = await authenticate(request);
+      if (!hasPermission(principal, "store.read") && !hasPermission(principal, "devices.manage")) throw forbidden();
+      const storeId = query.storeId.trim();
+      if (!await canAccessStore(database, principal, storeId)) throw forbidden();
+      const [stats, devices] = await Promise.all([
+        getStoreOverviewMetrics(database, principal.organizationId, storeId),
+        listDevices(database, principal, storeId)
+      ]);
+      return { success: true, stats, devices };
+    }, {
+      query: t.Object({ storeId: t.String({ format: "uuid" }) })
     })
     // ==========================================
     // CANONICAL SURFACE: /api/v1/query/*
@@ -1664,18 +1932,22 @@ export function createApp(dependencies: AppDependencies) {
       const identity = await requireOnboardingIdentity(request);
       const userId = identity.userId;
       await assertOnboardingSessionOwner(body.sessionId, userId);
-      const result = await setupOnboardingOrganization(database, body.sessionId, userId, {
-        name: body.name,
-        legalName: body.legalName,
-        businessType: body.businessType,
-        country: body.country,
-        timezone: body.timezone,
-        currency: body.currency,
-        logoUrl: body.logoUrl,
-        contactEmail: body.contactEmail,
-        contactPhone: body.contactPhone
-      });
-      return { success: true, ...result };
+      try {
+        const result = await setupOnboardingOrganization(database, body.sessionId, userId, {
+          name: body.name,
+          legalName: body.legalName,
+          businessType: body.businessType,
+          country: body.country,
+          timezone: body.timezone,
+          currency: body.currency,
+          logoUrl: body.logoUrl,
+          contactEmail: body.contactEmail,
+          contactPhone: body.contactPhone
+        });
+        return { success: true, ...result };
+      } catch (error) {
+        return rethrowOrganizationLifecycleError(error);
+      }
     }, {
       body: t.Object({
         sessionId: t.String({ format: "uuid" }),
@@ -1694,22 +1966,30 @@ export function createApp(dependencies: AppDependencies) {
       assertAllowedOrigin(request);
       const identity = await requireOrganizationSetupIdentity(request, body.organizationId);
       await assertOnboardingSessionOwner(body.sessionId, identity.userId);
-      const result = await setupOnboardingStore(database, body.sessionId, {
-        organizationId: body.organizationId,
-        name: body.name,
-        code: body.code,
-        storeMode: body.storeMode as any,
-        address: body.address,
-        phone: body.phone,
-        taxId: body.taxId
-      });
-      return { success: true, ...result };
+      try {
+        const result = await setupOnboardingStore(database, body.sessionId, {
+          organizationId: body.organizationId,
+          name: body.name,
+          code: body.code,
+          timezone: body.timezone,
+          currency: body.currency,
+          storeMode: body.storeMode,
+          address: body.address,
+          phone: body.phone,
+          taxId: body.taxId
+        });
+        return { success: true, ...result };
+      } catch (error) {
+        return rethrowOrganizationLifecycleError(error);
+      }
     }, {
       body: t.Object({
         sessionId: t.String({ format: "uuid" }),
         organizationId: t.String({ format: "uuid" }),
         name: t.String({ minLength: 1, maxLength: 200 }),
         code: t.String({ minLength: 1, maxLength: 32 }),
+        timezone: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+        currency: t.Optional(t.String({ minLength: 3, maxLength: 3 })),
         storeMode: t.Optional(t.Union([
           t.Literal("POS"), t.Literal("KIOSK"), t.Literal("BOOKING"),
           t.Literal("POS_BOOKING"), t.Literal("CUSTOM")
@@ -1760,18 +2040,6 @@ export function createApp(dependencies: AppDependencies) {
         enableWaitlist: t.Boolean()
       })
     })
-    .post("/api/v1/hub/onboarding/demo-data", async ({ request, body }) => {
-      assertAllowedOrigin(request);
-      await requireOrganizationSetupIdentity(request, body.organizationId);
-      const demoData = await generateDemoData(database, body.organizationId, body.storeId, body.businessType ?? "general");
-      return { success: true, demoData };
-    }, {
-      body: t.Object({
-        organizationId: t.String({ format: "uuid" }),
-        storeId: t.String({ format: "uuid" }),
-        businessType: t.Optional(t.String())
-      })
-    })
     .post("/api/v1/hub/onboarding/progress", async ({ request, body }) => {
       assertAllowedOrigin(request);
       const identity = await requireOrganizationSetupIdentity(request, body.organizationId);
@@ -1783,17 +2051,6 @@ export function createApp(dependencies: AppDependencies) {
         sessionId: t.String({ format: "uuid" }),
         organizationId: t.String({ format: "uuid" }),
         step: t.Union([t.Literal("RESOURCES"), t.Literal("STAFF")])
-      })
-    })
-    .delete("/api/v1/hub/onboarding/demo-data", async ({ request, query }) => {
-      assertAllowedOrigin(request);
-      await requireOrganizationSetupIdentity(request, query.organizationId);
-      const result = await clearDemoData(database, query.organizationId, query.storeId);
-      return { success: true, ...result };
-    }, {
-      query: t.Object({
-        organizationId: t.String({ format: "uuid" }),
-        storeId: t.Optional(t.String({ format: "uuid" }))
       })
     })
     .get("/api/v1/hub/onboarding/checklist", async ({ request, query }) => {
@@ -1821,6 +2078,53 @@ export function createApp(dependencies: AppDependencies) {
     // ==========================================
     // CANONICAL SURFACE: /api/v1/admin/* (Platform Administration Console)
     // ==========================================
+    .get("/api/v1/admin/query/models", async ({ request }) => {
+      assertAllowedOrigin(request);
+      const admin = await requirePlatformAdmin(request);
+      const permissions = new Set<string>(platformRolePermissionDefaults[admin.platformRole]);
+      const models = (await listPlatformQueryModels(database))
+        .filter((model) => permissions.has(model.read_permission));
+      return { models };
+    })
+    .post("/api/v1/admin/query/execute", async ({ request, body }) => {
+      assertAllowedOrigin(request);
+      const admin = await requirePlatformAdmin(request);
+      const payload = body as { query: Record<string, unknown>; searchText?: string };
+      let query = payload.query;
+      if (payload.searchText?.trim()) {
+        try {
+          const searchWhere = parseQueryText(payload.searchText.trim());
+          const existingWhere = payload.query.where;
+          query = {
+            ...payload.query,
+            where: existingWhere && typeof existingWhere === "object"
+              ? { type: "and", children: [existingWhere, searchWhere] }
+              : searchWhere
+          };
+        } catch (error) {
+          if (error instanceof QuerySyntaxError) throw new AppError(422, "QUERY_SYNTAX_ERROR", error.message);
+          throw error;
+        }
+      }
+      return executePlatformQuery(database, platformQueryPrincipal(admin), query);
+    }, {
+      body: t.Object({
+        query: t.Record(t.String(), t.Unknown()),
+        searchText: t.Optional(t.String({ maxLength: 1000 }))
+      })
+    })
+    .post("/api/v1/admin/query/parse", async ({ request, body }) => {
+      assertAllowedOrigin(request);
+      await requirePlatformAdmin(request);
+      try {
+        return { where: parseQueryText(body.searchText.trim()) };
+      } catch (error) {
+        if (error instanceof QuerySyntaxError) throw new AppError(422, "QUERY_SYNTAX_ERROR", error.message);
+        throw error;
+      }
+    }, {
+      body: t.Object({ searchText: t.String({ maxLength: 1000 }) })
+    })
     .get("/api/v1/admin/overview", async ({ request }) => {
       assertAllowedOrigin(request);
       await requirePlatformAdmin(request, "system.health");
@@ -1832,6 +2136,12 @@ export function createApp(dependencies: AppDependencies) {
       await requirePlatformAdmin(request, "organization.read");
       const organizations = await listAdminOrganizations(database);
       return { success: true, organizations };
+    })
+    .get("/api/v1/admin/stores", async ({ request }) => {
+      assertAllowedOrigin(request);
+      await requirePlatformAdmin(request, "organization.read");
+      const stores = await listAdminStores(database);
+      return { success: true, stores };
     })
     .patch("/api/v1/admin/organizations/:id", async ({ request, params, body }) => {
       assertAllowedOrigin(request);
@@ -2068,29 +2378,6 @@ export function createApp(dependencies: AppDependencies) {
       await requirePlatformAdmin(request, "system.health");
       const overview = await getPlatformOverview(database);
       return { success: true, operatingMode: overview.operatingMode };
-    })
-    .post("/api/v1/admin/system/mode", async ({ request, body }) => {
-      assertAllowedOrigin(request);
-      const admin = await requirePlatformAdmin(request, "system.health");
-      const res = await setOperatingMode(database, body.mode as "production" | "testing", Boolean(body.unlimited));
-
-      await writeStructuredAuditLog(database, {
-        adminUserId: admin.userId,
-        platformRole: admin.role,
-        action: "OPERATING_MODE_CHANGED",
-        targetType: "system_settings",
-        beforeState: {},
-        afterState: res,
-        reason: "Admin system mode update",
-        createdAt: new Date().toISOString()
-      });
-
-      return res;
-    }, {
-      body: t.Object({
-        mode: t.Union([t.Literal("production"), t.Literal("testing")]),
-        unlimited: t.Optional(t.Boolean())
-      })
     })
     // ==========================================
     // CANONICAL SURFACE 2: /api/v1/staff/*

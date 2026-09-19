@@ -525,6 +525,50 @@ export interface OrganizationSummary {
   createdAt: string;
 }
 
+export const navigationFavoriteKinds = ["ORGANIZATION", "STORE", "MENU"] as const;
+export type NavigationFavoriteKind = (typeof navigationFavoriteKinds)[number];
+
+/**
+ * Menu targets are resolved server-side before a pin is persisted. Keeping a
+ * small allow-list prevents a favorite from becoming an arbitrary redirect.
+ */
+export const navigationMenuTargets = {
+  "organize.overview": { label: "Organize overview", href: "/organize", iconKey: "overview" },
+  "organize.stores": { label: "Stores & branches", href: "/organize?tab=stores", iconKey: "store" },
+  "organize.team": { label: "Team & access", href: "/organize?tab=team", iconKey: "team" },
+  "organize.apps": { label: "App subscriptions", href: "/organize?tab=apps", iconKey: "apps" },
+  "organize.billing": { label: "Billing & subscription", href: "/organize?tab=billing", iconKey: "billing" },
+  "workspace.devices": { label: "Hardware & terminals", href: "/workspace?view=devices", iconKey: "devices" },
+  "workspace.apps": { label: "Applications", href: "/workspace?view=apps", iconKey: "apps" },
+  "workspace.billing": { label: "Billing & plans", href: "/workspace?view=billing", iconKey: "billing" }
+} as const;
+export type NavigationMenuTarget = keyof typeof navigationMenuTargets;
+
+export interface NavigationFavorite {
+  id: string;
+  userId: string;
+  organizationId?: string | null;
+  storeId?: string | null;
+  kind: NavigationFavoriteKind;
+  targetKey: string;
+  label: string;
+  href: string;
+  iconKey: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const supportedLocales = ["en", "th"] as const;
+export type SupportedLocale = (typeof supportedLocales)[number];
+
+export interface UserPreferences {
+  userId: string;
+  /** NULL means the first authenticated visit still needs to resolve a locale. */
+  locale: SupportedLocale | null;
+  updatedAt: string;
+}
+
 export interface CreateOrganizationInput {
   name: string;
   slug?: string | undefined;
@@ -534,6 +578,11 @@ export interface CreateStoreInput {
   name: string;
   code: string;
   timezone?: string | undefined;
+  currency?: string | undefined;
+  storeMode?: "POS" | "KIOSK" | "BOOKING" | "POS_BOOKING" | "CUSTOM" | undefined;
+  address?: string | undefined;
+  phone?: string | undefined;
+  taxId?: string | undefined;
 }
 
 export interface StoreSummary {
@@ -542,6 +591,12 @@ export interface StoreSummary {
   name: string;
   code: string;
   timezone: string;
+  currency?: string;
+  storeMode?: "POS" | "KIOSK" | "BOOKING" | "POS_BOOKING" | "CUSTOM";
+  address?: string | null;
+  phone?: string | null;
+  taxId?: string | null;
+  status?: "ACTIVE" | "INACTIVE";
 }
 
 export interface DeviceSummary {
@@ -1198,7 +1253,7 @@ export interface AddWaitlistInput {
   estimatedWaitMinutes?: number | undefined;
 }
 
-// Onboarding & Open Testing Contracts
+// Onboarding Contracts
 export type OnboardingStep =
   | "REGISTER"
   | "OBJECTIVES"
@@ -1246,6 +1301,8 @@ export interface SetupStoreInput {
   organizationId: string;
   name: string;
   code: string;
+  timezone?: string;
+  currency?: string;
   storeMode?: "POS" | "KIOSK" | "BOOKING" | "POS_BOOKING" | "CUSTOM";
   address?: string;
   phone?: string;
@@ -1266,7 +1323,7 @@ export interface SetupBookingInput {
 
 export interface EntitlementResult {
   allowed: boolean;
-  mode: "testing" | "production";
+  mode: "production";
   limit: number | null;
   currentUsage: number;
   reason: string;
@@ -1288,18 +1345,6 @@ export interface SetupChecklistSummary {
   completedCount: number;
   totalCount: number;
   isReady: boolean;
-}
-
-export interface DemoDataSummary {
-  organizationId: string;
-  storeId: string;
-  categoriesCreated: number;
-  productsCreated: number;
-  venuesCreated: number;
-  resourcesCreated: number;
-  ordersCreated: number;
-  bookingsCreated: number;
-  isDemoData: boolean;
 }
 
 export interface PlatformUser {

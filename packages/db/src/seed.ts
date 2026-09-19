@@ -29,7 +29,10 @@ export async function seed(
   if (!email || !password || password.length < 12 || password === "change-me-now") {
     throw new Error("Set SEED_OWNER_EMAIL and a unique 12+ character SEED_OWNER_PASSWORD before seeding");
   }
-  const organizationName = env.SEED_ORGANIZATION_NAME?.trim() || "Aevo Demo";
+  const organizationName = env.SEED_ORGANIZATION_NAME?.trim();
+  if (!organizationName) {
+    throw new Error("SEED_ORGANIZATION_NAME is required; production seeding must never create an implicit tenant");
+  }
   const storeName = env.SEED_STORE_NAME?.trim() || "Main Store";
   const timezone = env.SEED_STORE_TIMEZONE?.trim() || "Asia/Bangkok";
   const requestedInitialRole = (env.SEED_INITIAL_ROLE ?? "OWNER").trim().toUpperCase();

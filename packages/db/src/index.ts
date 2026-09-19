@@ -20,3 +20,5 @@ export * from "./onboarding";
 export * from "./admin";
 export * from "./query-platform";
 export * from "./invitations";
+export * from "./navigation";
+export * from "./preferences";

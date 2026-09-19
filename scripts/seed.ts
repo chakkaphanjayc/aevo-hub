@@ -98,53 +98,7 @@ async function seed() {
 
   console.log(`[Seed] Seeded ${defaultApps.length} ecosystem apps.`);
 
-  // Ensure demo organization exists
-  const existingOrg = await db.unsafe(`SELECT id, name FROM organizations LIMIT 1;`) as any[];
-  let orgId = existingOrg[0]?.id;
-
-  if (!orgId) {
-    console.log(`[Seed] Creating default demonstration organization...`);
-    const newOrg = await db.unsafe(`
-      INSERT INTO organizations (name, slug, status)
-      VALUES ('Aevo Corporation', 'aevo-corp', 'ACTIVE')
-      RETURNING id;
-    `) as any[];
-    orgId = newOrg[0].id;
-  }
-
-  console.log(`[Seed] Active organization ID: ${orgId}`);
-
-  // Ensure flagship store exists
-  const existingStore = await db.unsafe(`SELECT id, code FROM stores WHERE organization_id = $1 LIMIT 1;`, [orgId]) as any[];
-  let storeId = existingStore[0]?.id;
-
-  if (!storeId) {
-    console.log(`[Seed] Creating default flagship store...`);
-    const newStore = await db.unsafe(`
-      INSERT INTO stores (organization_id, name, code, timezone, status)
-      VALUES ($1, 'Aevo Siam Flagship', 'BKK-01', 'Asia/Bangkok', 'ACTIVE')
-      RETURNING id;
-    `, [orgId]) as any[];
-    storeId = newStore[0].id;
-  }
-
-  console.log(`[Seed] Active store ID: ${storeId}`);
-
-  // Seed the canonical organization plan and its server-resolved entitlements.
-  await db.unsafe(`
-    INSERT INTO subscriptions (organization_id, plan_id, provider, status)
-    VALUES ($1, 'starter', 'MANUAL', 'TRIALING')
-    ON CONFLICT (organization_id) DO NOTHING;
-  `, [orgId]);
-  await db.unsafe(`
-    INSERT INTO organization_entitlements (organization_id, feature_key, is_enabled, custom_override, limit_value)
-    SELECT $1, feature_key, is_enabled, false, limit_value
-    FROM plan_entitlements
-    WHERE plan_id = 'starter'
-    ON CONFLICT (organization_id, feature_key) DO NOTHING;
-  `, [orgId]);
-
-  console.log(`[Seed] Successfully finished seeding Aevo Hub data!`);
+  console.log(`[Seed] No tenant or store rows were created. Organization and store lifecycle is owned by the authenticated setup flow.`);
   await db.close();
 }
 

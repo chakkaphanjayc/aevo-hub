@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Platform Administration Console — Aevo Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/shared.css">
   <style>
     body {
@@ -203,30 +203,14 @@
       text-decoration: line-through;
     }
 
-    /* Modal Styling */
-    dialog {
-      border: none;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-popover);
-      background: transparent;
-      margin: auto;
-      max-width: 520px;
-      width: 90%;
-    }
-
-    dialog::backdrop {
-      background: rgba(25, 32, 25, 0.4);
-      backdrop-filter: blur(4px);
-    }
-
-    .modal-box {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+    .entity-id {
+      display: inline-block;
+      max-width: 12rem;
+      overflow: hidden;
+      color: var(--text-muted);
+      font: 0.68rem/1.2 var(--font-mono);
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -246,9 +230,7 @@
     </div>
 
     <div style="display:flex; align-items:center; gap:10px;">
-      <button type="button" class="pill-btn pill-btn-subtle pill-btn-sm" onclick="toggleOperatingMode()">
-        <span>Toggle Operating Mode ↗</span>
-      </button>
+      <div class="locale-switcher" data-locale-switcher id="admin-locale-switcher"></div>
       <a href="/workspace" class="pill-btn pill-btn-primary pill-btn-sm">
         <span>Enter Workspace →</span>
       </a>
@@ -256,50 +238,48 @@
   </header>
 
   <!-- Admin Main Container -->
-  <main class="admin-container">
+  <main class="admin-container" id="admin-main" aria-busy="true">
     <!-- Metric Rail -->
     <section class="metric-rail">
       <div class="metric-card">
         <span class="metric-title">Organizations (Tenants)</span>
-        <span class="metric-value" id="kpi-orgs">--</span>
+        <span class="metric-value" id="kpi-orgs"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading organizations</span></span>
         <span class="metric-meta">Active business accounts</span>
       </div>
       <div class="metric-card">
         <span class="metric-title">Stores & Branches</span>
-        <span class="metric-value" id="kpi-stores">--</span>
+        <span class="metric-value" id="kpi-stores"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading stores</span></span>
         <span class="metric-meta">Registered operational stores</span>
       </div>
       <div class="metric-card">
         <span class="metric-title">Platform Users</span>
-        <span class="metric-value" id="kpi-users">--</span>
+        <span class="metric-value" id="kpi-users"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading users</span></span>
         <span class="metric-meta">User identities across tenants</span>
       </div>
       <div class="metric-card">
         <span class="metric-title">Hardware Terminals</span>
-        <span class="metric-value" id="kpi-devices">--</span>
+        <span class="metric-value" id="kpi-devices"><span class="aevo-skeleton aevo-skeleton--value" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading terminals</span></span>
         <span class="metric-meta">Paired POS, Kiosk & KDS units</span>
       </div>
     </section>
 
-    <!-- Operating Mode Banner -->
+    <!-- Production enforcement banner -->
     <section class="mode-bar">
       <div>
         <strong style="font-size:0.9rem;" id="mode-title">Current Operating Mode: Production</strong>
         <p style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;" id="mode-desc">
-          Strict tenant quotas and active subscription entitlement checks are enforced.
+          Tenant quotas, subscription entitlements, audit logs, and server-side RBAC are enforced.
         </p>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
-        <button type="button" class="pill-btn pill-btn-subtle pill-btn-sm" onclick="toggleOperatingMode()">
-          <span id="btn-toggle-mode-text">Switch to Open Testing Mode</span>
-        </button>
+        <span class="status-capsule-sm" style="background:#e4eedb; color:#2d4a30;">Enforced</span>
       </div>
     </section>
 
     <!-- Tab Bar -->
-    <!-- Tab Bar -->
     <nav class="admin-tab-bar">
       <button type="button" class="admin-tab-btn active" data-tab="tab-orgs" onclick="switchAdminTab('tab-orgs')">Organizations & Quotas</button>
+      <button type="button" class="admin-tab-btn" data-tab="tab-stores" onclick="switchAdminTab('tab-stores')">Stores & IDs</button>
       <button type="button" class="admin-tab-btn" data-tab="tab-subs" onclick="switchAdminTab('tab-subs')">Subscriptions & Plans</button>
       <button type="button" class="admin-tab-btn" data-tab="tab-users" onclick="switchAdminTab('tab-users')">User Accounts</button>
       <button type="button" class="admin-tab-btn" data-tab="tab-system" onclick="switchAdminTab('tab-system')">System Health & Security</button>
@@ -315,11 +295,14 @@
         <button type="button" class="pill-btn pill-btn-subtle pill-btn-sm" onclick="loadOrganizations()">Refresh List</button>
       </div>
 
+      <div id="admin-orgs-search" data-query-label="Organizations" data-query-hint="Search organizations by name, slug, legal name, contact email, or field expression."></div>
+
       <div style="overflow-x:auto;">
         <table class="clean-table">
           <thead>
             <tr>
               <th>Organization</th>
+              <th>Tenant ID</th>
               <th>Status</th>
               <th>Branches</th>
               <th>Users</th>
@@ -330,7 +313,45 @@
             </tr>
           </thead>
           <tbody id="tbody-orgs">
-            <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Loading organizations...</td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="9"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="9"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="9"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tenant stores and database-owned identifiers -->
+    <section class="table-card" id="pane-stores" style="display:none;">
+      <div class="table-card-head">
+        <div>
+          <h3 class="table-title">Stores &amp; identifiers</h3>
+          <p style="font-size:0.78rem; color:var(--text-muted);">Database-owned store UUIDs and tenant relationships. Human-facing codes remain editable business identifiers.</p>
+        </div>
+        <button type="button" class="pill-btn pill-btn-subtle pill-btn-sm" onclick="loadAdminStores()">Refresh List</button>
+      </div>
+
+      <div id="admin-stores-search" data-query-label="Stores" data-query-hint="Search stores by name, code, timezone, currency, or field expression."></div>
+
+      <div style="overflow-x:auto;">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Store ID</th>
+              <th>Tenant ID</th>
+              <th>Organization</th>
+              <th>Store</th>
+              <th>Code</th>
+              <th>Timezone</th>
+              <th>Currency</th>
+              <th>Status</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-stores">
+            <tr class="aevo-table-loading-row"><td colspan="9"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="9"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="9"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
           </tbody>
         </table>
       </div>
@@ -346,6 +367,8 @@
         <button type="button" class="pill-btn pill-btn-subtle pill-btn-sm" onclick="loadSubscriptions()">Refresh List</button>
       </div>
 
+      <div id="admin-subs-search" data-query-label="Subscriptions" data-query-hint="Search subscriptions by plan, provider, status, or field expression."></div>
+
       <div style="overflow-x:auto;">
         <table class="clean-table">
           <thead>
@@ -360,7 +383,9 @@
             </tr>
           </thead>
           <tbody id="tbody-subs">
-            <tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">Loading subscriptions...</td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="7"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="7"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="7"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
           </tbody>
         </table>
       </div>
@@ -376,6 +401,8 @@
         <button type="button" class="pill-btn pill-btn-subtle pill-btn-sm" onclick="loadUsers()">Refresh List</button>
       </div>
 
+      <div id="admin-users-search" data-query-label="Users" data-query-hint="Search users by email, display name, status, or field expression."></div>
+
       <div style="overflow-x:auto;">
         <table class="clean-table">
           <thead>
@@ -389,7 +416,9 @@
             </tr>
           </thead>
           <tbody id="tbody-users">
-            <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Loading users...</td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="6"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="6"><span class="aevo-skeleton aevo-skeleton--block" aria-hidden="true"></span></td></tr>
+            <tr class="aevo-table-loading-row"><td colspan="6"><span class="aevo-skeleton aevo-skeleton--line" aria-hidden="true"></span></td></tr>
           </tbody>
         </table>
       </div>
@@ -443,63 +472,122 @@
     </section>
   </main>
 
+  <dialog id="modal-audit-reason" aria-labelledby="audit-reason-title">
+    <div class="modal-header">
+      <div>
+        <div class="modal-header-title" id="audit-reason-title">Reason required</div>
+        <div class="modal-header-subtitle" id="audit-reason-subtitle">This privileged action is recorded in the immutable audit log.</div>
+      </div>
+      <button type="button" class="modal-close-btn" id="btn-close-audit-reason" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="input-field-group">
+        <label for="audit-reason-input">Audit reason</label>
+        <input type="text" id="audit-reason-input" autocomplete="off" maxlength="240" placeholder="e.g. Support ticket #1234 or approved access review" />
+        <p id="audit-reason-error" class="aevo-loading-state--error" role="alert" hidden></p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="pill-btn pill-btn-ghost" id="btn-cancel-audit-reason">Cancel</button>
+      <button type="button" class="pill-btn pill-btn-primary" id="btn-confirm-audit-reason">Continue</button>
+    </div>
+  </dialog>
+
   <!-- Modal: Configure Tenant & Quotas -->
   <dialog id="modal-edit-tenant">
-    <div class="modal-box">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:10px;">
-        <h3 style="font-family:var(--font-serif); font-size:1.3rem;">Configure Organization</h3>
-        <button type="button" class="modal-close-btn" onclick="document.getElementById('modal-edit-tenant').close()" style="background:none; border:none; font-size:1rem; cursor:pointer;">✕</button>
+    <!-- Header -->
+    <div class="modal-header">
+      <div>
+        <div class="modal-header-title">Configure Organization</div>
+        <div class="modal-header-subtitle">Adjust quotas, status, and module access for this tenant</div>
       </div>
+      <button type="button" class="modal-close-btn" onclick="document.getElementById('modal-edit-tenant').close()" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
 
+    <!-- Body -->
+    <div class="modal-body">
       <input type="hidden" id="edit-org-id">
 
       <div class="input-field-group">
         <label>Organization Name</label>
-        <input type="text" id="edit-org-name" readonly style="background:var(--surface-subtle);">
+        <input type="text" id="edit-org-name" readonly>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <!-- 3-column quota grid -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
         <div class="input-field-group">
-          <label for="edit-org-status">Tenant Status</label>
+          <label for="edit-org-status">Status</label>
           <select id="edit-org-status">
-            <option value="ACTIVE">ACTIVE (Operational)</option>
-            <option value="SUSPENDED">SUSPENDED (Locked)</option>
-            <option value="ARCHIVED">ARCHIVED (Inactive)</option>
+            <option value="ACTIVE">Active</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
         </div>
         <div class="input-field-group">
-          <label for="edit-org-users">Max Users Quota</label>
+          <label for="edit-org-users">Max Users</label>
           <input type="number" id="edit-org-users" min="1" max="1000" value="10">
         </div>
         <div class="input-field-group">
-          <label for="edit-org-stores">Max Stores Quota</label>
+          <label for="edit-org-stores">Max Stores</label>
           <input type="number" id="edit-org-stores" min="1" max="500" value="5">
         </div>
       </div>
 
-      <div>
-        <label style="font-size:0.78rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:8px;">
-          Feature Modules Access (Enable / Disable per tenant)
-        </label>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" id="flag-pos" checked> <span>Aevo POS</span></label>
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" id="flag-kiosk" checked> <span>Aevo Kiosk</span></label>
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" id="flag-booking" checked> <span>Aevo Booking</span></label>
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" id="flag-crm" checked> <span>Aevo CRM</span></label>
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" id="flag-inventory" checked> <span>Aevo Inventory</span></label>
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" id="flag-odoo"> <span>Odoo 19 Bridge</span></label>
+      <!-- Feature Module Chips -->
+      <div class="input-field-group">
+        <label>Feature Modules <span style="font-weight:400; color:var(--text-muted);">— enable or disable per tenant</span></label>
+        <div class="module-chip-group">
+          <div class="module-chip">
+            <input type="checkbox" id="flag-pos" checked>
+            <label for="flag-pos">Aevo POS</label>
+          </div>
+          <div class="module-chip">
+            <input type="checkbox" id="flag-kiosk" checked>
+            <label for="flag-kiosk">Aevo Kiosk</label>
+          </div>
+          <div class="module-chip">
+            <input type="checkbox" id="flag-booking" checked>
+            <label for="flag-booking">Aevo Booking</label>
+          </div>
+          <div class="module-chip">
+            <input type="checkbox" id="flag-crm" checked>
+            <label for="flag-crm">Aevo CRM</label>
+          </div>
+          <div class="module-chip">
+            <input type="checkbox" id="flag-inventory" checked>
+            <label for="flag-inventory">Aevo Inventory</label>
+          </div>
+          <div class="module-chip">
+            <input type="checkbox" id="flag-odoo">
+            <label for="flag-odoo">Odoo 19 Bridge</label>
+          </div>
         </div>
       </div>
 
+      <!-- Audit Reason -->
       <div class="input-field-group">
-        <label for="edit-org-reason">Reason for Change (Required for Audit Log) <span style="color:#dc2626;">*</span></label>
-        <input type="text" id="edit-org-reason" placeholder="e.g. Customer support ticket #1234 or plan change" style="border-color:#d97706;">
+        <label for="edit-org-reason">
+          Reason for Change <span style="color:#dc2626;">*</span>
+          <span style="font-weight:400; color:var(--text-muted); font-size:0.72rem;"> — required for audit log</span>
+        </label>
+        <input type="text" id="edit-org-reason" placeholder="e.g. Customer support ticket #1234 or plan upgrade">
       </div>
+    </div>
 
-      <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--line); padding-top:14px;">
-        <button type="button" class="pill-btn pill-btn-subtle" onclick="document.getElementById('modal-edit-tenant').close()">Cancel</button>
-        <button type="button" id="btn-save-tenant" class="pill-btn pill-btn-primary" onclick="saveTenantConfiguration()">Save Changes</button>
-      </div>
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button type="button" class="pill-btn pill-btn-ghost" onclick="document.getElementById('modal-edit-tenant').close()">Cancel</button>
+      <button type="button" id="btn-save-tenant" class="pill-btn pill-btn-primary aevo-hold-button">Hold to save changes</button>
     </div>
   </dialog>
 
@@ -508,10 +596,26 @@
 
   <script type="module">
     import { apiFetch } from "/auth.js";
+    import { createI18n } from "/i18n.js";
+    import { createUniversalSearch } from "/query-ui.js";
+    import { attachGlassSelection } from "/glass-selection.js";
+    import { enhanceHoldButton } from "/hold-button.js";
 
-    let currentOperatingMode = { mode: "production", unlimited: false };
+    const i18n = createI18n({ apiFetch });
+    const localeReady = i18n.init();
+    const adminTabSelection = attachGlassSelection(document.querySelector(".admin-tab-bar"), { itemSelector: ".admin-tab-btn" });
+    enhanceHoldButton(document.getElementById("btn-save-tenant"), {
+      duration: 900,
+      pendingLabel: "Saving…",
+      onConfirm: () => window.saveTenantConfiguration?.(),
+      onError: (error) => showToast(error?.message || "Could not save organization", true)
+    });
+
     let cachedOrgs = [];
+    let cachedStores = [];
+    let cachedSubscriptions = [];
     let cachedUsers = [];
+    const adminSearches = new Map();
 
     function showToast(msg, isError = false) {
       const container = document.getElementById("toast-tray");
@@ -526,28 +630,195 @@
       }, 4000);
     }
 
+    function requestAuditReason({ title, subtitle, placeholder }) {
+      const dialog = document.getElementById("modal-audit-reason");
+      const titleNode = document.getElementById("audit-reason-title");
+      const subtitleNode = document.getElementById("audit-reason-subtitle");
+      const input = document.getElementById("audit-reason-input");
+      const error = document.getElementById("audit-reason-error");
+      const confirmButton = document.getElementById("btn-confirm-audit-reason");
+      const cancelButton = document.getElementById("btn-cancel-audit-reason");
+      const closeButton = document.getElementById("btn-close-audit-reason");
+      if (!(dialog instanceof HTMLDialogElement) || !input || !confirmButton || !cancelButton || !closeButton) {
+        return Promise.resolve(null);
+      }
+
+      titleNode.textContent = title || "Reason required";
+      subtitleNode.textContent = subtitle || "This privileged action is recorded in the immutable audit log.";
+      input.placeholder = placeholder || "Enter a concise reason";
+      input.value = "";
+      error.hidden = true;
+      error.textContent = "";
+
+      return new Promise((resolve) => {
+        let settled = false;
+        const settle = (value) => {
+          if (settled) return;
+          settled = true;
+          resolve(value);
+        };
+        const onClose = () => {
+          dialog.removeEventListener("close", onClose);
+          settle(null);
+        };
+        const submit = () => {
+          const value = input.value.trim();
+          if (!value) {
+            error.textContent = "Enter a reason before continuing.";
+            error.hidden = false;
+            input.focus();
+            return;
+          }
+          dialog.removeEventListener("close", onClose);
+          dialog.close();
+          settle(value);
+        };
+        const cancel = () => dialog.close();
+        dialog.addEventListener("close", onClose);
+        confirmButton.onclick = submit;
+        cancelButton.onclick = cancel;
+        closeButton.onclick = cancel;
+        dialog.showModal();
+        window.requestAnimationFrame(() => input.focus());
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
     async function fetchApi(path, options = {}) {
       return apiFetch(path, options);
+    }
+
+    function searchResultIds(result) {
+      return new Set((Array.isArray(result?.rows) ? result.rows : [])
+        .map((row) => row && typeof row.id === "string" ? row.id : null)
+        .filter(Boolean));
+    }
+
+    function rowsMatchingSearch(result, rows) {
+      const ids = searchResultIds(result);
+      return Array.isArray(rows) ? rows.filter((row) => ids.has(String(row.id))) : [];
+    }
+
+    function renderListState(tbody, colSpan, message, error = false) {
+      tbody.replaceChildren();
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = colSpan;
+      cell.style.cssText = "text-align:center; padding:24px;";
+      cell.style.color = error ? "#ef4444" : "var(--text-muted)";
+      cell.textContent = message;
+      row.appendChild(cell);
+      tbody.appendChild(row);
+    }
+
+    function setTableBusy(tbody, busy) {
+      const surface = tbody?.closest(".table-card");
+      if (!surface) return;
+      surface.classList.toggle("aevo-refreshing", busy);
+      surface.setAttribute("aria-busy", String(busy));
+    }
+
+    function ensureAdminSearch(key, rootId, model, onResults) {
+      const existing = adminSearches.get(key);
+      if (existing) return existing;
+      const root = document.getElementById(rootId);
+      if (!root) return null;
+      const search = createUniversalSearch({
+        root,
+        apiFetch: fetchApi,
+        model,
+        queryBasePath: "/api/v1/admin/query",
+        enableSavedQueries: false,
+        enableSave: false,
+        pageSize: 80,
+        onResults,
+        onError: (error) => showToast(error?.message || "Admin search failed", true)
+      });
+      adminSearches.set(key, search);
+      return search;
     }
 
     // Tab Navigation
     window.switchAdminTab = function(tabId) {
       document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
       document.querySelector(`.admin-tab-btn[data-tab="${tabId}"]`)?.classList.add("active");
+      adminTabSelection?.sync();
 
       document.getElementById("pane-orgs").style.display = tabId === "tab-orgs" ? "block" : "none";
+      document.getElementById("pane-stores").style.display = tabId === "tab-stores" ? "block" : "none";
       document.getElementById("pane-subs").style.display = tabId === "tab-subs" ? "block" : "none";
       document.getElementById("pane-users").style.display = tabId === "tab-users" ? "block" : "none";
       document.getElementById("pane-system").style.display = tabId === "tab-system" ? "block" : "none";
 
-      if (tabId === "tab-orgs") loadOrganizations();
-      if (tabId === "tab-subs") loadSubscriptions();
-      if (tabId === "tab-users") loadUsers();
+      if (tabId === "tab-orgs") void loadOrganizations();
+      if (tabId === "tab-stores") void loadAdminStores();
+      if (tabId === "tab-subs") void loadSubscriptions();
+      if (tabId === "tab-users") void loadUsers();
       if (tabId === "tab-system") runHealthCheck();
+    };
+
+    function renderAdminStores(result) {
+      const tbody = document.getElementById("tbody-stores");
+      const stores = rowsMatchingSearch(result, cachedStores);
+      if (stores.length === 0) {
+        renderListState(tbody, 9, cachedStores.length === 0 ? "No stores found" : "No stores match this search");
+        return;
+      }
+
+      tbody.replaceChildren();
+      for (const store of stores) {
+          const tr = document.createElement("tr");
+          const status = String(store.status || "ACTIVE").toUpperCase();
+          const statusColor = status === "ACTIVE" ? "#2d4a30" : "#991b1b";
+          const statusBg = status === "ACTIVE" ? "#e4eedb" : "#fee2e2";
+          const createdAt = store.createdAt ? new Date(store.createdAt).toLocaleDateString(i18n.getIntlLocale()) : "—";
+          tr.innerHTML = `
+            <td><code class="entity-id" title="${escapeHtml(store.id)}">${escapeHtml(store.id)}</code></td>
+            <td><code class="entity-id" title="${escapeHtml(store.organizationId)}">${escapeHtml(store.organizationId)}</code></td>
+            <td>
+              <strong>${escapeHtml(store.organizationName)}</strong>
+              <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono);">${escapeHtml(store.organizationSlug)}</div>
+            </td>
+            <td><strong>${escapeHtml(store.name)}</strong></td>
+            <td><code>${escapeHtml(store.code)}</code></td>
+            <td>${escapeHtml(store.timezone)}</td>
+            <td>${escapeHtml(store.currency)}</td>
+            <td><span class="status-capsule-sm" style="background:${statusBg}; color:${statusColor};">${escapeHtml(status)}</span></td>
+            <td>${escapeHtml(createdAt)}</td>
+          `;
+          tbody.appendChild(tr);
+      }
+    }
+
+    window.loadAdminStores = async function() {
+      const tbody = document.getElementById("tbody-stores");
+      setTableBusy(tbody, true);
+      try {
+        const res = await fetchApi("/api/v1/admin/stores");
+        cachedStores = Array.isArray(res.stores) ? res.stores : [];
+        const firstLoad = !adminSearches.has("stores");
+        const search = ensureAdminSearch("stores", "admin-stores-search", "admin.store", renderAdminStores);
+        if (search) await (firstLoad ? search.init() : search.refresh());
+        else renderListState(tbody, 9, cachedStores.length === 0 ? "No stores found" : "Search is unavailable", cachedStores.length > 0);
+      } catch (err) {
+        renderListState(tbody, 9, `Error loading stores: ${err.message}`, true);
+      } finally {
+        setTableBusy(tbody, false);
+      }
     };
 
     // Load Overview KPIs
     async function loadOverview() {
+      const rail = document.querySelector(".metric-rail");
+      rail?.classList.add("aevo-refreshing");
       try {
         const data = await fetchApi("/api/v1/admin/overview");
         document.getElementById("kpi-orgs").textContent = data.totalOrganizations ?? 0;
@@ -555,73 +826,27 @@
         document.getElementById("kpi-users").textContent = data.totalUsers ?? 0;
         document.getElementById("kpi-devices").textContent = data.totalDevices ?? 0;
 
-        currentOperatingMode = data.operatingMode || { mode: "production", unlimited: false };
-        updateModeDisplay();
       } catch (err) {
         showToast("Failed to load platform overview: " + err.message, true);
+      } finally {
+        rail?.classList.remove("aevo-refreshing");
       }
     }
 
-    function updateModeDisplay() {
-      const isTesting = currentOperatingMode.mode === "testing";
-      const badge = document.getElementById("badge-operating-mode");
-      const title = document.getElementById("mode-title");
-      const desc = document.getElementById("mode-desc");
-      const btnText = document.getElementById("btn-toggle-mode-text");
-
-      if (isTesting) {
-        badge.textContent = "Mode: Open Testing";
-        badge.style.background = "#fef3c7";
-        badge.style.color = "#92400e";
-        badge.style.borderColor = "#fde68a";
-        title.textContent = "Current Operating Mode: Open Testing Mode";
-        desc.textContent = "All apps, branches, and devices are globally unrestricted.";
-        btnText.textContent = "Switch to Production Mode";
-      } else {
-        badge.textContent = "Mode: Production";
-        badge.style.background = "#e4eedb";
-        badge.style.color = "#2d4a30";
-        badge.style.borderColor = "#c9d5c4";
-        title.textContent = "Current Operating Mode: Production";
-        desc.textContent = "Strict tenant quotas and active subscription entitlement checks are enforced.";
-        btnText.textContent = "Switch to Open Testing Mode";
-      }
-    }
-
-    window.toggleOperatingMode = async function() {
-      const nextMode = currentOperatingMode.mode === "production" ? "testing" : "production";
-      const nextUnlimited = nextMode === "testing";
-      try {
-        const res = await fetchApi("/api/v1/admin/system/mode", {
-          method: "POST",
-          body: JSON.stringify({ mode: nextMode, unlimited: nextUnlimited })
-        });
-        currentOperatingMode = { mode: res.mode, unlimited: res.unlimited };
-        updateModeDisplay();
-        showToast(`Switched operating mode to ${res.mode.toUpperCase()}`);
-      } catch (err) {
-        showToast(err.message, true);
-      }
-    };
-
-    // Load Organizations Table
-    window.loadOrganizations = async function() {
+    function renderAdminOrganizations(result) {
       const tbody = document.getElementById("tbody-orgs");
-      try {
-        const res = await fetchApi("/api/v1/admin/organizations");
-        cachedOrgs = res.organizations || [];
-        tbody.replaceChildren();
+      const organizations = rowsMatchingSearch(result, cachedOrgs);
+      if (organizations.length === 0) {
+        renderListState(tbody, 9, cachedOrgs.length === 0 ? "No organizations found" : "No organizations match this search");
+        return;
+      }
 
-        if (cachedOrgs.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">No organizations found</td></tr>`;
-          return;
-        }
-
-        for (const org of cachedOrgs) {
+      tbody.replaceChildren();
+      for (const org of organizations) {
           const tr = document.createElement("tr");
           const flags = org.featureFlags || {};
           const flagChips = Object.entries(flags)
-            .map(([k, v]) => `<span class="flag-chip ${v ? 'on' : 'off'}">${k}</span>`)
+            .map(([k, v]) => `<span class="flag-chip ${v ? 'on' : 'off'}">${escapeHtml(k)}</span>`)
             .join("");
 
           const statusColor = org.status === "ACTIVE" ? "#2d4a30" : "#991b1b";
@@ -629,11 +854,12 @@
 
           tr.innerHTML = `
             <td>
-              <strong>${org.name}</strong>
-              <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono);">${org.slug}</div>
+              <strong>${escapeHtml(org.name)}</strong>
+              <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono);">${escapeHtml(org.slug)}</div>
             </td>
+            <td><code class="entity-id" title="${escapeHtml(org.id)}">${escapeHtml(org.id)}</code></td>
             <td>
-              <span class="status-capsule-sm" style="background:${statusBg}; color:${statusColor};">${org.status}</span>
+              <span class="status-capsule-sm" style="background:${statusBg}; color:${statusColor};">${escapeHtml(org.status)}</span>
             </td>
             <td style="font-feature-settings:'tnum';">${org.storesCount}</td>
             <td style="font-feature-settings:'tnum';">${org.membersCount}</td>
@@ -647,58 +873,85 @@
 
           tr.querySelector(".btn-edit-tenant").onclick = () => openEditTenantModal(org.id);
           tbody.appendChild(tr);
-        }
+      }
+    }
+
+    // Load Organizations Table
+    window.loadOrganizations = async function() {
+      const tbody = document.getElementById("tbody-orgs");
+      setTableBusy(tbody, true);
+      try {
+        const res = await fetchApi("/api/v1/admin/organizations");
+        cachedOrgs = Array.isArray(res.organizations) ? res.organizations : [];
+        const firstLoad = !adminSearches.has("orgs");
+        const search = ensureAdminSearch("orgs", "admin-orgs-search", "admin.organization", renderAdminOrganizations);
+        if (search) await (firstLoad ? search.init() : search.refresh());
+        else renderListState(tbody, 9, cachedOrgs.length === 0 ? "No organizations found" : "Search is unavailable", cachedOrgs.length > 0);
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:#ef4444;">Error: ${err.message}</td></tr>`;
+        renderListState(tbody, 9, `Error: ${err.message}`, true);
+      } finally {
+        setTableBusy(tbody, false);
       }
     };
 
-    // Load Subscriptions Table
-    window.loadSubscriptions = async function() {
+    function renderAdminSubscriptions(result) {
       const tbody = document.getElementById("tbody-subs");
-      try {
-        const res = await fetchApi("/api/v1/admin/subscriptions");
-        const subs = res.subscriptions || [];
-        tbody.replaceChildren();
+      const subs = rowsMatchingSearch(result, cachedSubscriptions);
+      if (subs.length === 0) {
+        renderListState(tbody, 7, cachedSubscriptions.length === 0 ? "No commercial subscriptions found" : "No subscriptions match this search");
+        return;
+      }
 
-        if (subs.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">No commercial subscriptions found</td></tr>`;
-          return;
-        }
-
-        for (const s of subs) {
+      tbody.replaceChildren();
+      for (const s of subs) {
           const tr = document.createElement("tr");
-          const statusBadge = s.status === "active" || s.status === "trialing"
-            ? `<span class="status-capsule-sm" style="background:#e4eedb; color:#2d4a30; text-transform:uppercase;">${s.status}</span>`
-            : `<span class="status-capsule-sm" style="background:#fee2e2; color:#991b1b; text-transform:uppercase;">${s.status}</span>`;
+          const normalizedStatus = String(s.status || "").toUpperCase();
+          const statusBadge = normalizedStatus === "ACTIVE" || normalizedStatus === "TRIALING"
+            ? `<span class="status-capsule-sm" style="background:#e4eedb; color:#2d4a30; text-transform:uppercase;">${escapeHtml(normalizedStatus)}</span>`
+            : `<span class="status-capsule-sm" style="background:#fee2e2; color:#991b1b; text-transform:uppercase;">${escapeHtml(normalizedStatus || "UNKNOWN")}</span>`;
 
-          const periodStart = s.current_period_start ? new Date(s.current_period_start).toLocaleDateString() : "—";
-          const periodEnd = s.current_period_end ? new Date(s.current_period_end).toLocaleDateString() : (s.trial_end ? `Trial: ${new Date(s.trial_end).toLocaleDateString()}` : "—");
+          const periodStart = s.currentPeriodStart ? new Date(s.currentPeriodStart).toLocaleDateString(i18n.getIntlLocale()) : "—";
+          const periodEnd = s.currentPeriodEnd ? new Date(s.currentPeriodEnd).toLocaleDateString(i18n.getIntlLocale()) : (s.trialEnd ? `Trial: ${new Date(s.trialEnd).toLocaleDateString(i18n.getIntlLocale())}` : "—");
 
           tr.innerHTML = `
             <td>
-              <strong>${s.organization_name || s.organization_id}</strong>
-              <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono);">${s.organization_slug || s.organization_id}</div>
+              <strong>${escapeHtml(s.organizationName || s.organizationId)}</strong>
+              <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono);">${escapeHtml(s.organizationSlug || s.organizationId)}</div>
             </td>
             <td>
-              <span class="flag-chip on" style="font-size:0.75rem;">${s.plan_name || s.plan_id}</span>
+              <span class="flag-chip on" style="font-size:0.75rem;">${escapeHtml(s.planId)}</span>
             </td>
-            <td style="font-family:var(--font-mono); font-size:0.75rem; text-transform:uppercase;">${s.provider}</td>
+            <td style="font-family:var(--font-mono); font-size:0.75rem; text-transform:uppercase;">${escapeHtml(s.provider)}</td>
             <td>${statusBadge}</td>
             <td style="font-feature-settings:'tnum';">${periodStart}</td>
             <td style="font-feature-settings:'tnum';">${periodEnd}</td>
             <td>
-              <button class="pill-btn pill-btn-outline pill-btn-sm btn-edit-sub" data-org-id="${s.organization_id}">Manage</button>
+              <button class="pill-btn pill-btn-outline pill-btn-sm btn-edit-sub" data-org-id="${escapeHtml(s.organizationId)}">Manage</button>
             </td>
           `;
 
           tr.querySelector(".btn-edit-sub").onclick = () => {
-            openEditTenantModal(s.organization_id);
+            openEditTenantModal(s.organizationId);
           };
           tbody.appendChild(tr);
-        }
+      }
+    }
+
+    // Load Subscriptions Table
+    window.loadSubscriptions = async function() {
+      const tbody = document.getElementById("tbody-subs");
+      setTableBusy(tbody, true);
+      try {
+        const res = await fetchApi("/api/v1/admin/subscriptions");
+        cachedSubscriptions = Array.isArray(res.subscriptions) ? res.subscriptions : [];
+        const firstLoad = !adminSearches.has("subscriptions");
+        const search = ensureAdminSearch("subscriptions", "admin-subs-search", "admin.subscription", renderAdminSubscriptions);
+        if (search) await (firstLoad ? search.init() : search.refresh());
+        else renderListState(tbody, 7, cachedSubscriptions.length === 0 ? "No commercial subscriptions found" : "Search is unavailable", cachedSubscriptions.length > 0);
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:#ef4444;">Error loading subscriptions: ${err.message}</td></tr>`;
+        renderListState(tbody, 7, `Error loading subscriptions: ${err.message}`, true);
+      } finally {
+        setTableBusy(tbody, false);
       }
     };
 
@@ -766,22 +1019,18 @@
       }
     };
 
-    // Load Users Table
-    window.loadUsers = async function() {
+    function renderAdminUsers(result) {
       const tbody = document.getElementById("tbody-users");
-      try {
-        const res = await fetchApi("/api/v1/admin/users");
-        cachedUsers = res.users || [];
-        tbody.replaceChildren();
+      const users = rowsMatchingSearch(result, cachedUsers);
+      if (users.length === 0) {
+        renderListState(tbody, 6, cachedUsers.length === 0 ? "No users found" : "No users match this search");
+        return;
+      }
 
-        if (cachedUsers.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">No users found</td></tr>`;
-          return;
-        }
-
-        for (const u of cachedUsers) {
+      tbody.replaceChildren();
+      for (const u of users) {
           const tr = document.createElement("tr");
-          const createdStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-US") : "—";
+          const createdStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString(i18n.getIntlLocale()) : "—";
           const memStr = (u.memberships || [])
             .map(m => `<strong>${m.organizationName}</strong> (${m.role})`)
             .join("<br>") || '<span style="color:var(--text-light);">No Orgs</span>';
@@ -801,23 +1050,30 @@
             <td style="font-feature-settings:'tnum';">${createdStr}</td>
             <td>
               <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <button class="pill-btn pill-btn-outline pill-btn-sm btn-toggle-user" data-id="${u.id}" data-status="${u.status}">
-                  ${isActive ? 'Disable' : 'Activate'}
+                <button class="pill-btn pill-btn-outline pill-btn-sm btn-toggle-user aevo-hold-button" data-id="${u.id}" data-status="${u.status}" type="button">
+                  ${isActive ? 'Hold to disable' : 'Hold to activate'}
                 </button>
                 ${primaryOrgId ? `
-                  <button class="pill-btn pill-btn-subtle pill-btn-sm btn-impersonate" data-user-id="${u.id}" data-org-id="${primaryOrgId}" data-email="${u.email}">
-                    Impersonate
+                  <button class="pill-btn pill-btn-subtle pill-btn-sm btn-impersonate aevo-hold-button" data-user-id="${u.id}" data-org-id="${primaryOrgId}" data-email="${u.email}" type="button">
+                    Hold to impersonate
                   </button>
                 ` : ''}
               </div>
             </td>
           `;
 
-          tr.querySelector(".btn-toggle-user").onclick = async () => {
+          const toggleButton = tr.querySelector(".btn-toggle-user");
+          enhanceHoldButton(toggleButton, {
+            duration: 850,
+            pendingLabel: isActive ? "Disabling…" : "Activating…",
+            onConfirm: async () => {
             const nextStatus = isActive ? "DISABLED" : "ACTIVE";
-            const reason = prompt(`Reason for setting status of ${u.email} to ${nextStatus} (required):`);
+            const reason = await requestAuditReason({
+              title: `${isActive ? "Disable" : "Activate"} ${u.email}`,
+              subtitle: "This status change is recorded in the immutable audit log.",
+              placeholder: "e.g. Access review or support ticket #1234"
+            });
             if (!reason) {
-              showToast("Status change cancelled: reason is required", true);
               return;
             }
             try {
@@ -830,14 +1086,22 @@
             } catch (err) {
               showToast(err.message, true);
             }
-          };
+            },
+            onError: (error) => showToast(error?.message || "Could not update user status", true)
+          });
 
           const impBtn = tr.querySelector(".btn-impersonate");
           if (impBtn) {
-            impBtn.onclick = async () => {
-              const reason = prompt(`Enter reason to impersonate ${u.email} (logged to immutable audit_logs):`);
+            enhanceHoldButton(impBtn, {
+              duration: 1100,
+              pendingLabel: "Creating session…",
+              onConfirm: async () => {
+              const reason = await requestAuditReason({
+                title: `Impersonate ${u.email}`,
+                subtitle: "A short-lived privileged session will be created and recorded.",
+                placeholder: "e.g. Customer support ticket #1234"
+              });
               if (!reason) {
-                showToast("Impersonation cancelled: reason required", true);
                 return;
               }
               try {
@@ -856,13 +1120,30 @@
               } catch (err) {
                 showToast("Impersonation failed: " + err.message, true);
               }
-            };
+              },
+              onError: (error) => showToast(error?.message || "Impersonation failed", true)
+            });
           }
 
           tbody.appendChild(tr);
-        }
+      }
+    }
+
+    // Load Users Table
+    window.loadUsers = async function() {
+      const tbody = document.getElementById("tbody-users");
+      setTableBusy(tbody, true);
+      try {
+        const res = await fetchApi("/api/v1/admin/users");
+        cachedUsers = Array.isArray(res.users) ? res.users : [];
+        const firstLoad = !adminSearches.has("users");
+        const search = ensureAdminSearch("users", "admin-users-search", "admin.user", renderAdminUsers);
+        if (search) await (firstLoad ? search.init() : search.refresh());
+        else renderListState(tbody, 6, cachedUsers.length === 0 ? "No users found" : "Search is unavailable", cachedUsers.length > 0);
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#ef4444;">Error: ${err.message}</td></tr>`;
+        renderListState(tbody, 6, `Error: ${err.message}`, true);
+      } finally {
+        setTableBusy(tbody, false);
       }
     };
 
@@ -883,22 +1164,39 @@
     // Initialize only after the browser session is established.
     async function initializeAdmin() {
       try {
+        await localeReady;
         const me = await apiFetch("/api/auth/me");
+        await i18n.init({ userId: me?.user?.id });
         if (me?.user?.email) {
           const roleBadge = document.getElementById("platform-role-badge");
           if (roleBadge) {
             roleBadge.textContent = `Operator: ${me.user.email}`;
           }
         }
-        await Promise.all([loadOverview(), loadOrganizations()]);
+        await Promise.all([loadOverview(), loadOrganizations(), loadAdminStores()]);
       } catch (err) {
         if (err?.status === 401) {
           window.location.assign("/login?next=/admin");
           return;
         }
         showToast(err?.message || "Unable to load the administration console", true);
+      } finally {
+        document.getElementById("admin-main")?.setAttribute("aria-busy", "false");
       }
     }
+
+    document.querySelectorAll("dialog").forEach((dlg) => {
+      dlg.addEventListener("click", (event) => {
+        const rect = dlg.getBoundingClientRect();
+        const isInDialog = (
+          rect.top <= event.clientY &&
+          event.clientY <= rect.top + rect.height &&
+          rect.left <= event.clientX &&
+          event.clientX <= rect.left + rect.width
+        );
+        if (!isInDialog) dlg.close();
+      });
+    });
 
     initializeAdmin();
   </script>

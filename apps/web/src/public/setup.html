@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Set up your Aevo Hub organization and prepare the first operating location." />
+  <title>Setup &amp; readiness — Aevo Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared.css" />
+  <style>
+    :root {
+      --setup-canvas: #f7f8f4;
+      --setup-ink: #192019;
+      --setup-muted: #6b7768;
+      --setup-faint: #93a08f;
+      --setup-line: #e2e8de;
+      --setup-brand: #527451;
+      --setup-dark: #294b2f;
+      --setup-wash: #e4eedb;
+      --setup-danger: #a33e35;
+      --setup-radius: 14px;
+      --setup-sans: 'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif;
+      --setup-serif: 'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif;
+      --setup-mono: 'Fira Code', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: var(--setup-ink); background: var(--setup-canvas); font-family: var(--setup-sans); }
+    button, input, select, textarea { font: inherit; }
+    a { color: inherit; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; box-shadow: var(--glass-focus); }
+
+    .setup-shell { min-height: 100vh; padding: 22px 28px 64px; }
+    .setup-topbar { display: flex; align-items: center; gap: 16px; max-width: 1280px; min-height: 52px; margin: 0 auto 28px; }
+    .setup-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--setup-ink); text-decoration: none; }
+    .setup-brand-mark { display: grid; place-items: center; width: 34px; height: 34px; color: #fff; background: var(--setup-dark); border-radius: 9px; font: 600 1.2rem var(--setup-serif); }
+    .setup-brand-copy strong { display: block; font-size: .92rem; letter-spacing: -.02em; }
+    .setup-brand-copy span { display: block; margin-top: 2px; color: var(--setup-muted); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; }
+    .setup-topbar-spacer { flex: 1; }
+    .setup-topbar-actions { display: flex; align-items: center; gap: 9px; }
+
+    .setup-content { max-width: 1280px; margin: 0 auto; }
+    .setup-intro { display: flex; align-items: end; justify-content: space-between; gap: 22px; margin-bottom: 24px; }
+    .eyebrow { color: var(--setup-muted); font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .setup-intro h1 { margin: 7px 0; font: 500 clamp(2.25rem, 5vw, 4rem)/.98 var(--setup-serif); letter-spacing: -.045em; }
+    .setup-intro p { max-width: 710px; margin: 0; color: var(--setup-muted); font-size: .82rem; line-height: 1.65; }
+    .setup-intro-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 8px 14px; color: var(--setup-dark); background: var(--surface-subtle); border: 1px solid rgba(255,255,255,.72); border-radius: 9px; box-shadow: var(--glass-rim), 0 4px 14px rgba(45,74,48,.04); cursor: pointer; font-size: .74rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: transform .16s ease, background .16s ease, box-shadow .16s ease; }
+    .button:hover { background: rgba(255,255,255,.88); transform: translateY(-1px); }
+    .button-primary { color: #fff; background: linear-gradient(180deg, #446847 0%, #2f4e32 100%); border-color: transparent; box-shadow: inset 0 1px 1px rgba(255,255,255,.35), 0 6px 16px rgba(45,74,48,.25); }
+    .button-primary:hover { background: linear-gradient(180deg, #4e7351 0%, #29462d 100%); box-shadow: inset 0 1px 1px rgba(255,255,255,.42), 0 8px 20px rgba(45,74,48,.28); }
+    .button:disabled { opacity: .55; cursor: wait; transform: none; }
+    .button.is-loading { cursor: wait; pointer-events: none; }
+    .button.is-loading::before { width: 13px; height: 13px; content: ""; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: setup-spin .7s linear infinite; }
+    @keyframes setup-spin { to { transform: rotate(360deg); } }
+
+    .setup-stepper { display: grid; grid-template-columns: repeat(6, minmax(92px, 1fr)); gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 2px; }
+    .step-button { display: grid; gap: 7px; min-width: 92px; padding: 12px 10px; color: var(--setup-muted); background: var(--surface-subtle); border: 1px solid rgba(255,255,255,.7); border-radius: 10px; box-shadow: inset 1px 1px 0 rgba(255,255,255,.72); cursor: pointer; text-align: left; }
+    .step-button:hover:not(:disabled) { background: #fff; border-color: rgba(111,145,105,.4); }
+    .step-button.active { color: #fff; background: linear-gradient(180deg, #446847 0%, #2f4e32 100%); border-color: transparent; box-shadow: inset 0 1px 1px rgba(255,255,255,.35), 0 6px 16px rgba(45,74,48,.2); }
+    .step-button.done { color: var(--setup-dark); background: var(--feedback-success-bg); border-color: rgba(111,145,105,.28); }
+    .step-button:disabled { cursor: not-allowed; opacity: .58; }
+    .step-number { display: inline-grid; place-items: center; width: 23px; height: 23px; color: var(--setup-muted); background: #fff; border: 1px solid #d9e2d5; border-radius: 50%; font-size: .67rem; font-weight: 700; }
+    .step-button.active .step-number { color: var(--setup-dark); border-color: #fff; }
+    .step-button.done .step-number { color: #fff; background: var(--setup-brand); border-color: var(--setup-brand); }
+    .step-label { font-size: .69rem; font-weight: 700; white-space: nowrap; }
+
+    .setup-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(270px, .55fr); gap: 16px; align-items: start; }
+    .setup-card, .readiness-card, .setup-help { min-width: 0; background: var(--surface-card); border: 1px solid rgba(255,255,255,.7); border-radius: var(--setup-radius); box-shadow: var(--glass-rim), var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+    .setup-card-head { display: flex; justify-content: space-between; gap: 16px; padding: 22px 23px 18px; border-bottom: 1px solid var(--line-subtle); }
+    .setup-card-head h2 { margin: 0; font: 500 1.45rem var(--setup-serif); letter-spacing: -.02em; }
+    .setup-card-head p { margin: 5px 0 0; color: var(--setup-muted); font-size: .73rem; line-height: 1.55; }
+    .setup-card-body { padding: 22px 23px 23px; }
+    .setup-pane { display: none; }
+    .setup-pane.active { display: block; animation: setup-appear .18s ease-out; }
+    @keyframes setup-appear { from { opacity: .2; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .setup-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 24px; padding-top: 17px; border-top: 1px solid var(--line-subtle); }
+    .setup-actions-right { display: flex; gap: 8px; }
+    #setup-action-hint[data-state="success"] { color: var(--setup-brand); }
+    #setup-action-hint[data-state="error"] { color: var(--setup-danger); }
+    .setup-note { margin-bottom: 17px; padding: 12px 13px; color: #526550; background: var(--feedback-success-bg); border: 1px solid rgba(111,145,105,.28); border-radius: 9px; font-size: .7rem; line-height: 1.6; }
+    .setup-loading { display: flex; align-items: center; gap: 8px; min-height: 42px; color: var(--setup-muted); font-size: .74rem; }
+
+    .choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .choice { display: flex; align-items: start; gap: 10px; min-height: 74px; padding: 13px; background: rgba(255,255,255,.64); border: 1px solid rgba(255,255,255,.72); border-radius: 10px; box-shadow: var(--glass-rim); cursor: pointer; }
+    .choice:hover { border-color: rgba(111,145,105,.4); }
+    .choice:has(input:checked) { background: var(--feedback-success-bg); border-color: rgba(111,145,105,.4); box-shadow: var(--glass-rim), 0 5px 14px rgba(45,74,48,.05); }
+    .choice:has(input:disabled) { cursor: not-allowed; opacity: .62; }
+    .choice input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--setup-brand); }
+    .choice strong { display: block; font-size: .75rem; }
+    .choice span span { display: block; margin-top: 4px; color: var(--setup-muted); font-size: .66rem; line-height: 1.45; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .field { display: grid; gap: 7px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: var(--setup-muted); font-size: .72rem; font-weight: 700; letter-spacing: .02em; }
+    .field input, .field select, .field textarea { width: 100%; min-height: 42px; padding: 10px 14px; color: var(--setup-ink); background: var(--surface-recessed); border: 1px solid rgba(255,255,255,.7); border-radius: 10px; box-shadow: inset 0 2px 4px rgba(0,0,0,.04), inset 0 -1px 0 rgba(255,255,255,.62); font-size: .85rem; transition: background .15s ease, box-shadow .15s ease; }
+    .field textarea { min-height: 82px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { background: rgba(255,255,255,.9); border-color: transparent; box-shadow: var(--glass-focus); outline: none; }
+    .hint { color: var(--setup-faint); font-size: .66rem; line-height: 1.5; }
+    .inline-fields { display: grid; grid-template-columns: minmax(0,1fr) 150px; gap: 12px; margin-top: 13px; }
+    .radio-row { display: grid; gap: 8px; }
+    .radio-row .choice { min-height: 0; }
+
+    .setup-side { display: grid; gap: 12px; }
+    .readiness-card, .setup-help { padding: 18px; }
+    .readiness-card h3, .setup-help h3 { margin: 5px 0 4px; font: 500 1.35rem var(--setup-serif); }
+    .readiness-card p, .setup-help p { margin: 0; color: var(--setup-muted); font-size: .7rem; line-height: 1.6; }
+    .progress-track { height: 8px; margin: 15px 0 8px; overflow: hidden; background: rgba(230,237,226,.72); border-radius: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,.04); }
+    .progress-track span { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #5b7b58, #86a47d); border-radius: inherit; box-shadow: inset 0 1px 0 rgba(255,255,255,.42); transition: width .2s ease; }
+    .progress-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--setup-muted); font-size: .66rem; }
+    .checklist { display: grid; gap: 8px; margin-top: 15px; }
+    .check-item { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 8px; align-items: start; padding-top: 8px; border-top: 1px solid var(--line-subtle); }
+    .check-mark { display: grid; place-items: center; width: 20px; height: 20px; color: var(--setup-muted); background: #f2f4ef; border-radius: 50%; font-size: .68rem; font-weight: 700; }
+    .check-item.complete .check-mark { color: #fff; background: var(--setup-brand); }
+    .check-item.pending .check-mark { color: #8b682b; background: #fff3d5; }
+    .check-item strong { display: block; font-size: .67rem; }
+    .check-item span { display: block; margin-top: 2px; color: var(--setup-muted); font-size: .62rem; line-height: 1.4; }
+    .success-mark { display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 16px; color: #fff; background: var(--setup-brand); border-radius: 50%; }
+    .ready-summary { padding: 16px; background: rgba(247,250,245,.72); border: 1px solid rgba(111,145,105,.25); border-radius: 10px; }
+    .ready-summary strong { display: block; font-size: .78rem; }
+    .ready-summary span { display: block; margin-top: 4px; color: var(--setup-muted); font-size: .68rem; line-height: 1.5; }
+
+    .toast-tray { position: fixed; right: 20px; bottom: 20px; z-index: 30; display: grid; gap: 8px; }
+    .toast { display: flex; align-items: flex-start; gap: 10px; max-width: 360px; padding: 11px 12px 11px 14px; color: #fff; background: var(--setup-dark); border-radius: 8px; box-shadow: var(--shadow-popover); font-size: .73rem; }
+    .toast.error { background: var(--setup-danger); }
+    .toast-message { flex: 1; line-height: 1.45; }
+    .toast-close { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; color: inherit; background: transparent; border: 0; border-radius: 5px; cursor: pointer; }
+    .toast-close:hover { background: rgba(255,255,255,.14); }
+
+    @media (max-width: 1050px) {
+      .setup-layout { grid-template-columns: 1fr; }
+      .setup-side { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 700px) {
+      .setup-shell { padding: 14px 16px 42px; }
+      .setup-topbar { margin-bottom: 22px; }
+      .setup-brand-copy span { display: none; }
+      .setup-topbar-actions .locale-switcher { display: none; }
+      .setup-intro { display: block; }
+      .setup-intro-actions { margin-top: 16px; }
+      .setup-card-head { display: block; }
+      .setup-card-body { padding: 20px 16px; }
+      .form-grid, .choice-grid, .setup-side { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .setup-actions { align-items: stretch; flex-direction: column; }
+      .setup-actions-right { justify-content: space-between; }
+      .setup-actions-right .button { flex: 1; }
+      .inline-fields { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 420px) {
+      .setup-shell { padding-inline: 12px; }
+      .setup-intro h1 { font-size: 2.35rem; }
+      .setup-stepper { grid-template-columns: repeat(6, minmax(78px, 1fr)); }
+      .setup-topbar-actions .button { padding-inline: 9px; font-size: .65rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+    @supports not ((backdrop-filter: blur(1px))) {
+      .setup-card, .readiness-card, .setup-help, .choice, .ready-summary, .button { background: var(--surface-opaque); }
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-shell">
+    <header class="setup-topbar">
+      <a class="setup-brand" href="/" aria-label="Aevo Hub home">
+        <span class="setup-brand-mark">A</span>
+        <span class="setup-brand-copy"><strong>Aevo Hub</strong><span>Setup &amp; readiness</span></span>
+      </a>
+      <span class="setup-topbar-spacer"></span>
+      <div class="setup-topbar-actions">
+        <div class="locale-switcher" data-locale-switcher id="setup-locale-switcher"></div>
+        <button class="button" id="setup-sign-out" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <main class="setup-content" id="setup-main" aria-busy="true">
+      <section class="setup-intro" aria-labelledby="setup-title">
+        <div>
+          <div class="eyebrow">Aevo onboarding flow</div>
+          <h1 id="setup-title">Setup &amp; readiness</h1>
+          <p id="setup-description">Set the foundation for your business before entering the organization or store workspace. Your progress is saved after each step.</p>
+        </div>
+        <div class="setup-intro-actions">
+          <a class="button" id="setup-exit" href="/organize" hidden>Back to organization</a>
+        </div>
+      </section>
+
+      <div class="setup-stepper" aria-label="Setup progress">
+        <button class="step-button active" type="button" data-setup-index="0"><span class="step-number">1</span><span class="step-label">Organization</span></button>
+        <button class="step-button" type="button" data-setup-index="1" disabled><span class="step-number">2</span><span class="step-label">Store</span></button>
+        <button class="step-button" type="button" data-setup-index="2" disabled><span class="step-number">3</span><span class="step-label">Apps</span></button>
+        <button class="step-button" type="button" data-setup-index="3" disabled><span class="step-number">4</span><span class="step-label">Catalog</span></button>
+        <button class="step-button" type="button" data-setup-index="4" disabled><span class="step-number">5</span><span class="step-label">Staff</span></button>
+        <button class="step-button" type="button" data-setup-index="5" disabled><span class="step-number">6</span><span class="step-label">Ready</span></button>
+      </div>
+
+      <div class="setup-layout">
+        <section class="setup-card" aria-labelledby="setup-pane-title">
+          <div class="setup-card-head">
+            <div><h2 id="setup-pane-title">Set up your organization</h2><p id="setup-pane-description">Create the business foundation for your Aevo workspace.</p></div>
+            <span class="eyebrow" id="setup-step-count">Step 1 of 6</span>
+          </div>
+          <div class="setup-card-body">
+            <section class="setup-pane active" data-setup-pane="0">
+              <div class="form-grid">
+                <div class="field full"><label for="setup-org-name">Organization name</label><input id="setup-org-name" required placeholder="Sakura Cafe Co., Ltd." autocomplete="organization" /></div>
+                <div class="field full"><label for="setup-legal-name">Legal name <span class="hint">(optional)</span></label><input id="setup-legal-name" placeholder="Registered company name" /></div>
+                <div class="field"><label for="setup-business-type">Business type</label><select id="setup-business-type"><option value="restaurant">Restaurant / Food &amp; Beverage</option><option value="retail">Retail</option><option value="service">Service business</option><option value="sport">Sports / venue business</option><option value="other">Other</option></select></div>
+                <div class="field"><label for="setup-timezone">Timezone</label><select id="setup-timezone"><option>Asia/Bangkok</option><option>Asia/Singapore</option><option>Asia/Tokyo</option><option>UTC</option></select></div>
+                <div class="field"><label for="setup-country">Country</label><input id="setup-country" maxlength="10" value="TH" /></div>
+                <div class="field"><label for="setup-currency">Currency</label><input id="setup-currency" maxlength="10" value="THB" /></div>
+                <div class="field full"><label for="setup-contact-email">Operations email <span class="hint">(optional)</span></label><input id="setup-contact-email" type="email" placeholder="ops@example.com" /></div>
+              </div>
+            </section>
+
+            <section class="setup-pane" data-setup-pane="1">
+              <div class="setup-note">Your first store becomes the operating context for apps, terminals, catalog, and bookings.</div>
+              <div class="form-grid">
+                <div class="field full"><label for="setup-store-name">First store name</label><input id="setup-store-name" required placeholder="Central World Branch" /></div>
+                <div class="field"><label for="setup-store-code">Store code</label><input id="setup-store-code" required placeholder="BKK-01" /></div>
+                <div class="field"><label for="setup-store-mode">Primary mode</label><select id="setup-store-mode"><option value="POS">POS</option><option value="POS_BOOKING">POS + Booking</option><option value="KIOSK">Kiosk</option><option value="BOOKING">Booking</option><option value="CUSTOM">Custom</option></select></div>
+                <div class="field"><label for="setup-store-timezone">Store timezone</label><select id="setup-store-timezone"><option>Asia/Bangkok</option><option>Asia/Singapore</option><option>Asia/Tokyo</option><option>UTC</option></select></div>
+                <div class="field"><label for="setup-store-phone">Phone <span class="hint">(optional)</span></label><input id="setup-store-phone" type="tel" placeholder="+66 2 000 0000" /></div>
+                <div class="field full"><label for="setup-store-address">Address <span class="hint">(optional)</span></label><textarea id="setup-store-address" placeholder="Store address"></textarea></div>
+              </div>
+            </section>
+
+            <section class="setup-pane" data-setup-pane="2">
+              <div class="setup-note">Select the apps this organization should have ready. Availability is resolved by the organization plan and entitlement policy.</div>
+              <div class="choice-grid" id="setup-apps"><div class="setup-loading"><span class="aevo-spinner aevo-spinner--small" aria-hidden="true"></span><span>Loading available apps…</span></div></div>
+            </section>
+
+            <section class="setup-pane" data-setup-pane="3">
+              <div class="setup-note">Keep the organization clean from day one. Add real products and services from the workspace after setup, or configure booking resources here. You can skip this step and return later.</div>
+              <div class="radio-row">
+                <label class="choice"><input type="radio" name="catalog-mode" value="skip" checked /><span><strong>Add the catalog from the workspace</strong><span>Continue setup without creating placeholder records.</span></span></label>
+                <label class="choice"><input type="radio" name="catalog-mode" value="booking" /><span><strong>Configure booking resources</strong><span>Create a venue and bookable resources for the first store.</span></span></label>
+              </div>
+              <div id="booking-fields" hidden>
+                <div class="inline-fields"><div class="field"><label for="setup-venue-name">Venue name</label><input id="setup-venue-name" placeholder="Main venue" /></div><div class="field"><label for="setup-duration">Slot minutes</label><input id="setup-duration" type="number" min="15" max="1440" value="60" /></div></div>
+                <div class="field" style="margin-top:13px"><label for="setup-resources">Resource names</label><textarea id="setup-resources" placeholder="Table 1&#10;Table 2&#10;VIP room"></textarea><span class="hint">One resource per line. Prices can be configured after setup.</span></div>
+              </div>
+            </section>
+
+            <section class="setup-pane" data-setup-pane="4">
+              <div class="setup-note">You are already the organization owner. Invite one person now if you want to test role-based access, or skip this step and do it later from Team &amp; access.</div>
+              <div class="form-grid">
+                <div class="field full"><label for="setup-staff-email">Invite email <span class="hint">(optional)</span></label><input id="setup-staff-email" type="email" placeholder="manager@example.com" autocomplete="email" /></div>
+                <div class="field"><label for="setup-staff-name">Display name <span class="hint">(optional)</span></label><input id="setup-staff-name" placeholder="Store manager" /></div>
+                <div class="field"><label for="setup-staff-role">Role</label><select id="setup-staff-role"><option value="BRANCH_MANAGER">Branch manager</option><option value="STAFF">Staff</option><option value="VIEWER">Viewer</option></select></div>
+              </div>
+            </section>
+
+            <section class="setup-pane" data-setup-pane="5">
+              <div class="success-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></div>
+              <div class="ready-summary"><strong id="ready-title">Review your readiness</strong><span id="ready-description">The checklist on the right reflects what is ready for this organization.</span></div>
+              <div class="setup-note" style="margin-top:14px">Required setup is organization + store. Catalog, staff, booking resources, and integrations can continue after you open the operational workspace.</div>
+            </section>
+
+            <div class="setup-actions"><span class="hint" id="setup-action-hint" role="status" aria-live="polite">Your progress is saved after each step.</span><div class="setup-actions-right"><button class="button" id="setup-back" type="button">Back</button><button class="button" id="setup-skip" type="button" hidden>Skip for now</button><button class="button button-primary" id="setup-next" type="button">Continue →</button></div></div>
+          </div>
+        </section>
+
+        <aside class="setup-side">
+          <section class="readiness-card">
+            <div class="eyebrow">Readiness</div>
+            <h3 id="readiness-percent"><span class="aevo-skeleton aevo-skeleton--short" aria-hidden="true"></span><span class="aevo-visually-hidden">Loading readiness</span></h3>
+            <p>Live checks across the organization, store, apps, catalog, and team.</p>
+            <div class="progress-track" aria-hidden="true"><span id="readiness-bar"></span></div>
+            <div class="progress-meta"><span id="readiness-count"><span class="aevo-skeleton aevo-skeleton--short" aria-hidden="true"></span></span><span id="readiness-state"><span class="aevo-skeleton aevo-skeleton--short" aria-hidden="true"></span></span></div>
+            <div class="checklist" id="setup-checklist"><div class="setup-loading"><span class="aevo-spinner aevo-spinner--small" aria-hidden="true"></span><span>Loading readiness checks…</span></div></div>
+          </section>
+          <section class="setup-help"><div class="eyebrow">A calmer start</div><h3>Set the foundation, then operate.</h3><p>This flow is separate from the organization workspace so setup decisions stay focused. Once the required checks are complete, you can move into everyday operations.</p></section>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-tray" id="toast-tray" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { apiFetch, signOut, AuthApiError } from "/auth.js";
+    import { createI18n } from "/i18n.js";
+    import { attachGlassSelection } from "/glass-selection.js";
+
+    const i18n = createI18n({ apiFetch });
+    const localeReady = i18n.init();
+    const setupStepSelection = attachGlassSelection(document.querySelector(".setup-stepper"), { itemSelector: ".step-button" });
+    const setupSteps = [
+      { key: "ORGANIZATION", titleKey: "setup.organization.title", descriptionKey: "setup.organization.description" },
+      { key: "STORE", titleKey: "setup.store.title", descriptionKey: "setup.store.description" },
+      { key: "APPS", titleKey: "setup.apps.title", descriptionKey: "setup.apps.description" },
+      { key: "RESOURCES", titleKey: "setup.resources.title", descriptionKey: "setup.resources.description" },
+      { key: "STAFF", titleKey: "setup.staff.title", descriptionKey: "setup.staff.description" },
+      { key: "COMPLETE", titleKey: "setup.complete.title", descriptionKey: "setup.complete.description" }
+    ];
+    const state = {
+      user: null,
+      principal: null,
+      organizations: [],
+      currentOrg: null,
+      stores: [],
+      storesLoadedForOrg: null,
+      storeId: null,
+      apps: [],
+      appsLoaded: false,
+      subscriptions: [],
+      onboarding: null,
+      checklist: null,
+      setupStep: 0,
+      setupMaxStep: 0,
+      setupBusy: false,
+      actionFeedback: null,
+      actionTone: "neutral"
+    };
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;" }[character]));
+    const subscriptionAppId = (item) => item.appId || item.app_id;
+    const hubFetch = (path, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      if (state.currentOrg?.id) headers.set("x-organization-id", state.currentOrg.id);
+      if (state.storeId) headers.set("x-store-id", state.storeId);
+      return apiFetch(path, { ...options, headers });
+    };
+
+    function toast(message, error = false) {
+      const node = document.createElement("div");
+      node.className = "toast" + (error ? " error" : "");
+      node.setAttribute("role", error ? "alert" : "status");
+      node.setAttribute("aria-live", error ? "assertive" : "polite");
+      const messageNode = document.createElement("span");
+      messageNode.className = "toast-message";
+      messageNode.textContent = message;
+      node.appendChild(messageNode);
+      if (error) {
+        const close = document.createElement("button");
+        close.className = "toast-close";
+        close.type = "button";
+        close.setAttribute("aria-label", "Dismiss message");
+        close.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>';
+        close.addEventListener("click", () => node.remove());
+        node.appendChild(close);
+      }
+      $("toast-tray").appendChild(node);
+      if (!error) window.setTimeout(() => node.remove(), 4200);
+    }
+
+    function hasCompleted(key) { return Boolean(state.onboarding?.completedSteps?.includes(key)); }
+    function checklistItem(id) { return state.checklist?.items?.find((item) => item.id === id); }
+    function checklistComplete(id) { return checklistItem(id)?.status === "COMPLETED"; }
+    function setActionFeedback(message, tone = "progress") {
+      state.actionFeedback = message;
+      state.actionTone = tone;
+    }
+
+    function setButtonBusy(button, busy) {
+      button.classList.toggle("is-loading", busy);
+      button.setAttribute("aria-busy", String(busy));
+    }
+
+    function deriveStep() {
+      if (!state.currentOrg) return 0;
+      if (!state.stores.length) return 1;
+      if (state.onboarding?.isCompleted) return setupSteps.length - 1;
+      if (!hasCompleted("APPS") && !state.subscriptions.length) return 2;
+      if (!hasCompleted("RESOURCES") && !checklistComplete("products_setup") && !checklistComplete("booking_resources")) return 3;
+      if (!hasCompleted("STAFF") && !checklistComplete("staff_invite")) return 4;
+      return setupSteps.length - 1;
+    }
+
+    function renderReadiness() {
+      const checklist = state.checklist;
+      if (!checklist) {
+        $("readiness-percent").textContent = "0% ready";
+        $("readiness-bar").style.width = "0%";
+        $("readiness-count").textContent = "0 of 2 required checks complete";
+        $("readiness-state").textContent = "Organization needed";
+        $("setup-checklist").innerHTML = '<div class="setup-loading">Required checks will appear after your organization is created.</div>';
+        return;
+      }
+      const percent = checklist.totalProgressPercent ?? 0;
+      $("readiness-percent").textContent = percent + "% ready";
+      $("readiness-bar").style.width = percent + "%";
+      $("readiness-count").textContent = checklist.completedCount + " of " + checklist.totalCount + " checks complete";
+      $("readiness-state").textContent = checklist.isReady ? "Ready to operate" : "In progress";
+      $("setup-checklist").innerHTML = checklist.items.map((item) => {
+        const complete = item.status === "COMPLETED";
+        const pending = item.status === "PENDING";
+        const mark = complete
+          ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>'
+          : pending ? "·" : "…";
+        return '<div class="check-item ' + (complete ? "complete" : pending ? "pending" : "") + '"><span class="check-mark">' + mark + '</span><div><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.description) + '</span></div></div>';
+      }).join("");
+    }
+
+    function renderSetupApps() {
+      if (!state.apps.length) {
+        $("setup-apps").innerHTML = '<div class="setup-loading">No app catalog is available yet.</div>';
+        return;
+      }
+      const objectives = new Set(state.onboarding?.objectives || []);
+      const existing = new Set(state.subscriptions.map(subscriptionAppId));
+      const suggested = objectives.has("all")
+        ? state.apps.filter((app) => app.status !== "COMING_SOON").map((app) => app.id)
+        : state.apps.filter((app) => objectives.has(app.id) && app.status !== "COMING_SOON").map((app) => app.id);
+      $("setup-apps").innerHTML = state.apps.map((app) => {
+        const unavailable = app.status === "COMING_SOON" || app.status === "DEPRECATED";
+        const checked = existing.has(app.id) || suggested.includes(app.id);
+        return '<label class="choice"><input type="checkbox" value="' + escapeHtml(app.id) + '" data-setup-app' + (unavailable ? " disabled" : "") + (checked ? " checked" : "") + ' /><span><strong>' + escapeHtml(app.name || app.id) + '</strong><span>' + escapeHtml(unavailable ? "Coming soon" : app.description || "Connected Aevo business module.") + '</span></span></label>';
+      }).join("");
+    }
+
+    function renderSetup() {
+      const step = setupSteps[state.setupStep];
+      $("setup-main").setAttribute("aria-busy", String(state.setupBusy));
+      document.querySelectorAll(".step-button").forEach((button, index) => {
+        button.classList.toggle("active", index === state.setupStep);
+        button.classList.toggle("done", index < state.setupStep);
+        button.disabled = state.setupBusy || index > state.setupMaxStep;
+        if (index === state.setupStep) button.setAttribute("aria-current", "step");
+        else button.removeAttribute("aria-current");
+      });
+      setupStepSelection?.sync();
+      document.querySelectorAll(".setup-pane").forEach((pane) => pane.classList.toggle("active", Number(pane.dataset.setupPane) === state.setupStep));
+      $("setup-pane-title").textContent = i18n.t(step.titleKey);
+      $("setup-pane-description").textContent = i18n.t(step.descriptionKey);
+      $("setup-step-count").textContent = "Step " + (state.setupStep + 1) + " of " + setupSteps.length;
+      $("setup-back").disabled = state.setupStep === 0 || state.setupBusy;
+      const canSkip = state.setupStep === 3 || state.setupStep === 4;
+      $("setup-skip").hidden = !canSkip;
+      $("setup-skip").disabled = state.setupBusy;
+      $("setup-next").disabled = state.setupBusy;
+      const isReadyStep = state.setupStep === setupSteps.length - 1;
+      $("setup-next").textContent = isReadyStep
+        ? (state.setupBusy ? "Opening workspace…" : "Open workspace →")
+        : "Continue →";
+      const defaultActionHint = isReadyStep
+        ? (state.checklist?.isReady ? "Required checks are complete." : "You can continue optional setup later.")
+        : "Your progress is saved after each step.";
+      $("setup-action-hint").textContent = state.actionFeedback || defaultActionHint;
+      $("setup-action-hint").dataset.state = state.actionTone;
+      setButtonBusy($("setup-next"), state.setupBusy);
+      setButtonBusy($("setup-skip"), state.setupBusy && canSkip);
+      setButtonBusy($("setup-back"), false);
+      if (state.setupStep === 2) renderSetupApps();
+      if (state.setupStep === 3) $("booking-fields").hidden = document.querySelector('input[name="catalog-mode"]:checked')?.value !== "booking";
+      if (state.setupStep === setupSteps.length - 1) {
+        $("ready-title").textContent = state.checklist?.isReady ? "Your organization is ready." : "Your foundation is saved.";
+        $("ready-description").textContent = state.checklist?.isReady
+          ? "The required organization and store checks are complete. Open the workspace when you are ready."
+          : "Finish the required organization and store steps, then open the workspace. Optional checks can continue later.";
+      }
+      const exit = $("setup-exit");
+      if (state.currentOrg && state.stores.length) {
+        exit.hidden = false;
+        exit.href = `/organize?organizationId=${encodeURIComponent(state.currentOrg.id)}&tab=overview`;
+      } else {
+        exit.hidden = true;
+      }
+      renderReadiness();
+    }
+
+    async function loadOrganizations() {
+      const response = await apiFetch("/api/v1/hub/organizations");
+      state.organizations = response.organizations || [];
+      const requested = new URLSearchParams(window.location.search).get("organizationId");
+      const saved = localStorage.getItem("aevo.hub.orgId");
+      state.currentOrg = state.organizations.find((item) => item.id === requested)
+        || state.organizations.find((item) => item.id === saved)
+        || state.organizations[0]
+        || null;
+      if (state.currentOrg) localStorage.setItem("aevo.hub.orgId", state.currentOrg.id);
+    }
+
+    async function loadStores(force = false) {
+      if (!state.currentOrg) return;
+      const response = !force && state.storesLoadedForOrg === state.currentOrg.id
+        ? { stores: state.stores }
+        : await hubFetch("/api/v1/hub/stores?organizationId=" + encodeURIComponent(state.currentOrg.id));
+      state.stores = response.stores || [];
+      state.storesLoadedForOrg = state.currentOrg.id;
+      const saved = localStorage.getItem("aevo.hub.storeId");
+      state.storeId = state.stores.some((item) => item.id === saved) ? saved : state.stores[0]?.id || null;
+      if (state.storeId) localStorage.setItem("aevo.hub.storeId", state.storeId);
+    }
+
+    async function loadProfile() {
+      if (!state.currentOrg) return;
+      const response = await hubFetch("/api/v1/hub/organizations/" + state.currentOrg.id);
+      const org = response.organization;
+      $("setup-org-name").value = org.name || "";
+      $("setup-legal-name").value = org.legalName || "";
+      $("setup-business-type").value = String(org.businessType || "restaurant").toLowerCase();
+      $("setup-timezone").value = org.timezone || "Asia/Bangkok";
+      $("setup-country").value = org.country || "TH";
+      $("setup-currency").value = org.currency || "THB";
+      $("setup-contact-email").value = org.contactEmail || "";
+    }
+
+    async function loadAppsData() {
+      if (!state.appsLoaded) {
+        const response = await apiFetch("/api/v1/hub/apps");
+        state.apps = response.apps || [];
+        state.appsLoaded = true;
+      }
+      if (state.currentOrg) {
+        const query = state.storeId ? "?storeId=" + encodeURIComponent(state.storeId) : "";
+        const response = await hubFetch("/api/v1/hub/subscriptions" + query);
+        state.subscriptions = response.subscriptions || [];
+      }
+    }
+
+    async function loadOnboarding() {
+      const query = state.currentOrg ? "?organizationId=" + encodeURIComponent(state.currentOrg.id) : "";
+      const response = await apiFetch("/api/v1/hub/onboarding/session" + query);
+      state.onboarding = response.session;
+    }
+
+    async function loadChecklist() {
+      if (!state.currentOrg) {
+        state.checklist = null;
+        renderReadiness();
+        return;
+      }
+      const query = "?organizationId=" + encodeURIComponent(state.currentOrg.id) + (state.storeId ? "&storeId=" + encodeURIComponent(state.storeId) : "");
+      const response = await apiFetch("/api/v1/hub/onboarding/checklist" + query);
+      state.checklist = response.checklist;
+      renderReadiness();
+    }
+
+    async function saveSetupStep(skip = false) {
+      if (state.setupBusy) return;
+      const canSkip = state.setupStep === 3 || state.setupStep === 4;
+      if (skip && !canSkip) return;
+      const storeInput = state.setupStep === 1 ? {
+        name: $("setup-store-name").value.trim(),
+        code: $("setup-store-code").value.trim(),
+        timezone: $("setup-store-timezone").value,
+        currency: $("setup-currency").value.trim().toUpperCase() || "THB",
+        storeMode: $("setup-store-mode").value,
+        address: $("setup-store-address").value.trim() || undefined,
+        phone: $("setup-store-phone").value.trim() || undefined
+      } : null;
+      if (storeInput && (!storeInput.name || !storeInput.code)) {
+        const field = $(storeInput.name ? "setup-store-code" : "setup-store-name");
+        field.setAttribute("aria-invalid", "true");
+        field.focus();
+        setActionFeedback("Enter a store name and code before continuing.", "error");
+        toast("Enter a store name and code before continuing.", true);
+        renderSetup();
+        return;
+      }
+      const isReadyStep = state.setupStep === setupSteps.length - 1;
+      setActionFeedback(
+        isReadyStep ? "Completing setup…" : skip ? "Skipping this step…" : "Saving this step…",
+        "progress"
+      );
+      state.setupBusy = true;
+      renderSetup();
+      try {
+        let stepFeedback = {
+          message: skip ? "Step skipped. Moving to the next step…" : "Step saved. Moving to the next step…",
+          tone: "success"
+        };
+        if (state.setupStep === 0) {
+          const name = $("setup-org-name").value.trim();
+          if (!name) throw new Error("Enter an organization name.");
+          const response = await apiFetch("/api/v1/hub/onboarding/organization", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, name, legalName: $("setup-legal-name").value.trim() || undefined, businessType: $("setup-business-type").value, country: $("setup-country").value.trim().toUpperCase() || "TH", timezone: $("setup-timezone").value, currency: $("setup-currency").value.trim().toUpperCase() || "THB", contactEmail: $("setup-contact-email").value.trim() || undefined }) });
+          state.onboarding = response.session;
+          await loadOrganizations();
+          state.currentOrg = state.organizations.find((item) => item.id === response.organizationId) || state.currentOrg;
+          state.stores = [];
+          state.storesLoadedForOrg = null;
+          state.storeId = null;
+          localStorage.setItem("aevo.hub.orgId", response.organizationId);
+          await loadProfile();
+        } else if (state.setupStep === 1) {
+          if (!state.currentOrg) throw new Error("Create the organization first.");
+          if (!storeInput) throw new Error("Store details are unavailable. Reload this step and try again.");
+          const response = await apiFetch("/api/v1/hub/onboarding/store", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, ...storeInput }) });
+          state.onboarding = response.session;
+          state.storeId = response.storeId;
+          localStorage.setItem("aevo.hub.storeId", response.storeId);
+
+          // The store write is the required action. A failed follow-up refresh
+          // must not strand the user on this step after the store was created.
+          let refreshError = null;
+          try {
+            await loadStores(true);
+          } catch (error) {
+            refreshError = error;
+            if (!state.stores.some((item) => item.id === response.storeId)) {
+              state.stores = [...state.stores, { id: response.storeId, name: storeInput.name, code: storeInput.code }];
+            }
+          }
+          state.storeId = response.storeId;
+          localStorage.setItem("aevo.hub.storeId", response.storeId);
+          try {
+            await loadChecklist();
+          } catch (error) {
+            refreshError = refreshError || error;
+          }
+          if (refreshError) {
+            stepFeedback = {
+              message: "Store saved. Readiness refresh failed; continuing setup.",
+              tone: "error"
+            };
+            toast("Store was saved, but readiness could not refresh. You can continue setup.", true);
+          }
+        } else if (state.setupStep === 2) {
+          if (!state.currentOrg) throw new Error("Create the organization first.");
+          const appIds = Array.from(document.querySelectorAll("[data-setup-app]:checked")).map((node) => node.value);
+          if (!appIds.length) throw new Error("Choose at least one app to continue.");
+          const response = await apiFetch("/api/v1/hub/onboarding/apps", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, appIds }) });
+          state.onboarding = response.session;
+          await loadAppsData();
+        } else if (state.setupStep === 3) {
+          if (!state.currentOrg || !state.storeId) throw new Error("Add the first store before setting up the catalog.");
+          const mode = skip ? "skip" : document.querySelector('input[name="catalog-mode"]:checked')?.value || "skip";
+          if (mode === "booking" && !checklistComplete("booking_resources")) {
+            const venueName = $("setup-venue-name").value.trim();
+            const resourceNames = $("setup-resources").value.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean);
+            if (!venueName || !resourceNames.length) throw new Error("Enter a venue name and at least one resource.");
+            const response = await apiFetch("/api/v1/hub/onboarding/booking-setup", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, storeId: state.storeId, venueName, businessType: $("setup-business-type").value, resourceNames, durationMinutes: Number($("setup-duration").value || 60), priceMinor: 0, enableWaitlist: true }) });
+            state.onboarding = response.session;
+          }
+          if (!state.onboarding?.completedSteps?.includes("RESOURCES")) {
+            const response = await apiFetch("/api/v1/hub/onboarding/progress", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, step: "RESOURCES" }) });
+            state.onboarding = response.session;
+          }
+          await loadChecklist();
+        } else if (state.setupStep === 4) {
+          const email = skip ? "" : $("setup-staff-email").value.trim();
+          if (email) {
+            if (!state.currentOrg) throw new Error("Create the organization first.");
+            await hubFetch("/api/v1/hub/members", { method: "POST", body: JSON.stringify({ email, displayName: $("setup-staff-name").value.trim() || undefined, role: $("setup-staff-role").value, storeIds: state.storeId ? [state.storeId] : [] }) });
+            $("setup-staff-email").value = "";
+            $("setup-staff-name").value = "";
+          }
+          if (!state.onboarding?.completedSteps?.includes("STAFF")) {
+            const response = await apiFetch("/api/v1/hub/onboarding/progress", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id, organizationId: state.currentOrg.id, step: "STAFF" }) });
+            state.onboarding = response.session;
+          }
+          await loadChecklist();
+        } else if (state.setupStep === setupSteps.length - 1) {
+          const storeId = state.storeId || state.stores[0]?.id;
+          if (!storeId) throw new Error("Add a store before opening the workspace.");
+          const response = await apiFetch("/api/v1/hub/onboarding/complete", { method: "POST", body: JSON.stringify({ sessionId: state.onboarding?.id }) });
+          state.onboarding = response.session;
+          localStorage.setItem("aevo.hub.storeId", storeId);
+          setActionFeedback("Setup complete. Opening workspace…", "success");
+          window.location.replace(`/workspace?organizationId=${encodeURIComponent(state.currentOrg?.id || "")}&storeId=${encodeURIComponent(storeId)}`);
+          return;
+        }
+        setActionFeedback(stepFeedback.message, stepFeedback.tone);
+        state.setupStep = Math.min(setupSteps.length - 1, state.setupStep + 1);
+        state.setupMaxStep = Math.max(state.setupMaxStep, state.setupStep);
+        if (state.setupStep === setupSteps.length - 1 && state.currentOrg) await loadChecklist();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not save this step";
+        setActionFeedback(message, "error");
+        toast(message, true);
+      } finally {
+        state.setupBusy = false;
+        renderSetup();
+      }
+    }
+
+    function goBackSetup() {
+      if (state.setupBusy || state.setupStep === 0) return;
+      setActionFeedback("Going back to the previous step…", "progress");
+      state.setupStep -= 1;
+      renderSetup();
+    }
+
+    document.querySelectorAll(".step-button").forEach((button) => button.addEventListener("click", () => {
+      const index = Number(button.dataset.setupIndex);
+      if (index <= state.setupMaxStep) {
+        setActionFeedback("Opening " + setupSteps[index].titleKey.replace("setup.", "").replace(".title", "") + " step…", "progress");
+        state.setupStep = index;
+        renderSetup();
+      }
+    }));
+    document.querySelectorAll('input[name="catalog-mode"]').forEach((input) => input.addEventListener("change", () => {
+      $("booking-fields").hidden = input.value !== "booking";
+      setActionFeedback(input.value === "booking" ? "Booking resources selected." : "Catalog will be added later.", "progress");
+      renderSetup();
+    }));
+    $("setup-back").addEventListener("click", goBackSetup);
+    $("setup-next").addEventListener("click", saveSetupStep);
+    $("setup-skip").addEventListener("click", () => saveSetupStep(true));
+    $("setup-sign-out").addEventListener("click", async () => {
+      const button = $("setup-sign-out");
+      setButtonBusy(button, true);
+      button.disabled = true;
+      button.textContent = "Signing out…";
+      try { await signOut(); } finally { window.location.assign("/login"); }
+    });
+    document.addEventListener("aevo:locale-changed", () => { if (state.user) renderSetup(); });
+
+    async function init() {
+      try {
+        await localeReady;
+        const params = new URLSearchParams(window.location.search);
+        const requestedOrgId = params.get("organizationId");
+        const bootstrap = await apiFetch("/api/v1/hub/bootstrap", { headers: requestedOrgId ? { "x-organization-id": requestedOrgId } : {} });
+        await i18n.init({ userId: bootstrap.user?.userId || bootstrap.user?.id, preference: bootstrap.preferences });
+        state.user = bootstrap.user;
+        state.principal = bootstrap.principal;
+        state.organizations = bootstrap.organizations || [];
+        state.currentOrg = state.organizations.find((item) => item.id === requestedOrgId)
+          || state.organizations.find((item) => item.id === bootstrap.principal?.organizationId)
+          || state.organizations.find((item) => item.id === localStorage.getItem("aevo.hub.orgId"))
+          || state.organizations[0]
+          || null;
+        state.stores = bootstrap.stores || [];
+        state.storesLoadedForOrg = null;
+        state.apps = bootstrap.apps || [];
+        state.appsLoaded = true;
+        if (state.currentOrg) {
+          localStorage.setItem("aevo.hub.orgId", state.currentOrg.id);
+          await loadStores(true);
+          const savedStoreId = params.get("storeId") || localStorage.getItem("aevo.hub.storeId");
+          state.storeId = state.stores.some((store) => store.id === savedStoreId) ? savedStoreId : state.stores[0]?.id || null;
+          if (state.storeId) localStorage.setItem("aevo.hub.storeId", state.storeId);
+        }
+        await loadOnboarding();
+        if (state.currentOrg) await Promise.all([loadChecklist(), loadAppsData(), loadProfile()]);
+        state.setupStep = deriveStep();
+        state.setupMaxStep = state.setupStep;
+        renderSetup();
+      } catch (error) {
+        if (error instanceof AuthApiError && error.status === 401) window.location.replace("/login");
+        else toast(error.message || "Could not load setup", true);
+      } finally {
+        $("setup-main")?.setAttribute("aria-busy", "false");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

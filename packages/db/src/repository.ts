@@ -10,6 +10,12 @@ interface UserProfileRow {
   status: "ACTIVE" | "DISABLED";
 }
 
+export interface PrincipalIdentity {
+  userId?: string;
+  email: string;
+  displayName?: string;
+}
+
 interface MembershipRow {
   id: string;
   organization_id: string;
@@ -52,15 +58,25 @@ function isPermission(value: string): value is Permission {
 export async function resolvePrincipal(
   database: Database,
   userId: string,
-  requestedOrganizationId?: string
+  requestedOrganizationId?: string,
+  identity?: PrincipalIdentity
 ): Promise<SessionPrincipal | null> {
-  const profileResult = await database.client
-    .from("user_profiles")
-    .select("id,email,display_name,status")
-    .eq("id", userId)
-    .maybeSingle();
-  throwIfError(profileResult.error, "user profile lookup");
-  const profile = profileResult.data as UserProfileRow | null;
+  const profile = identity
+    ? {
+        id: userId,
+        email: identity.email,
+        display_name: identity.displayName || identity.email.split("@")[0] || "User",
+        status: "ACTIVE"
+      } satisfies UserProfileRow
+    : await (async () => {
+        const profileResult = await database.client
+          .from("user_profiles")
+          .select("id,email,display_name,status")
+          .eq("id", userId)
+          .maybeSingle();
+        throwIfError(profileResult.error, "user profile lookup");
+        return profileResult.data as UserProfileRow | null;
+      })();
   if (!profile || profile.status !== "ACTIVE") return null;
 
   let membershipQuery = database.client
@@ -76,20 +92,21 @@ export async function resolvePrincipal(
   const membership = (membershipResult.data?.[0] ?? null) as MembershipRow | null;
   if (!membership) return null;
 
-  const organizationResult = await database.client
-    .from("organizations")
-    .select("id,status")
-    .eq("id", membership.organization_id)
-    .eq("status", "ACTIVE")
-    .maybeSingle();
+  const [organizationResult, roleResult] = await Promise.all([
+    database.client
+      .from("organizations")
+      .select("id,status")
+      .eq("id", membership.organization_id)
+      .eq("status", "ACTIVE")
+      .maybeSingle(),
+    database.client
+      .from("roles")
+      .select("id,code")
+      .eq("id", membership.role_id)
+      .maybeSingle()
+  ]);
   throwIfError(organizationResult.error, "organization lookup");
   if (!organizationResult.data) return null;
-
-  const roleResult = await database.client
-    .from("roles")
-    .select("id,code")
-    .eq("id", membership.role_id)
-    .maybeSingle();
   throwIfError(roleResult.error, "role lookup");
   const role = roleResult.data as RoleRow | null;
   if (!role || !isRole(role.code)) return null;
@@ -120,7 +137,7 @@ export async function resolvePrincipal(
 
 export async function listAuthorizedStores(database: Database, principal: SessionPrincipal): Promise<StoreSummary[]> {
   let allowedStoreIds: string[] | undefined;
-  if (principal.role !== "OWNER" && principal.role !== "ADMIN") {
+  if (!["OWNER", "ADMIN", "ORGANIZATION_MANAGER"].includes(principal.role)) {
     const accessResult = await database.client
       .from("membership_stores")
       .select("store_id")
@@ -158,7 +175,7 @@ export async function canAccessStore(database: Database, principal: SessionPrinc
     .maybeSingle();
   throwIfError(storeResult.error, "store access check");
   if (!storeResult.data) return false;
-  if (principal.role === "OWNER" || principal.role === "ADMIN") return true;
+  if (["OWNER", "ADMIN", "ORGANIZATION_MANAGER"].includes(principal.role)) return true;
 
   const membershipStoreResult = await database.client
     .from("membership_stores")

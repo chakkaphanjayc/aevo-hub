@@ -32,27 +32,14 @@ const appFeatureMap: Record<string, FeatureEntitlement[]> = {
   odoo_connector: ["odoo.sync"]
 };
 
-export async function isSystemTestingMode(database: Database): Promise<boolean> {
-  try {
-    const result = await database.client
-      .from("system_settings")
-      .select("value")
-      .eq("key", "operating_mode")
-      .maybeSingle();
-
-    if (result.data?.value) {
-      const value = typeof result.data.value === "string" ? JSON.parse(result.data.value) : result.data.value;
-      if (value && typeof value === "object") {
-        const mode = (value as Record<string, unknown>).mode;
-        const unlimited = (value as Record<string, unknown>).unlimited;
-        return mode === "testing" && unlimited === true;
-      }
-    }
-  } catch {
-    // Entitlement checks fail closed when the setting cannot be read.
-  }
-  return false;
+const APP_CATALOG_CACHE_TTL_MS = 60_000;
+interface AppCatalogCacheEntry {
+  expiresAt: number;
+  apps?: AppDefinition[];
+  pending?: Promise<AppDefinition[]>;
 }
+
+const appCatalogCache = new WeakMap<Database, AppCatalogCacheEntry>();
 
 function mapApp(row: Row): AppDefinition {
   return {
@@ -96,14 +83,30 @@ function planIsUsable(value: unknown): boolean {
 }
 
 export async function listApps(database: Database): Promise<AppDefinition[]> {
-  const result = await database.client
-    .from("apps")
-    .select("id,name,description,icon,pricing_model,base_price_monthly_minor,status,features,created_at")
-    .order("created_at", { ascending: true });
+  const cached = appCatalogCache.get(database);
+  if (cached?.pending) return cached.pending;
+  if (cached?.apps && cached.expiresAt > Date.now()) return cached.apps;
 
-  throwDatabaseError(result.error, "list apps");
-  if (!result.data) return [];
-  return (result.data as Row[]).map(mapApp);
+  const pending = (async () => {
+    const result = await database.client
+      .from("apps")
+      .select("id,name,description,icon,pricing_model,base_price_monthly_minor,status,features,created_at")
+      .order("created_at", { ascending: true });
+
+    throwDatabaseError(result.error, "list apps");
+    if (!result.data) return [];
+    return (result.data as Row[]).map(mapApp);
+  })();
+
+  appCatalogCache.set(database, { expiresAt: 0, pending });
+  try {
+    const apps = await pending;
+    appCatalogCache.set(database, { expiresAt: Date.now() + APP_CATALOG_CACHE_TTL_MS, apps });
+    return apps;
+  } catch (error) {
+    appCatalogCache.delete(database);
+    throw error;
+  }
 }
 
 export async function listOrganizationSubscriptions(
@@ -111,11 +114,8 @@ export async function listOrganizationSubscriptions(
   principal: SessionPrincipal,
   storeId?: string
 ): Promise<AppSubscriptionSummary[]> {
-  const [appsResult, subscriptionResult, organizationEntitlementsResult] = await Promise.all([
-    database.client
-      .from("apps")
-      .select("id")
-      .order("created_at", { ascending: true }),
+  const [apps, subscriptionResult, organizationEntitlementsResult] = await Promise.all([
+    listApps(database),
     database.client
       .from("subscriptions")
       .select("id,plan_id,status,trial_end,current_period_start,current_period_end,created_at,updated_at")
@@ -127,7 +127,6 @@ export async function listOrganizationSubscriptions(
       .eq("organization_id", principal.organizationId)
   ]);
 
-  throwDatabaseError(appsResult.error, "list subscription apps");
   throwDatabaseError(subscriptionResult.error, "load organization subscription");
   throwDatabaseError(organizationEntitlementsResult.error, "load organization entitlements");
 
@@ -152,7 +151,6 @@ export async function listOrganizationSubscriptions(
     });
   }
 
-  const operatingMode = await isSystemTestingMode(database);
   const rawPlanStatus = subscription?.status ?? "TRIALING";
   const status = mapPlanStatus(rawPlanStatus);
   const now = new Date().toISOString();
@@ -166,11 +164,11 @@ export async function listOrganizationSubscriptions(
   const createdAt = subscription?.created_at ? String(subscription.created_at) : now;
   const updatedAt = subscription?.updated_at ? String(subscription.updated_at) : createdAt;
 
-  return ((appsResult.data ?? []) as Row[]).map((app) => {
-    const appId = String(app.id);
+  return apps.map((app) => {
+    const appId = app.id;
     const featureKey = appFeatureKeys[appId] ?? appId;
     const feature = entitlements.get(featureKey);
-    const isEntitled = operatingMode || (planIsUsable(rawPlanStatus) && Boolean(feature?.enabled));
+    const isEntitled = planIsUsable(rawPlanStatus) && Boolean(feature?.enabled);
     const appStatus: SubscriptionStatus = isEntitled ? status : "EXPIRED";
     const daysRemaining = status === "TRIAL"
       ? calculateDaysRemaining(trialEndsAt)
@@ -225,17 +223,6 @@ export async function checkAppEntitlement(
   appId: string,
   storeId?: string
 ): Promise<EntitlementResult> {
-  const testing = await isSystemTestingMode(database);
-  if (testing) {
-    return {
-      allowed: true,
-      mode: "testing",
-      limit: null,
-      currentUsage: 0,
-      reason: "unlimited_testing_mode"
-    };
-  }
-
   const entitlement = await getAppEntitlement(database, principal, appId, storeId);
   return {
     allowed: entitlement.isEntitled,

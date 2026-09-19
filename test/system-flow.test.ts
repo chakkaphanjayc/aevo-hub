@@ -32,7 +32,19 @@ describe("Aevo Hub: canonical session flow", () => {
     expect(result).not.toHaveProperty("accessToken");
   });
 
-  it("3. Unsupported demo login is removed", async () => {
+  it("3. Locale: stores the per-user interface preference", async () => {
+    const initial = await client.auth.getPreferences();
+    expect(initial.preferences.userId).toBeDefined();
+    expect(initial.preferences.locale).toBeNull();
+
+    const updated = await client.auth.updatePreferences("th");
+    expect(updated.preferences.locale).toBe("th");
+
+    const persisted = await client.auth.getPreferences();
+    expect(persisted.preferences.locale).toBe("th");
+  });
+
+  it("4. Unsupported demo login is removed", async () => {
     const response = await fetch(`${GATEWAY_URL}/api/auth/demo-login`, {
       method: "POST"
     });
@@ -80,7 +92,7 @@ describe("Aevo Hub: canonical session flow", () => {
     storeId = result.storeId;
   });
 
-  it("7. Apps and demo data: follows the same session and tenant boundary", async () => {
+  it("7. Apps: follows the same session and tenant boundary", async () => {
     const apps = await client.hub.onboarding.setupApps({
       sessionId,
       organizationId,
@@ -88,20 +100,17 @@ describe("Aevo Hub: canonical session flow", () => {
     });
     expect(apps.success).toBe(true);
 
-    const demo = await client.hub.onboarding.generateDemoData({
-      organizationId,
-      storeId,
-      businessType: "sport_cafe"
-    });
-    expect(demo.success).toBe(true);
-    expect(demo.demoData.productsCreated).toBeGreaterThan(0);
-    expect(demo.demoData.resourcesCreated).toBeGreaterThan(0);
   }, 20000);
 
   it("8. Checklist: reports tenant readiness from Supabase", async () => {
     const result = await client.hub.onboarding.getChecklist(organizationId, storeId);
     expect(result.success).toBe(true);
-    expect(result.checklist.totalProgressPercent).toBeGreaterThanOrEqual(50);
+    expect(result.checklist.totalProgressPercent).toBeGreaterThan(0);
+    expect(result.checklist.isReady).toBe(true);
+    expect(result.checklist.items
+      .filter((item) => item.category === "REQUIRED")
+      .every((item) => item.status === "COMPLETED"))
+      .toBe(true);
     expect(result.checklist.items.length).toBe(8);
   });
 

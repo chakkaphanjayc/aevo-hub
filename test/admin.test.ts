@@ -9,6 +9,7 @@ describe("Platform Administration API & Console (/admin)", () => {
     const requests: Array<Promise<Response>> = [
       fetch(`${GATEWAY_URL}/api/v1/admin/overview`),
       fetch(`${GATEWAY_URL}/api/v1/admin/organizations`),
+      fetch(`${GATEWAY_URL}/api/v1/admin/stores`),
       fetch(`${GATEWAY_URL}/api/v1/admin/organizations/${sampleId}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -20,18 +21,33 @@ describe("Platform Administration API & Console (/admin)", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ status: "ACTIVE" })
       }),
-      fetch(`${GATEWAY_URL}/api/v1/admin/system`),
-      fetch(`${GATEWAY_URL}/api/v1/admin/system/mode`, {
+      fetch(`${GATEWAY_URL}/api/v1/admin/query/models`),
+      fetch(`${GATEWAY_URL}/api/v1/admin/query/parse`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode: "testing", unlimited: true })
+        body: JSON.stringify({ searchText: "status:ACTIVE" })
       }),
+      fetch(`${GATEWAY_URL}/api/v1/admin/query/execute`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          query: {
+            version: 1,
+            model: "admin.organization",
+            fields: ["id", "name"],
+            pagination: { limit: 10, offset: 0 }
+          }
+        })
+      }),
+      fetch(`${GATEWAY_URL}/api/v1/admin/system`),
       fetch(`${GATEWAY_URL}/api/v1/hub/sql/tables`)
     ];
 
     const responses = await Promise.all(requests);
     expect(responses.slice(0, -1).every((response) => response.status === 401)).toBe(true);
     expect(responses.at(-1)?.status).toBe(404);
+    const removedModeRoute = await fetch(`${GATEWAY_URL}/api/v1/admin/system/mode`, { method: "POST" });
+    expect(removedModeRoute.status).toBe(404);
   });
 
   it("serves /admin without exposing a client-side bearer-token flow", async () => {
@@ -40,6 +56,12 @@ describe("Platform Administration API & Console (/admin)", () => {
     const adminHtml = await adminRes.text();
     expect(adminHtml).toContain("Platform Administration Console");
     expect(adminHtml).toContain("Organizations & Quotas");
+    expect(adminHtml).toContain("Stores & IDs");
+    expect(adminHtml).toContain("admin-orgs-search");
+    expect(adminHtml).toContain("admin-stores-search");
+    expect(adminHtml).toContain("admin-subs-search");
+    expect(adminHtml).toContain("admin-users-search");
+    expect(adminHtml).toContain("/api/v1/admin/query");
     expect(adminHtml).not.toContain("Authorization: Bearer");
     expect(adminHtml).not.toContain("SUPABASE_SECRET_KEY");
     expect(adminHtml).toContain("/auth.js");
@@ -52,7 +74,7 @@ describe("Platform Administration API & Console (/admin)", () => {
     const landingHtml = await landingRes.text();
     expect(landingHtml).not.toContain("Open Testing Mode");
     expect(landingHtml).toContain("Enterprise Multi-Tenant Operating Platform");
-    expect(landingHtml).toContain("getCurrentUser");
+    expect(landingHtml).toContain("/api/v1/hub/bootstrap");
     expect(landingHtml).toContain("/auth.js");
     expect(landingHtml).toContain("landing-account");
     expect(landingHtml).toContain("Open Workspace");

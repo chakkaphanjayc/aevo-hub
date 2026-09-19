@@ -25,7 +25,6 @@ import type {
   OnboardingStep,
   OnboardingSessionSummary,
   SetupChecklistSummary,
-  DemoDataSummary,
   EntitlementResult,
   QueryModelMetadata,
   QuerySpecV1,
@@ -37,7 +36,9 @@ import type {
   QueryImportJobSummary,
   QueryImportMappingRecord,
   QueryImportErrorRecord,
-  QueryExportJobSummary
+  QueryExportJobSummary,
+  SupportedLocale,
+  UserPreferences
 } from "@aevo/contracts";
 
 const ORGANIZATION_STORAGE_KEY = "aevo.hub.orgId";
@@ -337,6 +338,15 @@ export class GatewayClient {
       principal: SessionPrincipal | null;
     }> => this.request("/api/auth/me"),
 
+    getPreferences: (): Promise<{ preferences: UserPreferences }> =>
+      this.request<{ preferences: UserPreferences }>("/api/v1/me/preferences"),
+
+    updatePreferences: (locale: SupportedLocale): Promise<{ preferences: UserPreferences }> =>
+      this.request<{ preferences: UserPreferences }>("/api/v1/me/preferences", {
+        method: "PATCH",
+        body: JSON.stringify({ locale })
+      }),
+
     logout: (): Promise<void> => this.request("/api/auth/logout", { method: "POST" }),
 
     listSessions: (): Promise<{ sessions: Array<{
@@ -490,7 +500,7 @@ export class GatewayClient {
       }),
 
     getOperatingMode: (): Promise<{
-      mode: "testing" | "production";
+      mode: "production";
       isUnlimitedTesting: boolean;
       description: string;
     }> =>
@@ -548,6 +558,8 @@ export class GatewayClient {
         organizationId: string;
         name: string;
         code: string;
+        timezone?: string;
+        currency?: string;
         storeMode?: "POS" | "KIOSK" | "BOOKING" | "POS_BOOKING" | "CUSTOM";
         address?: string;
         phone?: string;
@@ -584,16 +596,6 @@ export class GatewayClient {
           body: JSON.stringify(input)
         }),
 
-      generateDemoData: (input: {
-        organizationId: string;
-        storeId: string;
-        businessType?: string;
-      }): Promise<{ success: boolean; demoData: DemoDataSummary }> =>
-        this.request("/api/v1/hub/onboarding/demo-data", {
-          method: "POST",
-          body: JSON.stringify(input)
-        }),
-
       markProgress: (input: {
         sessionId: string;
         organizationId: string;
@@ -603,16 +605,6 @@ export class GatewayClient {
           method: "POST",
           body: JSON.stringify(input)
         }),
-
-      clearDemoData: (
-        organizationId: string,
-        storeId?: string
-      ): Promise<{ success: boolean; deletedCounts: Record<string, number> }> => {
-        const params = new URLSearchParams({ organizationId, ...(storeId ? { storeId } : {}) });
-        return this.request(`/api/v1/hub/onboarding/demo-data?${params.toString()}`, {
-          method: "DELETE"
-        });
-      },
 
       getChecklist: (
         organizationId: string,

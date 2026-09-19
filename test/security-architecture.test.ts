@@ -70,7 +70,7 @@ describe("Aevo security architecture invariants", () => {
   });
 
   it("does not expose server credentials to public web surfaces", async () => {
-    for (const path of ["/admin", "/organize", "/workspace", "/auth.js", "/shared.css"]) {
+    for (const path of ["/admin", "/organize", "/workspace", "/setup", "/auth.js", "/shared.css"]) {
       const response = await fetch(`${WEB_URL}${path}`);
       if (response.status !== 200) continue;
       const body = await response.text();
