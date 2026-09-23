@@ -2,6 +2,7 @@ import type {
   AddWaitlistInput,
   BookableResourceSummary,
   BookableResourceType,
+  BookingHoldSummary,
   BookingSlotSummary,
   BookingStatus,
   BookingSummary,
@@ -16,6 +17,24 @@ import type { Database } from "./client";
 import { throwDatabaseError } from "./errors";
 
 type Row = Record<string, unknown>;
+
+export class BookingValidationError extends Error {
+  readonly code = "BOOKING_VALIDATION_ERROR";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "BookingValidationError";
+  }
+}
+
+export class BookingConflictError extends Error {
+  readonly code = "BOOKING_CONFLICT";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "BookingConflictError";
+  }
+}
 
 function mapVenue(row: Row): VenueSummary {
   return {
@@ -61,11 +80,14 @@ function mapBooking(row: Row): BookingSummary {
     customerEmail: row.customer_email ? String(row.customer_email) : undefined,
     startAt: String(row.start_at),
     endAt: String(row.end_at),
+    partySize: Number(row.party_size ?? 1),
     status: (row.status ?? "CONFIRMED") as BookingStatus,
     amountMinor: Number(row.amount_minor ?? 0),
     checkinCode: row.checkin_code ? String(row.checkin_code) : undefined,
     checkedInAt: row.checked_in_at ? String(row.checked_in_at) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
+    publicTrackingToken: row.public_tracking_token ? String(row.public_tracking_token) : undefined,
+    slotHoldId: row.slot_hold_id ? String(row.slot_hold_id) : undefined,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at)
   };
@@ -178,7 +200,7 @@ export async function listBookings(
 ): Promise<BookingSummary[]> {
   let query = database.client
     .from("bookings")
-    .select("id,organization_id,venue_id,resource_id,order_id,customer_name,customer_phone,customer_email,start_at,end_at,status,amount_minor,checkin_code,checked_in_at,notes,created_at,updated_at")
+    .select(bookingSelect)
     .eq("organization_id", principal.organizationId)
     .eq("venue_id", venueId);
 
@@ -207,6 +229,192 @@ export function generateCheckinCode(): string {
   return code;
 }
 
+const bookingSelect = "id,organization_id,venue_id,resource_id,order_id,customer_name,customer_phone,customer_email,start_at,end_at,party_size,status,amount_minor,checkin_code,checked_in_at,notes,public_tracking_token,slot_hold_id,created_at,updated_at";
+
+function throwBookingError(error: { message: string; code?: string } | null, operation: string): void {
+  if (!error) return;
+  const message = error.message || `Supabase ${operation} failed`;
+  if (error.code === "P0001" || error.code === "40001" || error.code === "23505") {
+    if (message === "BOOKING_HOLD_EXPIRED") throw new BookingValidationError("เวลาสำรองหมดอายุแล้ว กรุณาเลือก slot ใหม่");
+    throw new BookingConflictError(
+      message === "BOOKING_CONFLICT" || message === "BOOKING_HOLD_CONFLICT"
+        ? "ช่วงเวลานี้มีผู้จองหรือกำลังถูกสำรองอยู่ กรุณาเลือกช่วงเวลาอื่น"
+        : message
+    );
+  }
+  if (error.code === "22023" || error.code === "23503" || error.code === "22P02") {
+    throw new BookingValidationError(message);
+  }
+  throwDatabaseError(error, operation);
+}
+
+function mapBookingHold(row: Row): BookingHoldSummary {
+  return {
+    id: String(row.id),
+    venueId: String(row.venue_id),
+    resourceId: String(row.resource_id),
+    startAt: String(row.start_at),
+    endAt: String(row.end_at),
+    partySize: Number(row.party_size ?? 1),
+    amountMinor: Number(row.amount_minor ?? 0),
+    expiresAt: String(row.expires_at),
+    serverTime: String(row.server_time ?? new Date().toISOString())
+  };
+}
+
+function firstRow(data: unknown): Row | undefined {
+  if (Array.isArray(data)) return data[0] as Row | undefined;
+  return data && typeof data === "object" ? data as Row : undefined;
+}
+
+export async function createPublicBooking(
+  database: Database,
+  input: {
+    organizationId: string;
+    venueId: string;
+    resourceId: string;
+    customerName: string;
+    customerPhone?: string | undefined;
+    customerEmail?: string | undefined;
+    startAt: string;
+    endAt: string;
+    amountMinor?: number | undefined;
+    notes?: string | undefined;
+  },
+  idempotencyKey: string
+): Promise<BookingSummary> {
+  const normalizedKey = idempotencyKey.trim();
+  if (!normalizedKey) throw new BookingValidationError("Idempotency-Key is required for booking confirmation");
+
+  const result = await database.client.rpc("create_booking", {
+    p_organization_id: input.organizationId,
+    p_venue_id: input.venueId,
+    p_resource_id: input.resourceId,
+    p_customer_name: input.customerName.trim(),
+    p_customer_phone: input.customerPhone?.trim() || null,
+    p_customer_email: input.customerEmail?.trim().toLowerCase() || null,
+    p_start_at: input.startAt,
+    p_end_at: input.endAt,
+    p_requested_amount_minor: input.amountMinor ?? null,
+    p_notes: input.notes?.trim() || null,
+    p_idempotency_key: normalizedKey,
+    p_created_by: null
+  });
+  throwBookingError(result.error, "public booking creation");
+
+  const row = firstRow(result.data);
+  const bookingId = row?.booking_id ? String(row.booking_id) : "";
+  if (!bookingId) throw new Error("Supabase public booking creation returned no booking");
+
+  const bookingResult = await database.client
+    .from("bookings")
+    .select(bookingSelect)
+    .eq("organization_id", input.organizationId)
+    .eq("id", bookingId)
+    .single();
+  throwBookingError(bookingResult.error, "public booking lookup");
+  return mapBooking(bookingResult.data as Row);
+}
+
+export async function createPublicBookingSlotHold(
+  database: Database,
+  input: {
+    organizationId: string;
+    venueId: string;
+    resourceId: string;
+    startAt: string;
+    endAt: string;
+    partySize: number;
+    amountMinor?: number | undefined;
+  },
+  idempotencyKey: string
+): Promise<BookingHoldSummary> {
+  const normalizedKey = idempotencyKey.trim();
+  if (!normalizedKey) throw new BookingValidationError("Idempotency-Key is required for a booking hold");
+  const result = await database.client.rpc("create_booking_slot_hold", {
+    p_organization_id: input.organizationId,
+    p_venue_id: input.venueId,
+    p_resource_id: input.resourceId,
+    p_start_at: input.startAt,
+    p_end_at: input.endAt,
+    p_party_size: input.partySize,
+    p_requested_amount_minor: input.amountMinor ?? null,
+    p_idempotency_key: normalizedKey
+  });
+  throwBookingError(result.error, "public booking hold creation");
+  const row = firstRow(result.data);
+  if (!row?.hold_id) throw new Error("Supabase public booking hold creation returned no hold");
+  return mapBookingHold({
+    id: row.hold_id,
+    venue_id: row.venue_id,
+    resource_id: row.resource_id,
+    start_at: row.start_at,
+    end_at: row.end_at,
+    party_size: row.party_size,
+    amount_minor: row.amount_minor,
+    expires_at: row.expires_at,
+    server_time: row.server_time
+  });
+}
+
+export async function confirmPublicBookingSlotHold(
+  database: Database,
+  input: {
+    holdId: string;
+    customerName: string;
+    customerPhone?: string | undefined;
+    customerEmail?: string | undefined;
+    notes?: string | undefined;
+  },
+  idempotencyKey: string
+): Promise<BookingSummary> {
+  const normalizedKey = idempotencyKey.trim();
+  if (!normalizedKey) throw new BookingValidationError("Idempotency-Key is required for booking confirmation");
+  const holdResult = await database.client
+    .from("booking_slot_holds")
+    .select("organization_id")
+    .eq("id", input.holdId)
+    .single();
+  throwBookingError(holdResult.error, "booking hold lookup");
+  const organizationId = String((holdResult.data as Row).organization_id);
+  const result = await database.client.rpc("confirm_booking_slot_hold", {
+    p_hold_id: input.holdId,
+    p_customer_name: input.customerName.trim(),
+    p_customer_phone: input.customerPhone?.trim() || null,
+    p_customer_email: input.customerEmail?.trim().toLowerCase() || null,
+    p_notes: input.notes?.trim() || null,
+    p_idempotency_key: normalizedKey,
+    p_created_by: null
+  });
+  throwBookingError(result.error, "public booking confirmation");
+  const row = firstRow(result.data);
+  const bookingId = row?.booking_id ? String(row.booking_id) : "";
+  if (!bookingId) throw new Error("Supabase public booking confirmation returned no booking");
+  const bookingResult = await database.client
+    .from("bookings")
+    .select(bookingSelect)
+    .eq("organization_id", organizationId)
+    .eq("id", bookingId)
+    .single();
+  throwBookingError(bookingResult.error, "public booking confirmation lookup");
+  return mapBooking(bookingResult.data as Row);
+}
+
+export async function getPublicBookingByToken(
+  database: Database,
+  trackingToken: string
+): Promise<BookingSummary | null> {
+  const normalizedToken = trackingToken.trim();
+  if (!normalizedToken) return null;
+  const result = await database.client
+    .from("bookings")
+    .select(bookingSelect)
+    .eq("public_tracking_token", normalizedToken)
+    .maybeSingle();
+  throwBookingError(result.error, "public booking tracking lookup");
+  return result.data ? mapBooking(result.data as Row) : null;
+}
+
 export async function createBooking(
   database: Database,
   principal: SessionPrincipal,
@@ -219,6 +427,7 @@ export async function createBooking(
     startAt: string;
     endAt: string;
     amountMinor: number;
+    partySize?: number | undefined;
     notes?: string | undefined;
     orderId?: string | undefined;
   }
@@ -235,7 +444,7 @@ export async function createBooking(
 
   throwDatabaseError(existingBookings.error, "check booking overlap");
   if (existingBookings.data && existingBookings.data.length > 0) {
-    throw new Error("ช่วงเวลาดังกล่าวมีผู้จองแล้ว กรุณาเลือกช่วงเวลาอื่น");
+    throw new BookingConflictError("ช่วงเวลาดังกล่าวมีผู้จองแล้ว กรุณาเลือกช่วงเวลาอื่น");
   }
 
   const checkinCode = generateCheckinCode();
@@ -252,12 +461,13 @@ export async function createBooking(
       customer_email: input.customerEmail ?? null,
       start_at: input.startAt,
       end_at: input.endAt,
+      party_size: input.partySize ?? 1,
       status: "CONFIRMED",
       amount_minor: input.amountMinor,
       checkin_code: checkinCode,
       notes: input.notes ?? null
     })
-    .select("id,organization_id,venue_id,resource_id,order_id,customer_name,customer_phone,customer_email,start_at,end_at,status,amount_minor,checkin_code,checked_in_at,notes,created_at,updated_at")
+    .select(bookingSelect)
     .single();
 
   throwDatabaseError(result.error, "create booking");
@@ -272,7 +482,7 @@ export async function checkinBooking(
 ): Promise<BookingSummary> {
   let query = database.client
     .from("bookings")
-    .select("id,organization_id,venue_id,resource_id,order_id,customer_name,customer_phone,customer_email,start_at,end_at,status,amount_minor,checkin_code,checked_in_at,notes,created_at,updated_at")
+    .select(bookingSelect)
     .eq("organization_id", principal.organizationId)
     .eq("id", bookingId);
 
@@ -294,7 +504,7 @@ export async function checkinBooking(
       checked_in_at: now
     })
     .eq("id", bookingId)
-    .select("id,organization_id,venue_id,resource_id,order_id,customer_name,customer_phone,customer_email,start_at,end_at,status,amount_minor,checkin_code,checked_in_at,notes,created_at,updated_at")
+    .select(bookingSelect)
     .single();
 
   throwDatabaseError(updateResult.error, "perform checkin");
@@ -305,7 +515,8 @@ export async function getVenueAvailability(
   database: Database,
   principal: SessionPrincipal,
   venueId: string,
-  dateStr: string
+  dateStr: string,
+  partySize = 1
 ): Promise<VenueAvailabilitySummary> {
   // Fetch venue
   const venueResult = await database.client
@@ -317,26 +528,80 @@ export async function getVenueAvailability(
   throwDatabaseError(venueResult.error, "fetch venue");
   const venue = venueResult.data as Row;
 
+  const timezone = String(venue.timezone ?? "Asia/Bangkok");
+
   // Fetch active resources
   const resources = await listResources(database, principal, venueId);
   const activeResources = resources.filter((r) => r.status === "ACTIVE");
 
-  // Fetch bookings for the date
-  const bookings = await listBookings(database, principal, venueId, { date: dateStr });
+  // Fetch bookings and unexpired holds. Both are server-authoritative and are
+  // intentionally read through the trusted Gateway client only.
+  const bookings = await listBookings(database, principal, venueId);
+  const now = new Date();
+  const holdResult = await database.client
+    .from("booking_slot_holds")
+    .select("resource_id,start_at,end_at,status,expires_at")
+    .eq("organization_id", principal.organizationId)
+    .eq("venue_id", venueId)
+    .eq("status", "HELD")
+    .gt("expires_at", now.toISOString());
+  throwDatabaseError(holdResult.error, "fetch booking holds");
+  const holds = (holdResult.data ?? []) as Row[];
+
+  const operatingHourResult = await database.client
+    .from("operating_hours")
+    .select("day_of_week,open_time,close_time,enabled")
+    .eq("organization_id", principal.organizationId)
+    .eq("venue_id", venueId)
+    .eq("day_of_week", new Date(`${dateStr}T00:00:00.000Z`).getUTCDay())
+    .maybeSingle();
+  throwDatabaseError(operatingHourResult.error, "fetch venue operating hours");
 
   const slotMinutes = Number(venue.slot_duration_minutes ?? 60);
   const slots: BookingSlotSummary[] = [];
 
-  // Generate slots for each resource between 08:00 and 22:00
-  const openHour = 8;
-  const closeHour = 22;
+  const configuredHours = operatingHourResult.data as Row | null;
+  const isClosed = configuredHours && configuredHours.enabled === false;
+  const parseTime = (value: unknown, fallback: number): number => {
+    if (typeof value !== "string") return fallback;
+    const match = /^(\d{2}):(\d{2})$/.exec(value);
+    if (!match) return fallback;
+    return Number(match[1]) * 60 + Number(match[2]);
+  };
+  const openMinute = configuredHours ? parseTime(configuredHours.open_time, 8 * 60) : 8 * 60;
+  const closeMinute = configuredHours ? parseTime(configuredHours.close_time, 22 * 60) : 22 * 60;
+
+  const localDateTimeToUtc = (localTime: string): string => {
+    const match = /^(\d{2}):(\d{2})$/.exec(localTime);
+    if (!match) return `${dateStr}T00:00:00.000Z`;
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const targetUtc = Date.UTC(year, month - 1, day, Number(match[1]), Number(match[2]), 0, 0);
+    let guess = new Date(targetUtc);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23"
+      }).formatToParts(guess);
+      const value = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+      const displayedUtc = Date.UTC(Number(value.year), Number(value.month) - 1, Number(value.day), Number(value.hour), Number(value.minute), Number(value.second));
+      guess = new Date(guess.getTime() + (targetUtc - displayedUtc));
+    }
+    return guess.toISOString();
+  };
 
   for (const resource of activeResources) {
-    let currentHour = openHour;
-    let currentMin = 0;
+    let currentTotalMin = openMinute;
 
-    while (currentHour * 60 + currentMin + slotMinutes <= closeHour * 60) {
-      const nextTotalMin = currentHour * 60 + currentMin + slotMinutes;
+    while (!isClosed && currentTotalMin + slotMinutes <= closeMinute) {
+      const nextTotalMin = currentTotalMin + slotMinutes;
+      const currentHour = Math.floor(currentTotalMin / 60);
+      const currentMin = currentTotalMin % 60;
       const nextHour = Math.floor(nextTotalMin / 60);
       const nextMin = nextTotalMin % 60;
 
@@ -344,17 +609,25 @@ export async function getVenueAvailability(
       const localStart = `${pad(currentHour)}:${pad(currentMin)}`;
       const localEnd = `${pad(nextHour)}:${pad(nextMin)}`;
 
-      const startIso = `${dateStr}T${localStart}:00.000Z`;
-      const endIso = `${dateStr}T${localEnd}:00.000Z`;
+      const startIso = localDateTimeToUtc(localStart);
+      const endIso = localDateTimeToUtc(localEnd);
 
-      // Check if slot is booked
       const isBooked = bookings.some(
         (b) =>
           b.resourceId === resource.id &&
-          b.status !== "CANCELLED" &&
+          ["HELD", "CONFIRMED", "CHECKED_IN"].includes(b.status) &&
           new Date(b.startAt).getTime() < new Date(endIso).getTime() &&
           new Date(b.endAt).getTime() > new Date(startIso).getTime()
       );
+      const isHeld = holds.some(
+        (hold) =>
+          String(hold.resource_id) === resource.id &&
+          new Date(String(hold.start_at)).getTime() < new Date(endIso).getTime() &&
+          new Date(String(hold.end_at)).getTime() > new Date(startIso).getTime()
+      );
+      const isPast = new Date(startIso).getTime() <= now.getTime();
+      const exceedsCapacity = partySize > resource.capacity;
+      const unavailableReason = isPast ? "PAST" as const : isBooked ? "BOOKED" as const : isHeld ? "BOOKED" as const : exceedsCapacity ? "BLOCKED" as const : undefined;
 
       slots.push({
         id: `${resource.id}-${localStart}`,
@@ -365,19 +638,18 @@ export async function getVenueAvailability(
         localStartTime: localStart,
         localEndTime: localEnd,
         priceMinor: resource.basePriceMinor,
-        available: !isBooked,
-        ...(isBooked ? { reason: "BOOKED" as const } : {})
+        available: unavailableReason === undefined,
+        ...(unavailableReason ? { reason: unavailableReason } : {})
       });
 
-      currentHour = nextHour;
-      currentMin = nextMin;
+      currentTotalMin = nextTotalMin;
     }
   }
 
   return {
     venueId,
     date: dateStr,
-    timezone: String(venue.timezone ?? "Asia/Bangkok"),
+    timezone,
     slotDurationMinutes: slotMinutes,
     slots
   };

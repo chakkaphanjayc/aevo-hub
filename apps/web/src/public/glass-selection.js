@@ -51,16 +51,25 @@ export function attachGlassSelection(container, { itemSelector }) {
       },
       observer: null,
       resizeHandler: null,
-      clickHandler: null
+      clickHandler: null,
+      queuedFrame: null
+    };
+
+    const queueSync = () => {
+      if (instance.queuedFrame !== null) return;
+      instance.queuedFrame = window.requestAnimationFrame(() => {
+        instance.queuedFrame = null;
+        instance?.sync();
+      });
     };
 
     instance.clickHandler = (event) => {
       if (event.target instanceof Element && event.target.closest(instance.selector)) {
-        window.requestAnimationFrame(() => instance?.sync());
+        queueSync();
       }
     };
-    instance.resizeHandler = () => instance?.sync();
-    instance.observer = new MutationObserver(() => instance?.sync());
+    instance.resizeHandler = queueSync;
+    instance.observer = new MutationObserver(queueSync);
 
     container.addEventListener("click", instance.clickHandler);
     window.addEventListener("resize", instance.resizeHandler, { passive: true });
@@ -68,7 +77,9 @@ export function attachGlassSelection(container, { itemSelector }) {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["class", "aria-current", "aria-selected", "hidden"]
+      // Do not observe the indicator's own hidden state. sync() updates it,
+      // so observing it would schedule another sync for every paint.
+      attributeFilter: ["class", "aria-current", "aria-selected"]
     });
     instances.set(container, instance);
   } else {
@@ -78,4 +89,3 @@ export function attachGlassSelection(container, { itemSelector }) {
   instance.sync();
   return instance;
 }
-

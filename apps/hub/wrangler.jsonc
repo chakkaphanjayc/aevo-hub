@@ -1,0 +1,77 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aevo-hub",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "AEVO_APP_CODE": "HUB",
+    "AEVO_ENVIRONMENT": "preview",
+    "AEVO_API_URL": "",
+    "AEVO_CORE_API_URL": "",
+    "AEVO_HUB_WEB_URL": "http://localhost:4330",
+    "AEVO_HUB_HOME_URL": "http://localhost:4321",
+    "AEVO_PLAY_URL": "http://localhost:4331/modern",
+    "AEVO_POS_URL": "http://localhost:4332",
+    "AEVO_GO_URL": "http://localhost:4324",
+    "AEVO_KIOSK_URL": "",
+    "AEVO_QUEUE_URL": "",
+    "CSRF_COOKIE_NAME": "aevo_csrf"
+  },
+  "env": {
+    "preview": {
+      "name": "aevo-hub-preview",
+      "vars": {
+        "AEVO_APP_CODE": "HUB",
+        "AEVO_ENVIRONMENT": "preview",
+        "AEVO_API_URL": "",
+        "AEVO_CORE_API_URL": "",
+        "AEVO_HUB_WEB_URL": "",
+        "AEVO_HUB_HOME_URL": "",
+        "AEVO_PLAY_URL": "",
+        "AEVO_POS_URL": "",
+        "AEVO_GO_URL": "",
+        "AEVO_KIOSK_URL": "",
+        "AEVO_QUEUE_URL": "",
+        "CSRF_COOKIE_NAME": "aevo_csrf"
+      }
+    },
+    "staging": {
+      "name": "aevo-hub-staging",
+      "vars": {
+        "AEVO_APP_CODE": "HUB",
+        "AEVO_ENVIRONMENT": "staging",
+        "AEVO_API_URL": "",
+        "AEVO_CORE_API_URL": "",
+        "AEVO_HUB_WEB_URL": "",
+        "AEVO_HUB_HOME_URL": "",
+        "AEVO_PLAY_URL": "",
+        "AEVO_POS_URL": "",
+        "AEVO_GO_URL": "",
+        "AEVO_KIOSK_URL": "",
+        "AEVO_QUEUE_URL": "",
+        "CSRF_COOKIE_NAME": "aevo_csrf"
+      }
+    },
+    "production": {
+      "name": "aevo-hub-production",
+      "vars": {
+        "AEVO_APP_CODE": "HUB",
+        "AEVO_ENVIRONMENT": "production",
+        "AEVO_API_URL": "",
+        "AEVO_CORE_API_URL": "",
+        "AEVO_HUB_WEB_URL": "",
+        "AEVO_HUB_HOME_URL": "",
+        "AEVO_PLAY_URL": "",
+        "AEVO_POS_URL": "",
+        "AEVO_GO_URL": "",
+        "AEVO_KIOSK_URL": "",
+        "AEVO_QUEUE_URL": "",
+        "CSRF_COOKIE_NAME": "aevo_csrf"
+      }
+    }
+  }
+}

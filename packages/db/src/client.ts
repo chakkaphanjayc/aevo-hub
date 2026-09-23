@@ -22,7 +22,8 @@ export function createDatabase(supabaseUrl: string, supabaseKey: string): Databa
     auth: {
       persistSession: false,
       autoRefreshToken: false,
-      detectSessionInUrl: false
+      detectSessionInUrl: false,
+      experimental: { passkey: true }
     },
     global: {
       headers: { "x-aevo-runtime": "api" }

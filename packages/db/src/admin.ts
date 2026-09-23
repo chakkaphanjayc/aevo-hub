@@ -1,5 +1,6 @@
-import { createHash, randomBytes } from "node:crypto";
-import type { AdminAuditEntry, PlatformRole } from "@aevo/contracts";
+import { createHash } from "node:crypto";
+import { applicationCodes } from "@aevo/contracts";
+import type { AdminAuditEntry, ApplicationCode, PlatformRole } from "@aevo/contracts";
 import type { Database } from "./client";
 import { throwDatabaseError } from "./errors";
 
@@ -13,6 +14,22 @@ export interface PlatformOverview {
     mode: string;
     unlimited: boolean;
   };
+}
+
+export interface AdminAuditLogSummary {
+  id: string;
+  organizationId: string | null;
+  adminUserId: string | null;
+  platformRole: string | null;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  beforeState: Record<string, unknown>;
+  afterState: Record<string, unknown>;
+  reason: string | null;
+  ipAddress: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
 export interface AdminOrganizationSummary {
@@ -55,6 +72,17 @@ export interface AdminUserSummary {
     role: string;
     storeIds: string[];
   }>;
+}
+
+export type AdminApplicationKind = "CONTROL_PLANE" | "PLATFORM_ADMIN" | "OPERATIONS" | "CONSUMER";
+
+export interface AdminApplicationSummary {
+  code: ApplicationCode;
+  name: string;
+  kind: AdminApplicationKind;
+  status: "ACTIVE" | "DISABLED";
+  createdAt: string;
+  updatedAt: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -403,21 +431,68 @@ export async function writeStructuredAuditLog(
   database: Database,
   entry: AdminAuditEntry
 ): Promise<void> {
-  await database.client.from("audit_logs").insert({
+  const result = await database.client.from("audit_logs").insert({
     organization_id: entry.organizationId ?? null,
     admin_user_id: entry.adminUserId ?? null,
     platform_role: entry.platformRole ?? null,
     action: entry.action,
+    target_type: entry.targetType,
+    target_id: entry.targetId ?? null,
     resource_type: entry.targetType,
-    resource_id: entry.targetId ? entry.targetId : null,
+    resource_id: auditUuidOrNull(entry.targetId),
     before_state: entry.beforeState ?? {},
     after_state: entry.afterState ?? {},
     reason: entry.reason ?? "System/Admin action",
     ip_address: entry.ipAddress ?? null,
     metadata: {
-      timestamp: entry.createdAt || new Date().toISOString()
+      timestamp: entry.createdAt || new Date().toISOString(),
+      ...(entry.applicationCode ? { applicationCode: entry.applicationCode } : {})
     }
   });
+  if (result.error) throwDatabaseError(result.error, "structured audit log create");
+}
+
+export async function listAdminAuditLogs(
+  database: Database,
+  limit = 200
+): Promise<AdminAuditLogSummary[]> {
+  const result = await database.client
+    .from("audit_logs")
+    .select("id,organization_id,admin_user_id,platform_role,action,target_type,target_id,resource_type,resource_id,before_state,after_state,reason,ip_address,metadata,created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(Math.trunc(limit), 1), 500));
+
+  if (result.error) return throwDatabaseError(result.error, "admin audit log list");
+
+  return (result.data ?? []).map((row) => {
+    const record = row as Record<string, unknown>;
+    const resourceType = typeof record.resource_type === "string" ? record.resource_type : "unknown";
+    const targetType = typeof record.target_type === "string" ? record.target_type : resourceType;
+    const targetId = typeof record.target_id === "string"
+      ? record.target_id
+      : typeof record.resource_id === "string" ? record.resource_id : null;
+    return {
+      id: String(record.id ?? ""),
+      organizationId: typeof record.organization_id === "string" ? record.organization_id : null,
+      adminUserId: typeof record.admin_user_id === "string" ? record.admin_user_id : null,
+      platformRole: typeof record.platform_role === "string" ? record.platform_role : null,
+      action: String(record.action ?? "UNKNOWN"),
+      targetType,
+      targetId,
+      beforeState: asRecord(record.before_state),
+      afterState: asRecord(record.after_state),
+      reason: typeof record.reason === "string" ? record.reason : null,
+      ipAddress: typeof record.ip_address === "string" ? record.ip_address : null,
+      metadata: asRecord(record.metadata),
+      createdAt: String(record.created_at ?? "")
+    };
+  });
+}
+
+function auditUuidOrNull(value: string | null | undefined): string | null {
+  return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value)
+    ? value
+    : null;
 }
 
 export async function createImpersonationSession(
@@ -431,7 +506,9 @@ export async function createImpersonationSession(
   }
 ): Promise<{ token: string; expiresAt: string }> {
   const ttl = input.ttlMinutes ?? 30; // 15-30 minutes max
-  const rawToken = `imp_${randomBytes(32).toString("base64url")}`;
+  const randomTokenBytes = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(randomTokenBytes);
+  const rawToken = `imp_${Buffer.from(randomTokenBytes).toString("base64url")}`;
   const tokenHash = hashImpersonationToken(rawToken);
   const expiresAt = new Date(Date.now() + ttl * 60 * 1000).toISOString();
 
@@ -529,4 +606,66 @@ export async function listAdminSubscriptions(
       createdAt: row.created_at
     };
   });
+}
+
+function applicationCode(value: unknown): ApplicationCode | null {
+  return typeof value === "string" && applicationCodes.includes(value as ApplicationCode)
+    ? value as ApplicationCode
+    : null;
+}
+
+function applicationKind(value: unknown): AdminApplicationKind {
+  return value === "CONTROL_PLANE" || value === "PLATFORM_ADMIN" || value === "OPERATIONS" || value === "CONSUMER"
+    ? value
+    : "OPERATIONS";
+}
+
+function applicationStatus(value: unknown): "ACTIVE" | "DISABLED" {
+  return value === "DISABLED" ? "DISABLED" : "ACTIVE";
+}
+
+function applicationSummary(row: Record<string, unknown>): AdminApplicationSummary | null {
+  const code = applicationCode(row.code);
+  if (!code) return null;
+  return {
+    code,
+    name: String(row.name ?? code),
+    kind: applicationKind(row.kind),
+    status: applicationStatus(row.status),
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? "")
+  };
+}
+
+export async function listAdminApplications(database: Database): Promise<AdminApplicationSummary[]> {
+  const result = await database.client
+    .from("application_registry")
+    .select("code,name,kind,status,created_at,updated_at")
+    .order("code", { ascending: true });
+
+  if (result.error) return throwDatabaseError(result.error, "Failed to list application registry");
+  return (result.data ?? [])
+    .map((row) => applicationSummary(row as Record<string, unknown>))
+    .filter((row): row is AdminApplicationSummary => row !== null);
+}
+
+export async function updateAdminApplicationStatus(
+  database: Database,
+  code: ApplicationCode,
+  status: "ACTIVE" | "DISABLED"
+): Promise<AdminApplicationSummary> {
+  const result = await database.client
+    .from("application_registry")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("code", code)
+    .select("code,name,kind,status,created_at,updated_at")
+    .single();
+
+  if (result.error || !result.data) {
+    return throwDatabaseError(result.error ?? new Error("Application was not found"), "Failed to update application status");
+  }
+
+  const summary = applicationSummary(result.data as Record<string, unknown>);
+  if (!summary) throw new Error("Application registry returned an invalid application code");
+  return summary;
 }

@@ -7,7 +7,6 @@
     "start": "bun run src/server.ts"
   },
   "dependencies": {
-    "@aevo/contracts": "workspace:*",
-    "@aevo/hub-client": "workspace:*"
+    "@aevo/contracts": "workspace:*"
   }
 }

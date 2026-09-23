@@ -8,13 +8,14 @@ import type {
   OrderSummary,
   OrderType,
   PaymentMethod,
+  PublicCartPriceSummary,
   RecordPaymentInput,
   SessionPrincipal,
   TransitionOrderInput
 } from "@aevo/contracts";
 import { fulfillmentTypes, orderChannels, orderStatuses, orderTypes, paymentMethods } from "@aevo/contracts";
 import { assertOrderTransition } from "@aevo/ordering";
-import { getStoreByCode } from "./catalog";
+import { getPublicCatalog, getStoreByCode } from "./catalog";
 import type { Database } from "./client";
 import { throwDatabaseError } from "./errors";
 
@@ -213,6 +214,75 @@ function normalizeCreateInput(input: CreateOrderInput): CreateOrderInput {
         ...(item.note?.trim() ? { note: item.note.trim() } : {})
       };
     })
+  };
+}
+
+export async function pricePublicCart(
+  database: Database,
+  input: CreatePublicOrderInput
+): Promise<PublicCartPriceSummary> {
+  const catalog = await getPublicCatalog(database, input.storeCode, input.channel);
+  if (!catalog) throw new OrderValidationError(`Store "${input.storeCode}" was not found or is inactive`);
+  if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 100) {
+    throw new OrderValidationError("A cart must contain between 1 and 100 items");
+  }
+
+  const productById = new Map(catalog.products.map((product) => [product.id, product]));
+  const lines = input.items.map((item) => {
+    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999) {
+      throw new OrderValidationError("Each cart item needs a quantity between 1 and 999");
+    }
+    const product = productById.get(item.productId);
+    if (!product || product.soldOut) {
+      throw new OrderValidationError("A cart item is no longer available");
+    }
+    const variant = item.variantId ? product.variants.find((candidate) => candidate.id === item.variantId) : undefined;
+    if (item.variantId && !variant) throw new OrderValidationError(`Variant for ${product.name} is no longer available`);
+
+    const modifierIds = [...(item.modifierIds ?? [])];
+    if (new Set(modifierIds).size !== modifierIds.length) {
+      throw new OrderValidationError(`Duplicate modifiers are not allowed for ${product.name}`);
+    }
+    const attachedModifiers = new Map(product.modifierGroups.flatMap((group) => group.modifiers.map((modifier) => [modifier.id, { modifier, group }] as const)));
+    if (modifierIds.some((modifierId) => !attachedModifiers.has(modifierId))) {
+      throw new OrderValidationError(`A modifier for ${product.name} is no longer available`);
+    }
+
+    let modifierTotalMinor = 0;
+    for (const group of product.modifierGroups) {
+      const selected = modifierIds.filter((modifierId) => group.modifiers.some((modifier) => modifier.id === modifierId));
+      if (selected.length < group.minSelections || (group.required && selected.length === 0)) {
+        throw new OrderValidationError(`Please complete modifier group ${group.name}`);
+      }
+      if ((group.selectionType === "SINGLE" && selected.length > 1) || (group.maxSelections > 0 && selected.length > group.maxSelections)) {
+        throw new OrderValidationError(`Too many modifiers selected for ${group.name}`);
+      }
+      modifierTotalMinor += selected.reduce((sum, modifierId) => sum + Number(attachedModifiers.get(modifierId)?.modifier.priceDeltaMinor ?? 0), 0);
+    }
+
+    const unitPriceMinor = variant?.priceMinor ?? product.effectivePriceMinor;
+    return {
+      productId: product.id,
+      productName: product.name,
+      ...(variant ? { variantId: variant.id, variantName: variant.name } : {}),
+      modifierIds,
+      quantity: item.quantity,
+      unitPriceMinor,
+      modifierTotalMinor,
+      subtotalMinor: (unitPriceMinor + modifierTotalMinor) * item.quantity
+    };
+  });
+  const subtotalMinor = lines.reduce((sum, line) => sum + line.subtotalMinor, 0);
+  return {
+    storeCode: catalog.store.code,
+    currency: catalog.store.currency,
+    pricingVersion: "catalog-v1",
+    subtotalMinor,
+    discountMinor: 0,
+    taxMinor: 0,
+    totalMinor: subtotalMinor,
+    lines,
+    serverTime: new Date().toISOString()
   };
 }
 
@@ -451,4 +521,40 @@ export async function recordOrderPayment(
   const row = firstRow(result.data);
   if (!row?.order_id) throw new Error("Supabase payment recording returned no order");
   return getOrder(database, principal, input.storeId, orderId);
+}
+
+export async function recordPublicOrderPayment(
+  database: Database,
+  input: {
+    organizationId: string;
+    storeId: string;
+    orderId: string;
+    amountMinor: number;
+    currency: string;
+    providerReference: string;
+    idempotencyKey: string;
+  }
+): Promise<{ orderId: string; paymentId: string; orderStatus: string }> {
+  if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {
+    throw new OrderValidationError("Payment amount must be positive");
+  }
+  const result = await database.client.rpc("record_order_payment", {
+    p_organization_id: input.organizationId,
+    p_store_id: input.storeId,
+    p_order_id: input.orderId,
+    p_received_by: null,
+    p_method: "EXTERNAL_CARD",
+    p_amount_minor: input.amountMinor,
+    p_currency: input.currency.trim().toUpperCase(),
+    p_provider_reference: input.providerReference.trim(),
+    p_idempotency_key: input.idempotencyKey.trim()
+  });
+  throwOrderError(result.error, "public provider payment recording");
+  const row = firstRow(result.data);
+  if (!row?.order_id || !row.payment_id) throw new Error("Supabase public payment recording returned no payment");
+  return {
+    orderId: String(row.order_id),
+    paymentId: String(row.payment_id),
+    orderStatus: String(row.order_status ?? "PAID")
+  };
 }

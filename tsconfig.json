@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "types": ["bun"],
     "strict": true,
+    "jsx": "react-jsx",
     "skipLibCheck": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -24,7 +25,13 @@
       "@aevo/push": ["packages/push/src/index.ts"],
       "@aevo/line": ["packages/line/src/index.ts"],
       "@aevo/odoo": ["packages/odoo/src/index.ts"],
-      "@aevo/hub-client": ["packages/sdk/src/index.ts"]
+      "@aevocado/api-contract": ["packages/api-contract/src/index.ts"],
+      "@aevocado/app-access": ["packages/app-access/src/index.ts"],
+      "@aevocado/auth-client": ["packages/auth-client/src/index.ts"],
+      "@aevocado/design-system": ["packages/design-system/src/index.ts"],
+      "@aevocado/observability": ["packages/observability/src/index.ts"],
+      "@aevocado/permissions": ["packages/permissions/src/index.ts"],
+      "@aevocado/tenant-context": ["packages/tenant-context/src/index.ts"]
     }
   },
   "include": [

@@ -1,6 +1,98 @@
 export const scopeTypes = ["PLATFORM", "ORGANIZATION", "STORE"] as const;
 export type ScopeType = (typeof scopeTypes)[number];
 
+export * from "./tracedee";
+
+/**
+ * First-party application boundary identifiers. These values are deliberately
+ * independent from the commercial `apps` catalog: an application boundary
+ * owns a session, access decision, and deployment, while the catalog owns
+ * subscription and entitlement data.
+ */
+export const applicationCodes = ["HUB", "ADMIN", "PLAY", "POS", "KIOSK", "QUEUE", "GO"] as const;
+export type ApplicationCode = (typeof applicationCodes)[number];
+
+export const applicationAssignmentStatuses = ["ACTIVE", "SUSPENDED", "REVOKED"] as const;
+export type ApplicationAssignmentStatus = (typeof applicationAssignmentStatuses)[number];
+
+export const applicationScopeTypes = ["ORGANIZATION", "STORE", "RESOURCE", "DEVICE_GROUP"] as const;
+export type ApplicationScopeType = (typeof applicationScopeTypes)[number];
+
+/** Applications that can be enabled or disabled at an individual store. */
+export const storeApplicationCodes = ["PLAY", "POS", "KIOSK", "QUEUE"] as const;
+export type StoreApplicationCode = (typeof storeApplicationCodes)[number];
+
+export const storeApplicationStatuses = ["ACTIVE", "DISABLED"] as const;
+export type StoreApplicationStatus = (typeof storeApplicationStatuses)[number];
+
+export interface StoreApplicationAccessSummary {
+  organizationId: string;
+  storeId: string;
+  applicationCode: StoreApplicationCode;
+  applicationName: string;
+  status: StoreApplicationStatus;
+  applicationActive: boolean;
+}
+
+export type AccessDecisionReason =
+  | "ALLOWED"
+  | "AUTHENTICATION_REQUIRED"
+  | "ACCOUNT_DISABLED"
+  | "MEMBERSHIP_REQUIRED"
+  | "APP_ASSIGNMENT_REQUIRED"
+  | "APP_ASSIGNMENT_SUSPENDED"
+  | "SCOPE_REQUIRED"
+  | "STORE_APPLICATION_DISABLED"
+  | "PERMISSION_REQUIRED"
+  | "APPLICATION_DISABLED"
+  | "ENTITLEMENT_INACTIVE";
+
+export interface AppAccessDecision {
+  allowed: boolean;
+  application: ApplicationCode;
+  reason: AccessDecisionReason;
+  userId?: string;
+  organizationId?: string;
+  storeId?: string;
+  role?: Role;
+  permissions: Permission[];
+  platformRole?: PlatformRole;
+  platformPermissions?: PlatformPermission[];
+  checkedAt: string;
+}
+
+export interface ApplicationScopeSummary {
+  scopeType: ApplicationScopeType;
+  scopeRef: string;
+}
+
+export interface MemberApplicationAssignmentSummary {
+  id: string;
+  membershipId: string;
+  applicationCode: ApplicationCode;
+  status: ApplicationAssignmentStatus;
+  startsAt: string;
+  expiresAt?: string | null;
+  scopes: ApplicationScopeSummary[];
+  roleCodes: Role[];
+}
+
+/**
+ * A client may suggest a context, but the API must resolve and validate it
+ * against membership, assignment, scope, and entitlement before use.
+ */
+export interface TenantContextHint {
+  organizationId?: string;
+  storeId?: string;
+}
+
+export interface TenantContext {
+  application: ApplicationCode;
+  organizationId: string;
+  storeId?: string;
+  scopeType: "ORGANIZATION" | "STORE";
+}
+
 export const roles = [
   "OWNER",
   "ADMIN",
@@ -164,17 +256,18 @@ export const platformPermissions = [
   "organization.read", "organization.manage", "organization.suspend", "organization.archive",
   "subscription.read", "subscription.manage", "entitlement.override",
   "user.impersonate", "plan.manage", "system.health", "system.jobs",
-  "system.errors", "webhook.read", "webhook.replay", "audit.read"
+  "system.errors", "webhook.read", "webhook.replay", "audit.read", "content.moderate",
+  "go.analytics.read", "go.settings.read", "go.settings.manage"
 ] as const;
 
 export type PlatformPermission = (typeof platformPermissions)[number];
 
 export const platformRolePermissionDefaults: Readonly<Record<PlatformRole, readonly PlatformPermission[]>> = {
   SUPER_ADMIN: platformPermissions,
-  SUPPORT: ["organization.read", "subscription.read", "user.impersonate", "audit.read"],
-  OPS: ["system.health", "system.jobs", "system.errors", "audit.read"],
+  SUPPORT: ["organization.read", "subscription.read", "user.impersonate", "audit.read", "go.analytics.read"],
+  OPS: ["system.health", "system.jobs", "system.errors", "audit.read", "content.moderate", "go.analytics.read", "go.settings.read"],
   BILLING_ADMIN: ["subscription.read", "subscription.manage", "plan.manage", "audit.read"],
-  DEVELOPER: ["system.errors", "webhook.read", "audit.read"],
+  DEVELOPER: ["system.errors", "webhook.read", "audit.read", "go.analytics.read", "go.settings.read"],
   AUDITOR: ["audit.read"]
 };
 
@@ -599,6 +692,117 @@ export interface StoreSummary {
   status?: "ACTIVE" | "INACTIVE";
 }
 
+export interface StoreTemplateSummary {
+  id: string;
+  organizationId: string;
+  name: string;
+  sourceStoreId: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerStoreProfile {
+  storeId: string;
+  organizationId: string;
+  publicSlug: string;
+  publicEnabled: boolean;
+  area: string;
+  category: string;
+  priceRange: string;
+  availabilityLabel: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  mediaUrls: string[];
+  facilities: string[];
+  policySummary: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  rating: number | null;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertCustomerStoreProfileInput {
+  publicSlug: string;
+  publicEnabled: boolean;
+  area: string;
+  category: string;
+  priceRange: string;
+  availabilityLabel?: string | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  mediaUrls?: string[];
+  facilities?: string[];
+  policySummary?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  rating?: number | null;
+  reviewCount?: number;
+}
+
+export interface PublicStoreDiscoverySummary {
+  id: string;
+  slug: string;
+  storeCode: string;
+  venueSlug?: string;
+  name: string;
+  area: string;
+  category: string;
+  rating: number | null;
+  reviewCount: number;
+  priceRange: string;
+  imageUrl: string | null;
+  mediaUrls?: string[];
+  facilities?: string[];
+  policySummary?: string | null;
+  address?: string | null;
+  timezone?: string;
+  operatingHours?: Array<{
+    dayOfWeek: number;
+    openTime: string;
+    closeTime: string;
+    enabled: boolean;
+  }>;
+  availabilityLabel: string | null;
+  description: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  categoryIconKey?: string;
+  priceLevel?: number | null;
+  availableToday?: boolean | null;
+  distanceMeters?: number;
+}
+
+export interface PublicDiscoveryBounds {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+export interface PublicDiscoveryFacet {
+  value: string;
+  count: number;
+}
+
+export interface PublicDiscoveryFacets {
+  categories: PublicDiscoveryFacet[];
+  areas: PublicDiscoveryFacet[];
+  priceRanges: PublicDiscoveryFacet[];
+}
+
+export interface PublicStoreDiscoveryPage {
+  data: PublicStoreDiscoverySummary[];
+  nextCursor: string | null;
+  facets?: PublicDiscoveryFacets;
+  requestId?: string;
+  bounds?: PublicDiscoveryBounds;
+  totalApproximate?: number;
+  truncated?: boolean;
+}
+
 export interface DeviceSummary {
   id: string;
   organizationId: string;
@@ -738,6 +942,30 @@ export interface PublicCatalogSnapshot {
   channel: CatalogChannel;
   categories: PublicCatalogCategory[];
   products: PublicProductItem[];
+}
+
+export interface PublicCartPriceLine {
+  productId: string;
+  productName: string;
+  variantId?: string;
+  variantName?: string;
+  modifierIds: string[];
+  quantity: number;
+  unitPriceMinor: number;
+  modifierTotalMinor: number;
+  subtotalMinor: number;
+}
+
+export interface PublicCartPriceSummary {
+  storeCode: string;
+  currency: string;
+  pricingVersion: string;
+  subtotalMinor: number;
+  discountMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  lines: PublicCartPriceLine[];
+  serverTime: string;
 }
 
 export interface CreatePublicOrderInput {
@@ -1093,6 +1321,32 @@ export interface ChangePlanInput {
   newPlanCode: string;
 }
 
+export interface HostedPaymentLineItem {
+  name: string;
+  unitAmountMinor: number;
+  quantity: number;
+}
+
+export interface CreateHostedPaymentSessionInput {
+  organizationId: string;
+  storeId: string;
+  orderId: string;
+  currency: string;
+  amountMinor: number;
+  customerEmail?: string | undefined;
+  successUrl: string;
+  cancelUrl: string;
+  lineItems: HostedPaymentLineItem[];
+  metadata: Record<string, string>;
+}
+
+export interface HostedPaymentSession {
+  provider: "STRIPE" | "OPN" | "XENDIT" | "MANUAL";
+  sessionId: string;
+  url: string;
+  expiresAt?: string | null | undefined;
+}
+
 export interface BillingWebhookEvent {
   id: string;
   type: string;
@@ -1107,6 +1361,7 @@ export interface BillingProvider {
   cancelSubscription(subscriptionId: string): Promise<void>;
   changePlan(input: ChangePlanInput): Promise<BillingSubscription>;
   getPortalUrl(customerId: string, returnUrl: string): Promise<string>;
+  createHostedPaymentSession?(input: CreateHostedPaymentSessionInput): Promise<HostedPaymentSession>;
   verifyWebhook(request: Request): Promise<BillingWebhookEvent>;
 }
 
@@ -1197,13 +1452,28 @@ export interface BookingSummary {
   customerEmail?: string | null | undefined;
   startAt: string;
   endAt: string;
+  partySize: number;
   status: BookingStatus;
   amountMinor: number;
   checkinCode?: string | null | undefined;
   checkedInAt?: string | null | undefined;
   notes?: string | null | undefined;
+  publicTrackingToken?: string | null | undefined;
+  slotHoldId?: string | null | undefined;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BookingHoldSummary {
+  id: string;
+  venueId: string;
+  resourceId: string;
+  startAt: string;
+  endAt: string;
+  partySize: number;
+  amountMinor: number;
+  expiresAt: string;
+  serverTime: string;
 }
 
 export interface BookingSlotSummary {
@@ -1421,6 +1691,7 @@ export interface AdminAuditEntry {
   organizationId?: string | null;
   adminUserId?: string | null;
   platformRole?: PlatformRole | null;
+  applicationCode?: ApplicationCode | null;
   action: string;
   targetType: string;
   targetId?: string | null;

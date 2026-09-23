@@ -409,7 +409,11 @@ export function createI18n({ apiFetch } = {}) {
     writeStoredLocale(locale, activeUserId);
     translate(document);
 
-    if (activeUserId && !serverLocale) await persistLocale();
+    // Locale persistence is secondary to rendering the workspace. Do not
+    // block the first authenticated paint on a profile write, especially when
+    // the local Core API is still warming up or the preference table is not
+    // ready yet.
+    if (activeUserId && !serverLocale) void persistLocale();
     return locale;
   }
 
@@ -419,7 +423,9 @@ export function createI18n({ apiFetch } = {}) {
     locale = next;
     writeStoredLocale(locale, activeUserId);
     translate(document);
-    await persistLocale();
+    // Keep the selector responsive while the preference is persisted in the
+    // background. The next page load will reconcile from the server.
+    void persistLocale();
     return locale;
   }
 

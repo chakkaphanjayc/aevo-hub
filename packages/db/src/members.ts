@@ -1,6 +1,7 @@
-import { roles, type AuditLogSummary, type MemberSummary, type Role, type SessionPrincipal } from "@aevo/contracts";
+import { roles, type ApplicationCode, type AuditLogSummary, type MemberSummary, type Role, type SessionPrincipal } from "@aevo/contracts";
 import type { Database } from "./client";
 import { throwDatabaseError } from "./errors";
+import { updateMemberApplicationAssignment } from "./application-assignments";
 
 type Row = Record<string, unknown>;
 
@@ -74,7 +75,7 @@ export async function updateMember(
 export async function createMember(
   database: Database,
   principal: SessionPrincipal,
-  input: { email: string; displayName?: string; role: Role; storeIds?: string[] }
+  input: { email: string; displayName?: string; role: Role; storeIds?: string[]; applicationCodes?: ApplicationCode[] }
 ): Promise<MemberSummary> {
   const roleResult = await database.client.from("roles").select("id").eq("code", input.role).maybeSingle();
   throwDatabaseError(roleResult.error, "member role lookup");
@@ -156,6 +157,14 @@ export async function createMember(
   const members = await listMembers(database, principal);
   const found = members.find((m) => m.membershipId === membershipId);
   if (!found) throw new Error("Failed to find created member");
+  for (const applicationCode of input.applicationCodes ?? []) {
+    if (applicationCode === "HUB" || applicationCode === "ADMIN" || applicationCode === "GO") continue;
+    await updateMemberApplicationAssignment(database, principal, membershipId, {
+      applicationCode,
+      status: "ACTIVE",
+      storeIds: input.storeIds ?? []
+    });
+  }
   return found;
 }
 

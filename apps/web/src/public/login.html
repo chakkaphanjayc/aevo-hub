@@ -144,7 +144,57 @@
       }, 4000);
     }
 
-    void redirectIfAuthenticated(new URLSearchParams(window.location.search).get("next"));
+    const loginParams = new URLSearchParams(window.location.search);
+    const handoffApplication = (loginParams.get("app") || "").toUpperCase();
+    const handoffReturnTo = loginParams.get("returnTo") || "/";
+
+    function isSafeReturnPath(value) {
+      return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\");
+    }
+
+    function applicationUrl(application) {
+      const configured = window.__AEVO_APP_URLS__?.[application.toLowerCase()];
+      if (typeof configured !== "string" || !/^https?:\/\//u.test(configured)) return null;
+      return configured.replace(/\/+$/u, "");
+    }
+
+    async function completeAppHandoff() {
+      if (!(["PLAY", "POS", "GO"].includes(handoffApplication)) || !isSafeReturnPath(handoffReturnTo)) return false;
+      const targetOrigin = applicationUrl(handoffApplication);
+      if (!targetOrigin) throw new Error("The requested application is not configured for this environment");
+      const result = await apiFetch("/api/auth/handoff", {
+        method: "POST",
+        body: JSON.stringify({
+          application: handoffApplication,
+          returnTo: handoffReturnTo,
+          ...(loginParams.get("state") ? { state: loginParams.get("state") } : {}),
+          ...(loginParams.get("code_challenge") ? { codeChallenge: loginParams.get("code_challenge") } : {})
+        })
+      });
+      const callback = new URL(targetOrigin);
+      callback.pathname = `${callback.pathname.replace(/\/+$/u, "")}/auth/callback`;
+      callback.searchParams.set("code", result.code);
+      if (result.state) callback.searchParams.set("state", result.state);
+      window.location.assign(callback.toString());
+      return true;
+    }
+
+    async function redirectAfterExistingSession() {
+      if (["PLAY", "POS", "GO"].includes(handoffApplication)) {
+        try {
+          await apiFetch("/api/auth/me");
+          await completeAppHandoff();
+          return;
+        } catch (error) {
+          if (error?.status === 401) return;
+          showToast(error instanceof Error ? error.message : "Unable to continue to the application", true);
+          return;
+        }
+      }
+      await redirectIfAuthenticated(loginParams.get("next"));
+    }
+
+    void redirectAfterExistingSession();
 
     const loginForm = document.getElementById("form-login");
     loginForm.onsubmit = async (e) => {
@@ -162,11 +212,13 @@
         });
         showToast("Signed in successfully");
 
+        if (await completeAppHandoff()) return;
+
         const requestedNext = new URLSearchParams(window.location.search).get("next");
-        const safeNext = requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//")
+        const safeNext = requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\")
           ? requestedNext
           : null;
-        if (safeNext === "/admin" || safeNext?.startsWith("/admin/")) {
+        if (safeNext) {
           window.location.assign(safeNext);
           return;
         }

@@ -11,6 +11,6 @@
     "@aevo/contracts": "workspace:*",
     "@aevo/query": "workspace:*",
     "@aevo/ordering": "workspace:*",
-    "@supabase/supabase-js": "^2.49.1"
+    "@supabase/supabase-js": "^2.105.0"
   }
 }

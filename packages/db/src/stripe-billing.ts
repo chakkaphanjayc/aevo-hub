@@ -5,7 +5,9 @@ import type {
   BillingWebhookEvent,
   ChangePlanInput,
   CreateCustomerInput,
-  CreateSubscriptionInput
+  CreateHostedPaymentSessionInput,
+  CreateSubscriptionInput,
+  HostedPaymentSession
 } from "@aevo/contracts";
 
 export interface StripeBillingConfig {
@@ -176,6 +178,41 @@ export class StripeBillingAdapter implements BillingProvider {
     });
 
     return session.url;
+  }
+
+  async createHostedPaymentSession(input: CreateHostedPaymentSessionInput): Promise<HostedPaymentSession> {
+    if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {
+      throw new Error("Hosted payment amount must be positive");
+    }
+    const body = new URLSearchParams();
+    body.set("mode", "payment");
+    body.set("success_url", input.successUrl);
+    body.set("cancel_url", input.cancelUrl);
+    body.set("client_reference_id", input.orderId);
+    body.set("payment_method_types[0]", "card");
+    if (input.customerEmail) body.set("customer_email", input.customerEmail);
+    for (const [key, value] of Object.entries(input.metadata)) {
+      body.set(`metadata[${key}]`, value);
+    }
+    input.lineItems.forEach((line, index) => {
+      body.set(`line_items[${index}][price_data][currency]`, input.currency.toLowerCase());
+      body.set(`line_items[${index}][price_data][product_data][name]`, line.name.slice(0, 200));
+      body.set(`line_items[${index}][price_data][unit_amount]`, String(line.unitAmountMinor));
+      body.set(`line_items[${index}][quantity]`, String(line.quantity));
+    });
+
+    const session = await this.request<{ id: string; url?: string; expires_at?: number }>("/checkout/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+    if (!session.url) throw new Error("Stripe did not return a hosted checkout URL");
+    return {
+      provider: "STRIPE",
+      sessionId: session.id,
+      url: session.url,
+      ...(session.expires_at ? { expiresAt: new Date(session.expires_at * 1000).toISOString() } : {})
+    };
   }
 
   async verifyWebhook(request: Request): Promise<BillingWebhookEvent> {

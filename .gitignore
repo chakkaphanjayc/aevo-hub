@@ -5,6 +5,8 @@ node_modules/
 # Build artifacts
 dist/
 build/
+storybook-static/
+.react-router/
 .next/
 *.tsbuildinfo
 .wrangler/

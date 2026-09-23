@@ -60,6 +60,11 @@
     .page-head h1 { margin: 5px 0; font: 500 clamp(2.1rem,4vw,3.4rem)/1 var(--serif); letter-spacing: -.04em; }
     .page-head p { max-width: 680px; margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.55; }
     .page-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .workspace-init-error { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 22px; padding: 14px 16px; color: #71332d; background: #fff7f5; border: 1px solid #efc7c1; border-radius: 12px; }
+    .workspace-init-error[hidden] { display: none; }
+    .workspace-init-error strong { display: block; font-size: .78rem; }
+    .workspace-init-error p { margin: 4px 0 0; color: #8d5b55; font-size: .7rem; line-height: 1.45; }
+    .workspace-init-error .button { flex: 0 0 auto; }
     .view { display: none; }
     .view.active { display: block; animation: appear .2s ease-out; }
     @keyframes appear { from { opacity: .2; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -408,6 +413,10 @@
           <div><div class="eyebrow">Aevo Hub / Organization</div><h1 id="page-title">Your organization.</h1><p id="page-description">Keep your business identity, locations, people, and applications in one place.</p></div>
           <div class="page-actions"><select class="button" id="page-org-switcher" aria-label="Choose organization"></select><a class="button" id="page-setup-link" href="/setup">Setup &amp; readiness →</a><button class="button" id="new-org" type="button">+ New organization</button></div>
         </div>
+        <section class="workspace-init-error" id="organize-init-error" hidden role="alert" aria-live="assertive">
+          <div><strong id="organize-init-error-title">Organization workspace could not be loaded.</strong><p id="organize-init-error-message">Check the local API and try again.</p></div>
+          <button class="button button-primary" id="organize-init-retry" type="button">Try again</button>
+        </section>
 
         <div id="organization-tabs">
           <section class="view active" id="view-overview">
@@ -692,6 +701,19 @@
       node.textContent = message;
       $("toast-tray").appendChild(node);
       window.setTimeout(() => node.remove(), 4200);
+    }
+    function showInitializationError(error) {
+      const message = error instanceof Error && error.message
+        ? error.message
+        : "The local Core API did not respond in time.";
+      const panel = $("organize-init-error");
+      if (!panel) {
+        toast(message, true);
+        return;
+      }
+      $("organize-init-error-message").textContent = message;
+      panel.hidden = false;
+      $("organize-main")?.setAttribute("aria-busy", "false");
     }
     function setOrganizeViewLoading(viewId, busy) {
       const view = $(viewId);
@@ -1288,7 +1310,10 @@
         $("avatar").textContent = (state.user.displayName || state.user.email || "A").charAt(0).toUpperCase();
         state.organizations = bootstrap.organizations || [];
         if (!state.organizations.length) {
-          window.location.replace("/setup");
+          // Keep the first-workspace path on the canonical modern Hub flow.
+          // Existing organizations continue to use the legacy compatibility
+          // surface until their route has parity.
+          window.location.replace("/modern/onboarding?next=%2Fmodern");
           return;
         }
         state.currentOrg = state.organizations.find((item) => item.id === params.get("organizationId"))
@@ -1296,13 +1321,19 @@
           || state.organizations.find((item) => item.id === savedOrgId)
           || state.organizations[0]
           || null;
+        const organizationRole = String(state.currentOrg?.role || bootstrap.principal?.role || "");
+        const canCompleteSetup = ["OWNER", "ADMIN", "ORGANIZATION_MANAGER"].includes(organizationRole);
+        if (state.currentOrg && canCompleteSetup && !(bootstrap.stores || []).length) {
+          window.location.replace(`/setup?organizationId=${encodeURIComponent(state.currentOrg.id)}`);
+          return;
+        }
         if (params.get("setup") === "true") {
           window.location.replace(`/setup?organizationId=${encodeURIComponent(state.currentOrg.id)}`);
           return;
         }
         state.stores = bootstrap.stores || [];
         state.storesLoadedForOrg = state.currentOrg?.id || null;
-        state.apps = bootstrap.apps || [];
+        state.apps = bootstrap.apps || bootstrap.applications || [];
         state.appsLoaded = true;
         state.settingsScope = params.get("scope") === "store" ? "store" : "organization";
         favoritesClient = createFavoritesClient({
@@ -1332,12 +1363,22 @@
           void loadProfile().catch((error) => toast(error.message || "Organization profile is unavailable", true));
         }
       } catch (error) {
-        if (error instanceof AuthApiError && error.status === 401) window.location.replace("/login");
-        else toast(error.message || "Could not load organization", true);
+        if (error instanceof AuthApiError && error.status === 401) {
+          const next = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+          window.location.replace(`/login?next=${encodeURIComponent(next)}`);
+        } else {
+          showInitializationError(error);
+        }
       } finally {
         $("organize-main")?.setAttribute("aria-busy", "false");
       }
     }
+    $("organize-init-retry")?.addEventListener("click", () => {
+      const button = $("organize-init-retry");
+      button.disabled = true;
+      button.textContent = "Retrying…";
+      window.location.reload();
+    });
     init();
   </script>
 </body>

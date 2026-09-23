@@ -5,6 +5,7 @@ const API_BASE = window.__AEVO_API_URL
 const CSRF_COOKIE_NAME = window.__AEVO_CSRF_COOKIE__ || "aevo_csrf";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+const REQUEST_TIMEOUT_MS = 15000;
 let refreshPromise = null;
 let currentUserPromise = null;
 
@@ -32,12 +33,31 @@ function isAuthPath(path) {
   return path.includes("/api/auth/login") || path.includes("/api/auth/refresh") || path.includes("/api/auth/logout") || path.includes("/api/auth/password/");
 }
 
+async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const callerSignal = options.signal;
+  const abortFromCaller = () => controller.abort(callerSignal?.reason);
+  const timeoutId = window.setTimeout(() => controller.abort(new DOMException("The request timed out.", "TimeoutError")), timeoutMs);
+
+  if (callerSignal) {
+    if (callerSignal.aborted) abortFromCaller();
+    else callerSignal.addEventListener("abort", abortFromCaller, { once: true });
+  }
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+    callerSignal?.removeEventListener("abort", abortFromCaller);
+  }
+}
+
 async function refreshSession() {
   if (!refreshPromise) {
     const headers = new Headers({ accept: "application/json" });
     const csrf = readCookie(CSRF_COOKIE_NAME);
     if (csrf) headers.set("x-csrf-token", csrf);
-    refreshPromise = fetch(`${API_BASE}/api/auth/refresh`, {
+    refreshPromise = fetchWithTimeout(`${API_BASE}/api/auth/refresh`, {
       method: "POST",
       credentials: "include",
       headers
@@ -59,7 +79,7 @@ export async function apiFetch(path, options = {}, canRefresh = true) {
     if (csrf) headers.set("x-csrf-token", csrf);
   }
 
-  let response = await fetch(`${API_BASE}${path}`, {
+  let response = await fetchWithTimeout(`${API_BASE}${path}`, {
     ...options,
     method,
     credentials: "include",
@@ -74,7 +94,7 @@ export async function apiFetch(path, options = {}, canRefresh = true) {
       const csrf = readCookie(CSRF_COOKIE_NAME);
       if (csrf) retryHeaders.set("x-csrf-token", csrf);
     }
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetchWithTimeout(`${API_BASE}${path}`, {
       ...options,
       method,
       credentials: "include",

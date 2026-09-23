@@ -1,0 +1,19 @@
+{
+  "name": "@aevocado/auth-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@aevocado/api-contract": "workspace:*",
+    "@aevocado/contracts": "file:../../../aevo-contracts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.21",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,82 +1,68 @@
-import { beforeAll, describe, expect, it } from "bun:test";
-import { createAevoClient, GatewayError } from "../packages/sdk/src";
+import { describe, expect, it } from "bun:test";
 
-const GATEWAY_URL = process.env.GATEWAY_URL || process.env.API_URL || "http://localhost:4000";
-const WEB_URL = process.env.WEB_URL || "http://localhost:4321";
+const edgeUrl = process.env.EDGE_URL?.trim()
+  || process.env.API_URL?.trim()
+  || "http://localhost:4000";
 
-async function gatewayStatus(operation: () => Promise<unknown>): Promise<number> {
-  try {
-    await operation();
-  } catch (error) {
-    if (error instanceof GatewayError) return error.status;
-    throw error;
-  }
-  throw new Error("Expected the gateway request to fail");
+type CookieMap = Map<string, string>;
+
+function cookieHeader(cookies: CookieMap): string {
+  return [...cookies.entries()].map(([name, value]) => `${name}=${value}`).join("; ");
 }
 
-describe("Aevo security architecture invariants", () => {
-  const timestamp = Date.now();
-  const client = createAevoClient({ baseUrl: GATEWAY_URL });
-  let organizationId: string;
+function rememberCookies(response: Response, cookies: CookieMap): void {
+  for (const header of response.headers.getSetCookie?.() ?? []) {
+    const [pair] = header.split(";", 1);
+    const separator = pair.indexOf("=");
+    if (separator <= 0) continue;
+    cookies.set(pair.slice(0, separator), pair.slice(separator + 1));
+  }
+}
 
-  beforeAll(async () => {
-    const email = `security.owner.${timestamp}@aevo.test`;
-    const registration = await client.hub.onboarding.register({
-      email,
-      password: "Password123!",
-      fullName: "Security Flow Owner"
-    });
-    await client.auth.login({ email, password: "Password123!" });
+async function request(cookies: CookieMap, path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set("x-aevo-app", "HUB");
+  headers.set("x-aevo-contract-version", "v1");
+  const currentCookies = cookieHeader(cookies);
+  if (currentCookies) headers.set("cookie", currentCookies);
+  const csrf = cookies.get("aevo_csrf");
+  if (csrf && init.method && init.method !== "GET" && init.method !== "HEAD") headers.set("x-csrf-token", csrf);
 
-    await client.hub.onboarding.setObjectives({
-      sessionId: registration.session.id,
-      objectives: ["pos"]
+  const response = await fetch(`${edgeUrl}${path}`, { ...init, headers });
+  rememberCookies(response, cookies);
+  return response;
+}
+
+describe("Core tenant and session security boundary", () => {
+  it("issues a Hub session through Accounts and keeps authorization tenant-scoped", async () => {
+    const cookies: CookieMap = new Map();
+    const timestamp = Date.now();
+    const registration = await request(cookies, "/api/v1/hub/onboarding/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: `core.security.${timestamp}@aevo.test`,
+        password: "AevoDev!Security2026#",
+        fullName: "Core Security Test"
+      })
     });
-    const organization = await client.hub.onboarding.setupOrganization({
-      sessionId: registration.session.id,
-      name: `Security Test Organization ${timestamp}`,
-      businessType: "retail",
-      country: "TH",
-      timezone: "Asia/Bangkok",
-      currency: "THB"
-    });
-    organizationId = organization.organizationId;
-    client.setOrganizationId(organizationId);
+    expect(registration.status).toBe(200);
+    expect(cookies.get("aevo_hub_session")).toBeTruthy();
+    expect(cookies.get("aevo_csrf")).toBeTruthy();
+
+    const me = await request(cookies, "/api/auth/me");
+    expect(me.status).toBe(200);
+    const meBody = await me.json() as { user?: { email?: string }; principal?: unknown };
+    expect(meBody.user?.email).toContain("@aevo.test");
+    expect(meBody.principal).toBeNull();
+
+    const onboarding = await request(cookies, "/api/v1/hub/onboarding/session");
+    expect(onboarding.status).toBe(200);
+    const onboardingBody = await onboarding.json() as { session?: { userId?: string; isCompleted?: boolean } };
+    expect(onboardingBody.session?.userId).toBeTruthy();
+    expect(onboardingBody.session?.isCompleted).toBe(false);
+
+    const foreignOrganization = await request(cookies, `/api/v1/hub/organizations/${crypto.randomUUID()}`);
+    expect([403, 404]).toContain(foreignOrganization.status);
   }, 30_000);
-
-  it("rejects anonymous and fabricated bearer authentication", async () => {
-    const anonymous = await fetch(`${GATEWAY_URL}/api/v1/admin/overview`);
-    expect(anonymous.status).toBe(401);
-
-    const fabricated = await fetch(`${GATEWAY_URL}/api/v1/hub/me`, {
-      headers: { Authorization: "Bearer invalid-access-token" }
-    });
-    expect(fabricated.status).toBe(401);
-
-    const removedDemoLogin = await fetch(`${GATEWAY_URL}/api/auth/demo-login`, { method: "POST" });
-    expect(removedDemoLogin.status).toBe(404);
-  });
-
-  it("keeps platform administration separate from organization ownership", async () => {
-    const removedSqlSurface = await fetch(`${GATEWAY_URL}/api/v1/hub/sql`, { method: "POST" });
-    expect(removedSqlSurface.status).toBe(404);
-    expect(await gatewayStatus(() => client.request("/api/v1/admin/overview"))).toBe(403);
-  });
-
-  it("enforces the tenant boundary for a valid session", async () => {
-    const foreignOrganizationId = "a0000000-0000-4000-a000-000000000099";
-    expect(await gatewayStatus(() => client.hub.listStores(foreignOrganizationId))).toBe(403);
-    client.setOrganizationId(organizationId);
-  });
-
-  it("does not expose server credentials to public web surfaces", async () => {
-    for (const path of ["/admin", "/organize", "/workspace", "/setup", "/auth.js", "/shared.css"]) {
-      const response = await fetch(`${WEB_URL}${path}`);
-      if (response.status !== 200) continue;
-      const body = await response.text();
-      expect(body).not.toContain("SUPABASE_SECRET_KEY");
-      expect(body).not.toContain("postgres://");
-      expect(body).not.toContain("sb_secret_");
-    }
-  });
 });

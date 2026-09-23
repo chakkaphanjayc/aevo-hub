@@ -1,3 +1,5 @@
+import type { ApplicationCode } from "@aevo/contracts";
+import { isMissingDatabaseObject } from "@aevo/db";
 import type { Database } from "@aevo/db";
 import type { AuthSession } from "./service";
 
@@ -47,6 +49,8 @@ export interface AuthSessionSummary {
 export interface SessionCookieOptions {
   idleTimeoutSeconds: number;
   absoluteTimeoutSeconds: number;
+  /** Runtime application boundary used once app_sessions has app_code. */
+  applicationCode?: ApplicationCode;
 }
 
 interface SessionRow {
@@ -63,6 +67,7 @@ interface SessionRow {
   idle_expires_at: string;
   absolute_expires_at: string;
   revoked_at: string | null;
+  app_code?: ApplicationCode | null;
 }
 
 function bytesToBase64Url(bytes: Uint8Array): string {
@@ -150,16 +155,39 @@ export class AuthSessionManager {
     return new TextDecoder().decode(plaintext);
   }
 
+  private get supportsPreAppCodeSchema(): boolean {
+    return this.options.applicationCode === undefined || this.options.applicationCode === "HUB";
+  }
+
   private async readRow(sessionToken: string): Promise<{ row: SessionRow; accessToken: string; refreshToken: string } | null> {
     const tokenHash = await sha256(sessionToken);
-    const result = await this.database.client
+    const baseFields = "id,user_id,csrf_token_hash,access_token_ciphertext,refresh_token_ciphertext,last_seen_at,access_expires_at,idle_expires_at,absolute_expires_at,revoked_at";
+    let result = await this.database.client
       .from("app_sessions")
-      .select("id,user_id,csrf_token_hash,access_token_ciphertext,refresh_token_ciphertext,last_seen_at,access_expires_at,idle_expires_at,absolute_expires_at,revoked_at")
+      .select(`${baseFields},app_code`)
       .eq("token_hash", tokenHash)
       .maybeSingle();
+    if (result.error && this.supportsPreAppCodeSchema && isMissingDatabaseObject(result.error)) {
+      // Keep the Hub rollback path compatible with deployments that predate
+      // the additive app_code column. Once present, the column is enforced.
+      result = await this.database.client
+        .from("app_sessions")
+        .select(baseFields)
+        .eq("token_hash", tokenHash)
+        .maybeSingle();
+    }
     if (result.error) throw new SessionManagerError(`Session lookup failed: ${result.error.message}`, { cause: result.error });
     const row = result.data as SessionRow | null;
     if (!row || row.revoked_at) return null;
+    if (this.options.applicationCode === "HUB") {
+      // Hub keeps a narrow rollback path for rows created before app_code was
+      // introduced, but it must never accept another application's session.
+      if (row.app_code && row.app_code !== "HUB") return null;
+    } else if (this.options.applicationCode && row.app_code !== this.options.applicationCode) {
+      // Privileged and downstream runtimes fail closed when the session is not
+      // explicitly bound to their application boundary.
+      return null;
+    }
 
     const now = Date.now();
     if (now >= Date.parse(row.idle_expires_at) || now >= Date.parse(row.absolute_expires_at)) {
@@ -178,13 +206,16 @@ export class AuthSessionManager {
     }
   }
 
-  private async revokeById(sessionId: string, replacedBy?: string): Promise<void> {
+  private async revokeById(sessionId: string, replacedBy?: string): Promise<boolean> {
     const result = await this.database.client
       .from("app_sessions")
       .update({ revoked_at: new Date().toISOString(), ...(replacedBy ? { replaced_by: replacedBy } : {}) })
       .eq("id", sessionId)
-      .is("revoked_at", null);
+      .is("revoked_at", null)
+      .select("id")
+      .maybeSingle();
     if (result.error) throw new SessionManagerError(`Session revoke failed: ${result.error.message}`, { cause: result.error });
+    return Boolean(result.data);
   }
 
   private async insert(
@@ -221,7 +252,13 @@ export class AuthSessionManager {
         last_seen_at: now.toISOString(),
         access_expires_at: accessExpiresAt.toISOString(),
         idle_expires_at: idleExpiresAt.toISOString(),
-        absolute_expires_at: absoluteExpiresAt.toISOString()
+        absolute_expires_at: absoluteExpiresAt.toISOString(),
+        // Existing Hub deployments may not have the additive app_code column
+        // yet; the migration default keeps those sessions compatible. Other
+        // application runtimes must identify themselves explicitly.
+        ...(this.options.applicationCode && this.options.applicationCode !== "HUB"
+          ? { app_code: this.options.applicationCode }
+          : {})
       })
       .select("id")
       .single();
@@ -254,6 +291,51 @@ export class AuthSessionManager {
     const now = new Date();
     const absoluteExpiresAt = new Date(now.getTime() + this.options.absoluteTimeoutSeconds * 1000);
     return this.insert(userId, authSession, metadata, absoluteExpiresAt, now);
+  }
+
+  /**
+   * Return credentials for a currently active Hub session to the trusted
+   * server-to-server handoff boundary. This method is never exposed through
+   * a browser route; the caller must immediately create an app-scoped target
+   * session and must not serialize the tokens to the client.
+   */
+  async getActiveCredentials(userId: string): Promise<AuthSession | null> {
+    let result = await this.database.client
+      .from("app_sessions")
+      .select("user_id,access_token_ciphertext,refresh_token_ciphertext,access_expires_at,idle_expires_at,absolute_expires_at,revoked_at,app_code")
+      .eq("user_id", userId)
+      .eq("app_code", this.options.applicationCode ?? "HUB")
+      .is("revoked_at", null)
+      .gt("idle_expires_at", new Date().toISOString())
+      .gt("absolute_expires_at", new Date().toISOString())
+      .order("last_seen_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (result.error && this.supportsPreAppCodeSchema && isMissingDatabaseObject(result.error)) {
+      result = await this.database.client
+        .from("app_sessions")
+        .select("user_id,access_token_ciphertext,refresh_token_ciphertext,access_expires_at,idle_expires_at,absolute_expires_at,revoked_at")
+        .eq("user_id", userId)
+        .is("revoked_at", null)
+        .gt("idle_expires_at", new Date().toISOString())
+        .gt("absolute_expires_at", new Date().toISOString())
+        .order("last_seen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    }
+    if (result.error) throw new SessionManagerError(`Session handoff lookup failed: ${result.error.message}`, { cause: result.error });
+    const row = result.data as (SessionRow & { user_id: string }) | null;
+    if (!row || row.revoked_at) return null;
+    const [accessToken, refreshToken] = await Promise.all([
+      this.decrypt(row.access_token_ciphertext),
+      this.decrypt(row.refresh_token_ciphertext)
+    ]);
+    return {
+      userId,
+      accessToken,
+      refreshToken,
+      expiresAt: new Date(row.access_expires_at)
+    };
   }
 
   async resolve(sessionToken: string): Promise<ManagedAuthSession | null> {
@@ -290,13 +372,23 @@ export class AuthSessionManager {
   }
 
   async list(userId: string, currentSessionId?: string): Promise<AuthSessionSummary[]> {
-    const result = await this.database.client
+    let result = await this.database.client
       .from("app_sessions")
       .select("id,user_agent,ip_address,created_at,last_seen_at,access_expires_at,idle_expires_at,absolute_expires_at,revoked_at")
       .eq("user_id", userId)
+      .eq("app_code", this.options.applicationCode ?? "HUB")
       .is("revoked_at", null)
       .gt("absolute_expires_at", new Date().toISOString())
       .order("last_seen_at", { ascending: false });
+    if (result.error && this.supportsPreAppCodeSchema && isMissingDatabaseObject(result.error)) {
+      result = await this.database.client
+        .from("app_sessions")
+        .select("id,user_agent,ip_address,created_at,last_seen_at,access_expires_at,idle_expires_at,absolute_expires_at,revoked_at")
+        .eq("user_id", userId)
+        .is("revoked_at", null)
+        .gt("absolute_expires_at", new Date().toISOString())
+        .order("last_seen_at", { ascending: false });
+    }
     if (result.error) throw new SessionManagerError(`Session list failed: ${result.error.message}`, { cause: result.error });
     return ((result.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
       id: String(row.id),
@@ -313,14 +405,25 @@ export class AuthSessionManager {
   }
 
   async revokeForUser(userId: string, sessionId: string): Promise<boolean> {
-    const result = await this.database.client
+    let result = await this.database.client
       .from("app_sessions")
       .update({ revoked_at: new Date().toISOString() })
       .eq("id", sessionId)
       .eq("user_id", userId)
+      .eq("app_code", this.options.applicationCode ?? "HUB")
       .is("revoked_at", null)
       .select("id")
       .maybeSingle();
+    if (result.error && this.supportsPreAppCodeSchema && isMissingDatabaseObject(result.error)) {
+      result = await this.database.client
+        .from("app_sessions")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", sessionId)
+        .eq("user_id", userId)
+        .is("revoked_at", null)
+        .select("id")
+        .maybeSingle();
+    }
     if (result.error) throw new SessionManagerError(`Session revoke failed: ${result.error.message}`, { cause: result.error });
     return Boolean(result.data);
   }
@@ -331,26 +434,46 @@ export class AuthSessionManager {
     metadata: { ipAddress?: string; userAgent?: string }
   ): Promise<{ session: ManagedAuthSession; csrfToken: string }> {
     const replacement = await this.insert(current.userId, authSession, metadata, current.absoluteExpiresAt);
-    await this.revokeById(current.id, replacement.session.id);
+    const revoked = await this.revokeById(current.id, replacement.session.id);
+    if (!revoked) {
+      await this.revokeById(replacement.session.id);
+      throw new SessionManagerError("Session rotation was already completed");
+    }
     return replacement;
   }
 
   async revoke(sessionToken: string): Promise<void> {
     const tokenHash = await sha256(sessionToken);
-    const result = await this.database.client
+    let result = await this.database.client
       .from("app_sessions")
       .update({ revoked_at: new Date().toISOString() })
       .eq("token_hash", tokenHash)
+      .eq("app_code", this.options.applicationCode ?? "HUB")
       .is("revoked_at", null);
+    if (result.error && this.supportsPreAppCodeSchema && isMissingDatabaseObject(result.error)) {
+      result = await this.database.client
+        .from("app_sessions")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("token_hash", tokenHash)
+        .is("revoked_at", null);
+    }
     if (result.error) throw new SessionManagerError(`Session revoke failed: ${result.error.message}`, { cause: result.error });
   }
 
   async revokeAll(userId: string): Promise<void> {
-    const result = await this.database.client
+    let result = await this.database.client
       .from("app_sessions")
       .update({ revoked_at: new Date().toISOString() })
       .eq("user_id", userId)
+      .eq("app_code", this.options.applicationCode ?? "HUB")
       .is("revoked_at", null);
+    if (result.error && this.supportsPreAppCodeSchema && isMissingDatabaseObject(result.error)) {
+      result = await this.database.client
+        .from("app_sessions")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .is("revoked_at", null);
+    }
     if (result.error) throw new SessionManagerError(`Session revoke-all failed: ${result.error.message}`, { cause: result.error });
   }
 

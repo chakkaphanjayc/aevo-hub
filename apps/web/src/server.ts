@@ -8,17 +8,49 @@ const publicDir = join(import.meta.dir, "public");
 const publicApiUrl = process.env.PUBLIC_API_URL?.trim();
 const csrfCookieName = process.env.CSRF_COOKIE_NAME?.trim() || "aevo_csrf";
 const production = process.env.NODE_ENV === "production";
+const modernAppOrigin = process.env.AEVO_HUB_MODERN_URL?.trim() || (production ? "" : "http://localhost:4330");
 const appUrls = {
   play: process.env.AEVO_PLAY_URL?.trim() || (production ? "" : "http://localhost:4322"),
-  pos: process.env.AEVO_POS_URL?.trim() || (production ? "" : "http://localhost:4323")
+  pos: process.env.AEVO_POS_URL?.trim() || (production ? "" : "http://localhost:4323"),
+  go: process.env.AEVO_GO_URL?.trim() || (production ? "" : "http://localhost:4324")
 };
 const staticAssetCache = new Map<string, { body: Buffer; etag: string }>();
+
+async function proxyModernApp(req: Request, url: URL): Promise<Response> {
+  if (!modernAppOrigin) return new Response("Modern Hub is not configured", { status: 404 });
+  const target = new URL(`${url.pathname}${url.search}`, `${modernAppOrigin}/`);
+  const headers = new Headers(req.headers);
+  headers.delete("host");
+  const init: RequestInit = {
+    method: req.method,
+    headers,
+    redirect: "manual"
+  };
+  if (req.method !== "GET" && req.method !== "HEAD") init.body = await req.arrayBuffer();
+
+  try {
+    const upstream = await fetch(target, init);
+    const responseHeaders = new Headers(upstream.headers);
+    responseHeaders.set("x-aevo-modern-proxy", "true");
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders
+    });
+  } catch {
+    return new Response("Modern Hub is unavailable", { status: 502 });
+  }
+}
 
 const server = serve({
   port,
   async fetch(req) {
     const url = new URL(req.url);
     let pathname = url.pathname;
+
+    if (pathname === "/modern" || pathname.startsWith("/modern/")) {
+      return proxyModernApp(req, url);
+    }
 
     if (pathname === "/" || pathname === "/landing") {
       pathname = "/landing.html";

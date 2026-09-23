@@ -342,6 +342,16 @@ export async function listOrganizationStores(
   }));
 }
 
+export async function getOrganizationStore(
+  database: Database,
+  organizationId: string,
+  storeId: string,
+  principal?: SessionPrincipal
+): Promise<StoreSummary | null> {
+  const stores = await listOrganizationStores(database, organizationId, principal);
+  return stores.find((store) => store.id === storeId) ?? null;
+}
+
 export async function createStore(
   database: Database,
   organizationId: string,

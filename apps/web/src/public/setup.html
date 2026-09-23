@@ -47,6 +47,12 @@
     .setup-intro h1 { margin: 7px 0; font: 500 clamp(2.25rem, 5vw, 4rem)/.98 var(--setup-serif); letter-spacing: -.045em; }
     .setup-intro p { max-width: 710px; margin: 0; color: var(--setup-muted); font-size: .82rem; line-height: 1.65; }
     .setup-intro-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .setup-init-error { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; padding: 14px 16px; color: #7f2f29; background: #fff5f3; border: 1px solid rgba(163,62,53,.28); border-radius: 10px; font-size: .74rem; line-height: 1.5; }
+    .setup-init-error[hidden] { display: none; }
+    .setup-init-error strong { display: block; color: #69251f; }
+    .setup-init-error p { margin: 3px 0 0; }
+    .setup-init-error-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .setup-init-error-actions .button { color: #69251f; border-color: rgba(163,62,53,.3); }
 
     .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 8px 14px; color: var(--setup-dark); background: var(--surface-subtle); border: 1px solid rgba(255,255,255,.72); border-radius: 9px; box-shadow: var(--glass-rim), 0 4px 14px rgba(45,74,48,.04); cursor: pointer; font-size: .74rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: transform .16s ease, background .16s ease, box-shadow .16s ease; }
     .button:hover { background: rgba(255,255,255,.88); transform: translateY(-1px); }
@@ -191,6 +197,11 @@
         </div>
       </section>
 
+      <section class="setup-init-error" id="setup-init-error" hidden role="alert" aria-live="assertive">
+        <div><strong id="setup-init-error-title">Setup could not be loaded.</strong><p id="setup-init-error-message">Check the Hub session and try again.</p></div>
+        <div class="setup-init-error-actions"><a class="button" id="setup-init-login" href="/login">Sign in</a><button class="button" id="setup-init-retry" type="button">Try again</button></div>
+      </section>
+
       <div class="setup-stepper" aria-label="Setup progress">
         <button class="step-button active" type="button" data-setup-index="0"><span class="step-number">1</span><span class="step-label">Organization</span></button>
         <button class="step-button" type="button" data-setup-index="1" disabled><span class="step-number">2</span><span class="step-label">Store</span></button>
@@ -213,8 +224,8 @@
                 <div class="field full"><label for="setup-legal-name">Legal name <span class="hint">(optional)</span></label><input id="setup-legal-name" placeholder="Registered company name" /></div>
                 <div class="field"><label for="setup-business-type">Business type</label><select id="setup-business-type"><option value="restaurant">Restaurant / Food &amp; Beverage</option><option value="retail">Retail</option><option value="service">Service business</option><option value="sport">Sports / venue business</option><option value="other">Other</option></select></div>
                 <div class="field"><label for="setup-timezone">Timezone</label><select id="setup-timezone"><option>Asia/Bangkok</option><option>Asia/Singapore</option><option>Asia/Tokyo</option><option>UTC</option></select></div>
-                <div class="field"><label for="setup-country">Country</label><input id="setup-country" maxlength="10" value="TH" /></div>
-                <div class="field"><label for="setup-currency">Currency</label><input id="setup-currency" maxlength="10" value="THB" /></div>
+                <div class="field"><label for="setup-country">Country</label><select id="setup-country"><option value="TH">Thailand (TH)</option><option value="SG">Singapore (SG)</option><option value="MY">Malaysia (MY)</option><option value="JP">Japan (JP)</option><option value="ID">Indonesia (ID)</option><option value="VN">Vietnam (VN)</option><option value="PH">Philippines (PH)</option><option value="AU">Australia (AU)</option><option value="US">United States (US)</option><option value="GB">United Kingdom (GB)</option></select></div>
+                <div class="field"><label for="setup-currency">Currency</label><select id="setup-currency"><option value="THB">THB — Thai baht</option><option value="SGD">SGD — Singapore dollar</option><option value="MYR">MYR — Malaysian ringgit</option><option value="JPY">JPY — Japanese yen</option><option value="IDR">IDR — Indonesian rupiah</option><option value="VND">VND — Vietnamese dong</option><option value="PHP">PHP — Philippine peso</option><option value="AUD">AUD — Australian dollar</option><option value="USD">USD — US dollar</option><option value="GBP">GBP — British pound</option><option value="EUR">EUR — Euro</option></select></div>
                 <div class="field full"><label for="setup-contact-email">Operations email <span class="hint">(optional)</span></label><input id="setup-contact-email" type="email" placeholder="ops@example.com" /></div>
               </div>
             </section>
@@ -362,6 +373,32 @@
     function setButtonBusy(button, busy) {
       button.classList.toggle("is-loading", busy);
       button.setAttribute("aria-busy", String(busy));
+    }
+
+    function currentSetupPath() {
+      return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    }
+
+    function loginPath() {
+      return `/login?next=${encodeURIComponent(currentSetupPath())}`;
+    }
+
+    function showInitializationError(error) {
+      const authRequired = error instanceof AuthApiError && error.status === 401;
+      if (authRequired) {
+        window.location.replace(loginPath());
+        return;
+      }
+
+      const message = error instanceof Error
+        ? error.message
+        : "The Hub could not reach the local API.";
+      $("setup-init-error").hidden = false;
+      $("setup-init-error-title").textContent = "Setup could not be loaded.";
+      $("setup-init-error-message").textContent = message;
+      $("setup-init-login").href = loginPath();
+      $("setup-main").setAttribute("aria-busy", "false");
+      toast(message, true);
     }
 
     function deriveStep() {
@@ -695,6 +732,12 @@
     $("setup-back").addEventListener("click", goBackSetup);
     $("setup-next").addEventListener("click", saveSetupStep);
     $("setup-skip").addEventListener("click", () => saveSetupStep(true));
+    $("setup-init-retry").addEventListener("click", () => {
+      const button = $("setup-init-retry");
+      setButtonBusy(button, true);
+      button.disabled = true;
+      window.location.reload();
+    });
     $("setup-sign-out").addEventListener("click", async () => {
       const button = $("setup-sign-out");
       setButtonBusy(button, true);
@@ -736,8 +779,7 @@
         state.setupMaxStep = state.setupStep;
         renderSetup();
       } catch (error) {
-        if (error instanceof AuthApiError && error.status === 401) window.location.replace("/login");
-        else toast(error.message || "Could not load setup", true);
+        showInitializationError(error);
       } finally {
         $("setup-main")?.setAttribute("aria-busy", "false");
       }

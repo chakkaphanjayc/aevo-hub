@@ -1,0 +1,37 @@
+{
+  "name": "@aevo/hub-modern",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "react-router dev --host 0.0.0.0 --port 4330",
+    "build": "react-router build",
+    "preview:worker": "vite preview",
+    "deploy:preview": "react-router build && wrangler deploy --env preview",
+    "deploy:staging": "react-router build && wrangler deploy --env staging",
+    "deploy:production": "react-router build && wrangler deploy --env production",
+    "start": "vite preview",
+    "typecheck": "react-router typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@aevocado/api-contract": "workspace:*",
+    "@aevocado/app-access": "workspace:*",
+    "@aevocado/auth-client": "workspace:*",
+    "@aevocado/contracts": "file:../../../aevo-contracts",
+    "@aevocado/design-system": "workspace:*",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "8.4.0",
+    "isbot": "^5"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.57.1",
+    "@cloudflare/workers-types": "5.20260922.1",
+    "@react-router/dev": "8.4.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.8.2",
+    "vite": "^7.1.9",
+    "wrangler": "4.136.1"
+  }
+}

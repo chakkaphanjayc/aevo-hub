@@ -9,6 +9,7 @@ import type {
 } from "@aevo/contracts";
 import type { Database } from "./client";
 import { throwDatabaseError } from "./errors";
+import { recordPublicOrderPayment } from "./orders";
 
 type Row = Record<string, unknown>;
 
@@ -81,7 +82,8 @@ export async function recordBillingWebhookEvent(
     .maybeSingle();
 
   if (existing.data) {
-    return { processed: Boolean(existing.data.processed), duplicate: true };
+    const processed = Boolean(existing.data.processed);
+    return { processed, duplicate: processed };
   }
 
   const insertRes = await database.client
@@ -91,11 +93,19 @@ export async function recordBillingWebhookEvent(
       provider: event.provider,
       event_type: event.eventType,
       payload: event.payload,
-      processed: true
+      processed: false
     });
 
   if (insertRes.error) throwDatabaseError(insertRes.error, "record billing webhook");
-  return { processed: true, duplicate: false };
+  return { processed: false, duplicate: false };
+}
+
+async function markBillingWebhookEventProcessed(database: Database, eventId: string): Promise<void> {
+  const result = await database.client
+    .from("billing_webhook_events")
+    .update({ processed: true, error_message: null })
+    .eq("id", eventId);
+  throwDatabaseError(result.error, "mark billing webhook processed");
 }
 
 /**
@@ -242,8 +252,32 @@ export async function processStripeWebhookEvent(
 
   // 2. Dispatch event handlers
   switch (event.type) {
-    case "checkout.session.completed": {
-      const orgId = String(obj?.client_reference_id || (obj?.metadata as Row)?.organization_id || "");
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded": {
+      const metadata = (obj?.metadata as Row) ?? {};
+      const orderId = String(metadata.order_id ?? "");
+      if (orderId) {
+        const organizationId = String(metadata.organization_id ?? "");
+        const storeId = String(metadata.store_id ?? "");
+        const amountMinor = Number(obj?.amount_total ?? metadata.amount_minor ?? 0);
+        const currency = String(obj?.currency ?? metadata.currency ?? "").toUpperCase();
+        const providerReference = String(obj?.payment_intent ?? obj?.id ?? "");
+        if (!organizationId || !storeId || !currency || !providerReference || amountMinor <= 0) {
+          throw new Error("Hosted payment webhook is missing order metadata");
+        }
+        await recordPublicOrderPayment(database, {
+          organizationId,
+          storeId,
+          orderId,
+          amountMinor,
+          currency,
+          providerReference,
+          idempotencyKey: `stripe-webhook-${event.id}`
+        });
+        break;
+      }
+
+      const orgId = String(obj?.client_reference_id || metadata.organization_id || "");
       const customerId = String(obj?.customer ?? "");
       const subscriptionId = String(obj?.subscription ?? "");
       const planId = String((obj?.metadata as Row)?.plan_id || "business");
@@ -377,5 +411,6 @@ export async function processStripeWebhookEvent(
     }
   }
 
+  await markBillingWebhookEventProcessed(database, event.id);
   return { success: true, eventType: event.type, duplicate: false };
 }
