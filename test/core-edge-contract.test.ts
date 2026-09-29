@@ -20,8 +20,8 @@ describe("Aevo Core API through the Edge boundary", () => {
       implementationStatus?: string;
     };
     expect(body.service).toBe("aevo-core-api");
-    expect(body.routeCount).toBe(48);
-    expect(body.implementedRouteCount).toBe(48);
+    expect(body.routeCount).toBe(57);
+    expect(body.implementedRouteCount).toBe(57);
     expect(body.implementationStatus).toBe("ready");
   });
 

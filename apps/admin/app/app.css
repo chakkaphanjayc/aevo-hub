@@ -681,6 +681,39 @@ textarea:focus-visible {
   outline: none;
 }
 
+.admin-login-remember {
+  display: flex !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  align-items: flex-start;
+  gap: 10px !important;
+  color: var(--aevo-ink) !important;
+  font-weight: 500 !important;
+}
+
+.admin-login-remember input {
+  width: 18px;
+  min-height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--aevo-brand-dark);
+}
+
+.admin-login-remember span {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-login-remember strong {
+  font-size: 0.8rem;
+}
+
+.admin-login-remember small {
+  color: var(--aevo-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
 .admin-login-submit {
   width: 100%;
   min-height: 44px;

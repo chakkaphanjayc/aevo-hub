@@ -219,13 +219,59 @@ textarea:focus-visible {
   z-index: 1;
 }
 
-.aevo-button__busy {
+.aevo-button.is-busy {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.aevo-button__busy,
+.aevo-spinner {
+  display: inline-block;
   width: 13px;
   height: 13px;
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
   animation: aevo-spin 700ms linear infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.aevo-spinner--sm {
+  width: 11px;
+  height: 11px;
+  border-width: 1.5px;
+}
+
+.aevo-spinner--md {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.aevo-spinner--lg {
+  width: 22px;
+  height: 22px;
+  border-width: 2.5px;
+}
+
+.aevo-top-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 10000;
+  background: linear-gradient(90deg, var(--aevo-brand-dark) 0%, var(--aevo-brand) 50%, #7bd399 100%);
+  background-size: 200% 100%;
+  animation: aevo-progress-shimmer 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  box-shadow: 0 1px 6px rgba(45, 122, 73, 0.35);
+  pointer-events: none;
+}
+
+@keyframes aevo-progress-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .aevo-card {

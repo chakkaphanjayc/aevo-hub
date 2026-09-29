@@ -1,5 +1,6 @@
 import { CreditCard } from "lucide-react";
 import { Card, DataTable, StatusBadge } from "@aevocado/design-system";
+import { ApiClientError } from "@aevocado/contracts";
 import { useLoaderData } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { createAdminApiClient, requireAdminAccess } from "../lib/auth.server";
@@ -19,19 +20,26 @@ interface SubscriptionsLoaderData {
   session: AdminLoaderData;
   subscriptions: AdminSubscription[];
   denied: boolean;
+  available: boolean;
 }
 
 export async function loader({ request }: LoaderFunctionArgs): Promise<SubscriptionsLoaderData> {
   const session = await requireAdminAccess(request);
-  if (!hasAdminPermission(session, "subscription.read")) return { session, subscriptions: [], denied: true };
+  if (!hasAdminPermission(session, "subscription.read")) return { session, subscriptions: [], denied: true, available: false };
   const api = createAdminApiClient(request);
-  const result = await api.request<{ success: true; subscriptions: AdminSubscription[] }>("/api/v1/admin/subscriptions");
-  return { session, subscriptions: result.subscriptions, denied: false };
+  try {
+    const result = await api.request<{ success: true; subscriptions: AdminSubscription[] }>("/api/v1/admin/subscriptions");
+    return { session, subscriptions: result.subscriptions, denied: false, available: true };
+  } catch (error) {
+    if (!(error instanceof ApiClientError)) throw error;
+    return { session, subscriptions: [], denied: false, available: false };
+  }
 }
 
 export default function SubscriptionsRoute() {
   const data = useLoaderData() as SubscriptionsLoaderData;
   if (data.denied) return <Card className="admin-panel"><h1>Subscriptions</h1><p className="admin-muted">บัญชีนี้ไม่มีสิทธิ์อ่าน billing records</p></Card>;
+  if (!data.available) return <Card className="admin-panel"><div className="admin-panel__heading"><div><span className="admin-eyebrow">Billing source of truth</span><h1>Subscriptions</h1></div><StatusBadge tone="warning">Not available</StatusBadge></div><p className="admin-muted">Core API ยังไม่มี billing directory contract สำหรับ local environment นี้ จึงยังแสดงรายการ subscription ไม่ได้</p></Card>;
   return (
     <>
       <section className="admin-page-heading"><div><span className="admin-eyebrow">Billing source of truth</span><h1>Subscriptions</h1><p>ตรวจ plan และ lifecycle จากข้อมูลที่ถูก sync โดย webhook ไม่ใช่ค่าที่ client รายงาน</p></div><StatusBadge tone="info">{data.subscriptions.length} records</StatusBadge></section>

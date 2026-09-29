@@ -14,6 +14,7 @@
     "typecheck": "react-router typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@aevo/client-data-cache": "file:../../../aevo-client-data-cache",
     "@aevocado/api-contract": "workspace:*",
     "@aevocado/app-access": "workspace:*",
     "@aevocado/auth-client": "workspace:*",

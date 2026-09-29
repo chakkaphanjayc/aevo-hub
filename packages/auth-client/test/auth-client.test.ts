@@ -8,8 +8,8 @@ describe("@aevocado/auth-client", () => {
       api: new ApiClient({ baseUrl: "http://localhost:4000", fetcher: async () => new Response(null, { status: 204 }) }),
       application: "HUB"
     });
-    expect(client.signInRedirect({ returnPath: "/workspace?storeId=store-1" })).toBe(
-      "/login?app=HUB&returnTo=%2Fworkspace%3FstoreId%3Dstore-1"
+    expect(client.signInRedirect({ returnPath: "/modern/stores/store-1" })).toBe(
+      "/login?app=HUB&returnTo=%2Fmodern%2Fstores%2Fstore-1"
     );
     expect(client.signInRedirect({ returnPath: "https://evil.example" })).toBe("/login?app=HUB&returnTo=%2F");
   });

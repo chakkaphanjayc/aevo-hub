@@ -9,7 +9,7 @@ describe("@aevocado/api-contract", () => {
   });
 
   test("rejects open-redirect return paths", () => {
-    expect(isSafeReturnPath("/workspace?storeId=store-1")).toBe(true);
+    expect(isSafeReturnPath("/modern/stores/store-1")).toBe(true);
     expect(isSafeReturnPath("https://evil.example/steal")).toBe(false);
     expect(isSafeReturnPath("//evil.example/steal")).toBe(false);
     expect(isSafeReturnPath("/%2f%2fevil.example")).toBe(false);

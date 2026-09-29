@@ -6,12 +6,17 @@ function tunnelEnabled(value: string | undefined): boolean {
   return ["1", "true", "yes", "on"].includes(value?.trim().toLowerCase() ?? "");
 }
 
+function tunnelOption(value: string | undefined, autoStartValue: string | undefined): boolean | { autoStart: true } {
+  if (!tunnelEnabled(value)) return false;
+  return tunnelEnabled(autoStartValue) ? { autoStart: true } : true;
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiTarget = env.AEVO_API_URL?.trim() || env.VITE_API_BASE_URL?.trim() || "http://localhost:4001";
 
   return {
-    plugins: [reactRouter(), cloudflare({ tunnel: tunnelEnabled(env.AEVO_DEV_TUNNEL) })],
+    plugins: [reactRouter(), cloudflare({ tunnel: tunnelOption(env.AEVO_DEV_TUNNEL, env.AEVO_DEV_TUNNEL_AUTOSTART) })],
     server: {
       host: "0.0.0.0",
       port: 4335,

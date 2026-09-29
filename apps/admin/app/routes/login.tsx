@@ -29,6 +29,7 @@ export default function AdminLoginRoute() {
   const data = useLoaderData() as LoginLoaderData;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -73,7 +74,7 @@ export default function AdminLoginRoute() {
         method: "POST",
         credentials: "include",
         headers: { accept: "application/json", "content-type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password })
+        body: JSON.stringify({ email: email.trim(), password, rememberMe })
       });
       if (!response.ok) throw new Error(await errorMessage(response));
       await completeLogin();
@@ -103,6 +104,18 @@ export default function AdminLoginRoute() {
           <label>
             รหัสผ่าน
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
+          </label>
+          <label className="admin-login-remember" htmlFor="admin-login-remember">
+            <input
+              id="admin-login-remember"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+            />
+            <span>
+              <strong>จดจำอุปกรณ์นี้</strong>
+              <small>เลือกเฉพาะอุปกรณ์ส่วนตัว; session จะหมดอายุและถูกเพิกถอนได้</small>
+            </span>
           </label>
           {message ? <p className="admin-login-alert" role="alert">{message}</p> : null}
           <button className="aevo-button aevo-button--primary admin-login-submit" type="submit" disabled={busy}>

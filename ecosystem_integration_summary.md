@@ -1,6 +1,7 @@
 # Ecosystem integration status
 
-Updated 2026-09-23 for the Core API cutover.
+Updated 2026-09-26 for the Core API cutover and HUB-013 through HUB-017
+development implementation.
 
 ## Runtime topology
 
@@ -19,17 +20,19 @@ independent application and is not part of this cutover.
 
 ## Completed boundary work
 
-- Hub contract inventory is published as v1 with 48 routes.
-- Core API implements and reports all 48 Hub routes as ready.
+- Hub contract inventory is published as v1 with 54 route entries across 52 unique Hub paths plus two shared `/api/v1/me` paths.
+- Core API implements and reports all 54 Hub route entries as ready.
 - Accounts issues identity-backed app sessions through Core API.
 - Hub, Play, and POS use Core session resolve/refresh/revoke contracts.
 - Organization membership, application assignments, store app access, CSRF,
   and tenant scope are server-resolved by Core API.
 - Onboarding session/progress/checklist state is owned by Core API.
-- Core migration ownership is verified through migration `0009`.
+- Core migration ownership is verified through migration `0037` with 42 applied, checksum-verified records, including the parallel numbered `0034` and `0037` projections and the Hub role-permission alignment backfill.
+- Server-side PKCE password recovery, bounded worker delivery, tenant-scoped dashboard projections, and the first Core-owned integration lifecycle are implemented and verified in development.
 - Normal Hub launchers start Core, Accounts, Edge, and web surfaces only.
-- Legacy Hub gateway, SDK, migration writer, and unused API client wrapper are
-  removed.
+- Legacy Hub gateway, SDK, migration writer, compatibility adapters, and
+  retired control-plane migration writers are removed. App-domain migration
+  history remains with its owning application.
 
 ## Local verification
 

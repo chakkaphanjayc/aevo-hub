@@ -13,12 +13,13 @@
     "AEVO_API_URL": "",
     "AEVO_CORE_API_URL": "",
     "AEVO_HUB_WEB_URL": "http://localhost:4330",
-    "AEVO_HUB_HOME_URL": "http://localhost:4321",
+    "AEVO_HUB_HOME_URL": "http://localhost:4330",
     "AEVO_PLAY_URL": "http://localhost:4331/modern",
     "AEVO_POS_URL": "http://localhost:4332",
     "AEVO_GO_URL": "http://localhost:4324",
     "AEVO_KIOSK_URL": "",
     "AEVO_QUEUE_URL": "",
+    "AEVO_PASSKEY_ENABLED": "false",
     "CSRF_COOKIE_NAME": "aevo_csrf"
   },
   "env": {

@@ -8,7 +8,8 @@ import {
   gatewayAllowedOrigins,
   resolveTunnelOrigins,
   tunnelOrigin
-} from "../../scripts/tunnel-config.ts";
+} from "../../scripts/tunnel-config";
+import { killProcessTree, stopWorkspaceProcessesOnPorts } from "../../scripts/process-tree";
 
 type ServiceSpec = {
   label: string;
@@ -93,10 +94,6 @@ const tunnelOrigins = resolveTunnelOrigins(
 );
 const localAllowedRedirectOrigins = accountRedirectOrigins(tunnelOrigins);
 const localAllowedOrigins = gatewayAllowedOrigins(tunnelOrigins);
-const publicPort = parsePort(
-  process.env.WEB_PORT?.trim() || hubFileEnvironment.WEB_PORT?.trim() || "4321",
-  "Public Home"
-);
 const modernPort = 4330;
 const developmentDatabaseUrl = process.env.AEVO_DATABASE_URL?.trim()
   || process.env.DATABASE_URL?.trim()
@@ -108,16 +105,16 @@ const developmentSessionSecret = process.env.AEVO_SESSION_SECRET?.trim()
 const developmentAccountsSecret = process.env.AEVO_ACCOUNTS_SERVICE_SECRET?.trim()
   || hubFileEnvironment.AEVO_ACCOUNTS_SERVICE_SECRET?.trim()
   || "aevo-local-accounts-service-secret";
+const developmentHandshakeSecret = process.env.AEVO_HANDSHAKE_SHARED_SECRET?.trim()
+  || hubFileEnvironment.AEVO_HANDSHAKE_SHARED_SECRET?.trim()
+  || "aevo-local-handshake-secret";
 
 const hubEnvironment = serviceEnvironment(resolve(hubRoot, ".env"), {
-  PUBLIC_API_URL: apiOrigin,
   AEVO_API_URL: apiOrigin,
   AEVO_CORE_API_URL: apiOrigin,
   API_PORT: String(apiPort),
-  WEB_PORT: String(publicPort),
   WEB_ORIGIN: tunnelOrigin(tunnelOrigins, "hub", `http://localhost:${modernPort}`),
   AEVO_HUB_WEB_URL: tunnelOrigin(tunnelOrigins, "hub", `http://localhost:${modernPort}`),
-  AEVO_HUB_MODERN_URL: tunnelOrigin(tunnelOrigins, "hub", `http://localhost:${modernPort}`),
   AEVO_ALLOWED_WEB_ORIGINS: localAllowedOrigins,
   AEVO_APP_CODE: "HUB",
   SESSION_COOKIE_NAME: "aevo_hub_session",
@@ -140,6 +137,7 @@ const accountsEnvironment = serviceEnvironment(resolve(ecosystemRoot, "aevo-acco
 // runtime bindings explicitly so the Accounts worker cannot silently start with
 // the preview defaults from wrangler.jsonc.
 const accountsInspectorPort = String(Number(accountsPort) + 10000);
+const edgeInspectorPort = String(Number(accountsPort) + 10001);
 const accountsArgs = [
   "run", "dev", "--local", "--port", String(accountsPort),
   "--inspector-port", accountsInspectorPort,
@@ -170,8 +168,14 @@ const coreEnvironment = serviceEnvironment(resolve(ecosystemRoot, "aevo-core-api
   AEVO_IDENTITY_PLATFORM_PROJECT_ID: process.env.AEVO_IDENTITY_PLATFORM_PROJECT_ID?.trim() || "local-development",
   AEVO_SESSION_SECRET: developmentSessionSecret,
   AEVO_ACCOUNTS_API_ORIGIN: accountsOrigin,
+  AEVO_ALLOWED_ORIGINS: process.env.AEVO_ALLOWED_ORIGINS?.trim() || localAllowedOrigins,
   AEVO_ACCOUNTS_SERVICE_SECRET: developmentAccountsSecret,
+  AEVO_HANDSHAKE_SHARED_SECRET: developmentHandshakeSecret,
+  AEVO_PLAY_API_ORIGIN: process.env.AEVO_PLAY_API_ORIGIN?.trim() || "http://localhost:3002",
+  AEVO_POS_API_ORIGIN: process.env.AEVO_POS_API_ORIGIN?.trim() || "http://localhost:3003",
   AEVO_CORE_API_SERVICE_SECRET: process.env.AEVO_CORE_API_SERVICE_SECRET?.trim() || developmentAccountsSecret,
+  AEVO_HUB_WEB_ORIGIN: tunnelOrigin(tunnelOrigins, "hub", `http://localhost:${modernPort}`),
+  AEVO_RECOVERY_GRANT_ENCRYPTION_KEY: process.env.AEVO_RECOVERY_GRANT_ENCRYPTION_KEY?.trim() || developmentSessionSecret,
   AEVO_REQUIRE_GATEWAY_SIGNATURE: process.env.AEVO_REQUIRE_GATEWAY_SIGNATURE?.trim() || "true",
   AEVO_ORIGIN_SIGNING_SECRET: process.env.AEVO_ORIGIN_SIGNING_SECRET?.trim() || sharedSecret,
   AEVO_TRUSTED_GATEWAYS: process.env.AEVO_TRUSTED_GATEWAYS?.trim() || "aevo-edge-gateway"
@@ -186,22 +190,13 @@ const edgeEnvironment = serviceEnvironment(resolve(ecosystemRoot, "aevo-edge-gat
   AEVO_GATEWAY_SIGNING_SECRET: sharedSecret
 });
 
-const hubWebServices: ServiceSpec[] = [
-  {
-    label: "public-home",
-    command: "bun",
-    args: ["run", "--watch", "apps/web/src/server.ts"],
-    directory: hubRoot,
-    environment: hubEnvironment
-  },
-  {
-    label: "modern",
-    command: "bun",
-    args: ["run", "--cwd", "apps/hub", "dev"],
-    directory: hubRoot,
-    environment: hubEnvironment
-  }
-];
+const hubWebServices: ServiceSpec[] = [{
+  label: "modern",
+  command: "bun",
+  args: ["run", "--cwd", "apps/hub", "dev"],
+  directory: hubRoot,
+  environment: hubEnvironment
+}];
 
 const services: ServiceSpec[] = [
   {
@@ -222,8 +217,9 @@ const services: ServiceSpec[] = [
     label: "edge",
     command: "bun",
     args: [
-      "run", "dev", "--local", "--port", String(apiPort),
-      "--var", `AEVO_CORE_API_ORIGIN:${coreOrigin}`,
+  "run", "dev", "--local", "--port", String(apiPort),
+  "--inspector-port", edgeInspectorPort,
+  "--var", `AEVO_CORE_API_ORIGIN:${coreOrigin}`,
       "--var", `AEVO_GATEWAY_SIGNING_SECRET:${sharedSecret}`,
       "--var", `AEVO_ALLOWED_ORIGINS:${edgeEnvironment.AEVO_ALLOWED_ORIGINS}`,
       "--var", "AEVO_APP_CODE:HUB",
@@ -236,11 +232,11 @@ const services: ServiceSpec[] = [
 ];
 
 try {
+  await stopWorkspaceProcessesOnPorts([apiPort, accountsPort, corePort, modernPort, Number(edgeInspectorPort), Number(accountsInspectorPort), 9229], ecosystemRoot);
   await assertPortsAvailable([
     { label: "Edge API", port: apiPort },
     { label: "Accounts API", port: accountsPort },
     { label: "Core API", port: corePort },
-    { label: "Public Home", port: publicPort },
     { label: "Modern Console", port: modernPort }
   ]);
 } catch (error: unknown) {
@@ -251,7 +247,7 @@ try {
   process.exit(1);
 }
 
-console.log("\x1b[36m%s\x1b[0m", "🚀 Starting Aevo Hub (Core API + Edge + Public Home + Modern Console)...");
+console.log("\x1b[36m%s\x1b[0m", "🚀 Starting Aevo Hub (Core API + Edge + Modern Console)...");
 
 type Child = ReturnType<typeof spawn>;
 const children: Array<{ label: string; child: Child }> = services.map((service) => ({
@@ -313,7 +309,7 @@ function cleanup(exitCode = 0): void {
   if (cleaningUp) return;
   cleaningUp = true;
   console.log("\n\x1b[33m%s\x1b[0m", "🛑 Stopping Aevo Hub services...");
-  for (const { child } of children) child.kill();
+  for (const { child } of children) killProcessTree(child.pid);
   process.exit(exitCode);
 }
 

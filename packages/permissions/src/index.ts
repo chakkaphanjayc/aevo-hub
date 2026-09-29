@@ -3,8 +3,8 @@ import type {
   PlatformPermission,
   PlatformRole,
   Role
-} from "@aevo/contracts";
-import { platformRolePermissionDefaults, rolePermissionDefaults } from "@aevo/contracts";
+} from "@aevocado/contracts";
+import { platformRolePermissionDefaults, rolePermissionDefaults } from "@aevocado/contracts";
 
 export function hasPermission(
   permissions: readonly Permission[],

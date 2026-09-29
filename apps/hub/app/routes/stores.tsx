@@ -8,7 +8,7 @@ import {
   type SettingsLoaderData
 } from "./settings";
 
-export { action, loader } from "./settings";
+export { action, loader, clientLoader } from "./settings";
 
 export default function StoresRoute() {
   const data = useLoaderData() as SettingsLoaderData;
@@ -28,11 +28,13 @@ export default function StoresRoute() {
       <Breadcrumbs className="aevo-page-breadcrumb" items={[{ label: "Hub", href: "/" }, { label: "Stores & branches" }]} />
       <section className="aevo-page-heading">
         <div>
-          <StatusBadge tone="success">Server-checked store access</StatusBadge>
-          <h1>Stores &amp; branches</h1>
+          <div className="aevo-page-heading__title-row">
+            <h1>Stores &amp; branches</h1>
+            <StatusBadge tone="success">Server-checked store access</StatusBadge>
+          </div>
           <p>Manage branch records and the public store profiles exposed to Aevo Go. Store scope and mutations are enforced by Core API authorization.</p>
         </div>
-        <Link className="aevo-button aevo-button--secondary" to="/settings">Organization settings</Link>
+        <Link className="aevo-button aevo-button--secondary" to="/settings" prefetch="intent">Organization settings</Link>
       </section>
       {actionData?.ok === false ? <div className="aevo-inline-alert aevo-inline-alert--error" role="alert">{actionData.message}</div> : updated ? <div className="aevo-inline-alert" role="status">Saved {updated} successfully.</div> : null}
       {isSubmitting ? <div className="aevo-loading-strip" role="status">Saving securely…</div> : null}

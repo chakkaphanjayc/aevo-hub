@@ -1,5 +1,5 @@
 import { SQL } from "bun";
-import { platformRoles, type PlatformRole } from "../packages/contracts/src";
+import { platformRoles, type PlatformRole } from "@aevocado/contracts";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
@@ -34,9 +34,9 @@ async function addAdmin() {
     const userId = users[0].id;
 
     await db.unsafe(
-      `INSERT INTO public.platform_users (user_id, role, is_active)
-       VALUES ($1, $2, true)
-       ON CONFLICT (user_id) DO UPDATE SET role = $2, is_active = true, updated_at = now()`,
+      `INSERT INTO aevo_platform_roles (user_id, role_code, status)
+       VALUES ($1, $2, 'active')
+       ON CONFLICT (user_id) DO UPDATE SET role_code = $2, status = 'active', updated_at = now()`,
       [userId, roleInput]
     );
 

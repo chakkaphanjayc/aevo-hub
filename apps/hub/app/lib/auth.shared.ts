@@ -1,8 +1,10 @@
 import type { AccessDecisionResponse, AuthenticatedMeResponse, Permission } from "@aevocado/api-contract";
+import type { StoreSummary } from "@aevocado/contracts";
 
 export interface HubLoaderData {
   me: AuthenticatedMeResponse;
   access: AccessDecisionResponse;
+  stores: StoreSummary[];
   apiOrigin: string;
   homeUrl: string;
 }

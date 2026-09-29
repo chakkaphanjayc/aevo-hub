@@ -1,5 +1,6 @@
 import { Building2 } from "lucide-react";
 import { Card, DataTable, StatusBadge } from "@aevocado/design-system";
+import { ApiClientError } from "@aevocado/contracts";
 import { useLoaderData } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { createAdminApiClient, requireAdminAccess } from "../lib/auth.server";
@@ -21,19 +22,26 @@ interface OrganizationsLoaderData {
   session: AdminLoaderData;
   organizations: AdminOrganization[];
   denied: boolean;
+  available: boolean;
 }
 
 export async function loader({ request }: LoaderFunctionArgs): Promise<OrganizationsLoaderData> {
   const session = await requireAdminAccess(request);
-  if (!hasAdminPermission(session, "organization.read")) return { session, organizations: [], denied: true };
+  if (!hasAdminPermission(session, "organization.read")) return { session, organizations: [], denied: true, available: false };
   const api = createAdminApiClient(request);
-  const result = await api.request<{ success: true; organizations: AdminOrganization[] }>("/api/v1/admin/organizations");
-  return { session, organizations: result.organizations, denied: false };
+  try {
+    const result = await api.request<{ success: true; organizations: AdminOrganization[] }>("/api/v1/admin/organizations");
+    return { session, organizations: result.organizations, denied: false, available: true };
+  } catch (error) {
+    if (!(error instanceof ApiClientError)) throw error;
+    return { session, organizations: [], denied: false, available: false };
+  }
 }
 
 export default function OrganizationsRoute() {
   const data = useLoaderData() as OrganizationsLoaderData;
   if (data.denied) return <Card className="admin-panel"><h1>Organizations</h1><p className="admin-muted">บัญชีนี้ไม่มีสิทธิ์อ่านข้อมูลข้ามองค์กร</p></Card>;
+  if (!data.available) return <Card className="admin-panel"><div className="admin-panel__heading"><div><span className="admin-eyebrow">Cross-tenant directory</span><h1>Organizations</h1></div><StatusBadge tone="warning">Not available</StatusBadge></div><p className="admin-muted">Core API ยังไม่มี directory contract สำหรับข้อมูล organizations ใน local environment นี้ จึงยังแสดงรายการข้ามองค์กรไม่ได้</p></Card>;
   return (
     <>
       <section className="admin-page-heading"><div><span className="admin-eyebrow">Cross-tenant directory</span><h1>Organizations</h1><p>ข้อมูลนี้เป็น platform-level view สำหรับ support, operations และ governance เท่านั้น</p></div><StatusBadge tone="info">{data.organizations.length} tenants</StatusBadge></section>

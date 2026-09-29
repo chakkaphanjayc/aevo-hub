@@ -28,7 +28,7 @@ export function logHubEvent(
     timestamp: new Date().toISOString(),
     level,
     event,
-    app_name: "aevocado-hub-web",
+    app_name: "aevocado-hub-modern",
     app_version: process.env.APP_VERSION?.trim() || "development",
     environment: process.env.NODE_ENV === "production" ? "production" : "development",
     ...safeContext(context)

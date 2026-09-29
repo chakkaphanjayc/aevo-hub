@@ -48,6 +48,7 @@ export {
   SearchBar,
   Select,
   SortSelect,
+  Spinner,
   StatusBadge,
   Toast,
   ToastRegion
@@ -68,6 +69,7 @@ export type {
   SearchBarProps,
   OptionItem,
   SelectProps,
+  SpinnerProps,
   StatePanelProps,
   StatusBadgeProps,
   ToastProps,

@@ -10,6 +10,21 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   busyLabel?: string;
 }
 
+export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
+  size?: number;
+}
+
+export function Spinner({ size = 14, className = "", style, ...props }: SpinnerProps) {
+  return (
+    <span
+      {...props}
+      className={`aevo-spinner ${className}`.trim()}
+      style={{ width: size, height: size, ...style }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = "secondary", busy = false, busyLabel = "Working…", children, disabled, className = "", ...props },
   ref
@@ -18,7 +33,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       {...props}
       ref={ref}
-      className={`aevo-button aevo-button--${variant} ${className}`.trim()}
+      className={`aevo-button aevo-button--${variant} ${busy ? "is-busy" : ""} ${className}`.trim()}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
     >
@@ -354,6 +369,7 @@ export interface DialogProps extends DialogHTMLAttributes<HTMLDialogElement> {
 export function Dialog({ open, title, description, footer, children, onClose, ...props }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -363,9 +379,9 @@ export function Dialog({ open, title, description, footer, children, onClose, ..
   }, [open]);
 
   return (
-    <dialog {...props} ref={dialogRef} aria-labelledby={titleId} onClose={onClose}>
+    <dialog {...props} ref={dialogRef} aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} onClose={onClose}>
       <header className="aevo-dialog__header">
-        <div><h2 id={titleId}>{title}</h2>{description ? <p>{description}</p> : null}</div>
+        <div><h2 id={titleId}>{title}</h2>{description ? <p id={descriptionId}>{description}</p> : null}</div>
         <button className="aevo-dialog__close" type="button" aria-label="Close" onClick={() => dialogRef.current?.close()}>×</button>
       </header>
       <div className="aevo-dialog__body">{children}</div>

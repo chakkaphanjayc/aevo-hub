@@ -8,7 +8,9 @@ interface ApiErrorBody {
 }
 
 interface ResetLoaderData {
-  csrfCookieName: string;
+  recoveryCsrfCookieName: string;
+  recoveryReady: boolean;
+  authError: string | null;
 }
 
 function readCookie(name: string): string | null {
@@ -34,7 +36,11 @@ export default function ResetPasswordRoute() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(() => {
+    if (data.authError === "password_recovery_invalid") return "ลิงก์กู้คืนรหัสผ่านหมดอายุหรือไม่ถูกต้อง กรุณาขอลิงก์ใหม่";
+    if (!data.recoveryReady) return "กรุณาเปิดหน้านี้จากลิงก์กู้คืนรหัสผ่านในอีเมล";
+    return null;
+  });
 
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -45,7 +51,7 @@ export default function ResetPasswordRoute() {
     }
     setBusy(true);
     try {
-      const csrfToken = readCookie(data.csrfCookieName);
+      const csrfToken = readCookie(data.recoveryCsrfCookieName);
       const response = await fetch("/api/auth/password/update", {
         method: "POST",
         credentials: "include",
@@ -91,7 +97,7 @@ export default function ResetPasswordRoute() {
             <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={12} required />
           </label>
           {message ? <p className="aevo-login-alert" role="alert">{message}</p> : null}
-          <button className="aevo-button aevo-button--primary aevo-login-submit" type="submit" disabled={busy}>
+          <button className="aevo-button aevo-button--primary aevo-login-submit" type="submit" disabled={busy || !data.recoveryReady}>
             {busy ? "กำลังบันทึก…" : "เปลี่ยนรหัสผ่าน"}
           </button>
         </form>
@@ -101,6 +107,11 @@ export default function ResetPasswordRoute() {
   );
 }
 
-export function loader({}: LoaderFunctionArgs): ResetLoaderData {
-  return { csrfCookieName: process.env.CSRF_COOKIE_NAME?.trim() || "aevo_csrf" };
+export function loader({ request }: LoaderFunctionArgs): ResetLoaderData {
+  const url = new URL(request.url);
+  return {
+    recoveryCsrfCookieName: "aevo_password_recovery_csrf",
+    recoveryReady: url.searchParams.get("recovery") === "ready",
+    authError: url.searchParams.get("auth_error")
+  };
 }

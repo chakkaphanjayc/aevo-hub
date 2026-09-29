@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { ApiClientError } from "@aevocado/contracts";
 import { isAccessAllowed } from "@aevocado/app-access";
 import { Form, redirect, useActionData, useLoaderData, useNavigation, useRevalidator } from "react-router";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import type { ActionFunctionArgs, ClientLoaderFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
   createHubApiClient,
   requireHubAccess,
@@ -59,6 +59,9 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<SecurityL
   const hub = await requireHubAccess(request);
   const csrfCookieName = process.env.CSRF_COOKIE_NAME?.trim() || "aevo_csrf";
   if (!isAccessAllowed(hub.access)) return { hub, passkeys: [], passkeyAvailable: false, csrfCookieName };
+  if (process.env.AEVO_PASSKEY_ENABLED?.trim().toLowerCase() !== "true") {
+    return { hub, passkeys: [], passkeyAvailable: false, csrfCookieName };
+  }
   try {
     const response = await createHubApiClient(request).request<{ passkeys: PasskeySummary[] }>("/api/auth/passkeys");
     return { hub, passkeys: response.passkeys, passkeyAvailable: true, csrfCookieName };
@@ -68,6 +71,15 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<SecurityL
     }
     throw error;
   }
+}
+
+export async function clientLoader({
+  serverLoader
+}: ClientLoaderFunctionArgs): Promise<SecurityLoaderData> {
+  // This payload includes the Hub access decision and passkey state. It must
+  // be freshly authorized by the server instead of coming from a client
+  // cache that could outlive a role/session change.
+  return await serverLoader() as SecurityLoaderData;
 }
 
 export async function action({ request }: ActionFunctionArgs): Promise<Response | SecurityActionResult> {

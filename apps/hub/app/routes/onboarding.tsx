@@ -1,4 +1,4 @@
-import type { OnboardingSessionSummary } from "@aevo/contracts";
+import type { OnboardingSessionSummary } from "@aevocado/contracts";
 import { ApiClientError } from "@aevocado/contracts";
 import type { AuthenticatedMeResponse } from "@aevocado/api-contract";
 import { Form, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
@@ -13,6 +13,7 @@ type LoginApplication = "PLAY" | "POS" | "GO" | "KIOSK" | "QUEUE";
 
 interface LoginContext {
   application: LoginApplication | null;
+  storeId: string | null;
   next: string;
   returnTo: string;
   state: string | null;
@@ -84,6 +85,11 @@ function safePath(value: string | null, fallback: string): string {
   return value;
 }
 
+function safeStoreId(value: string | null): string | null {
+  if (!value) return null;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value.trim()) ? value.trim().toLowerCase() : null;
+}
+
 function safeToken(value: string | null, minimum: number, maximum: number): string | null {
   if (!value || value.length < minimum || value.length > maximum || /[\u0000-\u001f\u007f]/u.test(value)) return null;
   return value;
@@ -91,6 +97,9 @@ function safeToken(value: string | null, minimum: number, maximum: number): stri
 
 function readContext(request: Request): LoginContext {
   const url = new URL(request.url);
+  const storeIdValue = url.searchParams.get("storeId");
+  const storeId = safeStoreId(storeIdValue);
+  if (storeIdValue && !storeId) throw new Response("Invalid store context", { status: 400 });
   const applicationValue = url.searchParams.get("app")?.toUpperCase();
   const application = applicationValue === "PLAY"
     || applicationValue === "POS"
@@ -101,10 +110,11 @@ function readContext(request: Request): LoginContext {
     : null;
   return {
     application,
+    storeId,
     next: safePath(url.searchParams.get("next"), "/modern"),
     returnTo: safePath(url.searchParams.get("returnTo"), "/auth/callback"),
     state: safeToken(url.searchParams.get("state"), 16, 256),
-    codeChallenge: safeToken(url.searchParams.get("code_challenge"), 32, 256)
+    codeChallenge: safeToken(url.searchParams.get("code_challenge"), 43, 128)
   };
 }
 
@@ -123,6 +133,7 @@ function homeUrl(request: Request): string {
 function loginPath(context: LoginContext): string {
   const query = new URLSearchParams({ next: context.next });
   if (context.application) query.set("app", context.application);
+  if (context.storeId) query.set("storeId", context.storeId);
   if (context.application) query.set("returnTo", context.returnTo);
   if (context.state) query.set("state", context.state);
   if (context.codeChallenge) query.set("code_challenge", context.codeChallenge);
@@ -140,7 +151,7 @@ function textValue(form: FormData, name: string, maximum: number, required = fal
 
 export async function loader({ request }: LoaderFunctionArgs): Promise<OnboardingLoaderData> {
   const context = readContext(request);
-  const { me, api } = await requireAuthenticated(request, `/modern/onboarding?${new URLSearchParams({ next: context.next }).toString()}`);
+  const { me, api } = await requireAuthenticated(request, `/modern/onboarding?${new URLSearchParams({ next: context.next, ...(context.storeId ? { storeId: context.storeId } : {}) }).toString()}`);
   if (me.principal) throw redirect(loginPath(context));
   const result = await api.request<{ success: true; session: OnboardingSessionSummary }>("/api/v1/hub/onboarding/session");
   return { me, session: result.session, context, homeUrl: homeUrl(request) };
@@ -148,7 +159,7 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<Onboardin
 
 export async function action({ request }: ActionFunctionArgs): Promise<Response | OnboardingActionResult> {
   const context = readContext(request);
-  const { api } = await requireAuthenticated(request, `/modern/onboarding?${new URLSearchParams({ next: context.next }).toString()}`);
+  const { api } = await requireAuthenticated(request, `/modern/onboarding?${new URLSearchParams({ next: context.next, ...(context.storeId ? { storeId: context.storeId } : {}) }).toString()}`);
   const form = await request.formData();
 
   try {

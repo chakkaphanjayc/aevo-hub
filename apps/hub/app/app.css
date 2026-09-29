@@ -1,27 +1,34 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+}
+
 .aevo-hub-shell {
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
-  min-height: 100dvh;
-  align-items: start;
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .aevo-hub-sidebar {
-  position: sticky;
-  top: 0;
-  align-self: start;
+  flex: 0 0 260px;
+  width: 260px;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
-  max-height: 100dvh;
   padding: var(--aevo-space-5);
   border-right: 1px solid var(--aevo-line);
   background: var(--aevo-sidebar);
   backdrop-filter: var(--aevo-glass-blur);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: visible;
   scrollbar-gutter: stable;
   z-index: 2;
 }
@@ -62,48 +69,573 @@
   text-transform: uppercase;
 }
 
-.aevo-context-card {
-  display: grid;
-  gap: 4px;
+.aevo-context-switcher {
+  position: relative;
+  z-index: 5;
   margin-bottom: var(--aevo-space-6);
-  padding: var(--aevo-space-3);
+}
+
+.aevo-context-trigger {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 10px 12px;
   border: 1px solid var(--aevo-line);
   border-radius: var(--aevo-radius-md);
   background: var(--aevo-surface-strong);
+  color: var(--aevo-ink);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--aevo-rim-highlight), var(--aevo-shadow);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, transform 80ms ease;
+  position: relative;
 }
 
-.aevo-context-card span {
-  color: var(--aevo-muted);
-  font-size: 0.7rem;
+.aevo-context-trigger:hover,
+.aevo-context-trigger[aria-expanded="true"] {
+  border-color: var(--aevo-brand);
+  background: var(--aevo-surface);
+  box-shadow: 0 6px 18px rgba(35, 73, 47, 0.08);
 }
 
-.aevo-context-card strong {
+.aevo-context-trigger:active {
+  transform: scale(0.98);
+}
+
+.aevo-context-trigger:focus-visible,
+.aevo-scope-switcher button:focus-visible,
+.aevo-scope-switcher input:focus-visible {
+  outline: 3px solid rgba(45, 122, 73, 0.28);
+  outline-offset: 2px;
+}
+
+.aevo-context-trigger__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.aevo-context-trigger__eyebrow,
+.aevo-scope-switcher__section-label {
+  color: var(--aevo-faint);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aevo-context-trigger__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border: 1px solid rgba(45, 122, 73, 0.2);
+  border-radius: var(--aevo-radius-pill);
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-brand-dark);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.aevo-context-trigger__pill.is-store {
+  border-color: rgba(52, 91, 133, 0.2);
+  background: rgba(52, 91, 133, 0.09);
+  color: #345b85;
+}
+
+.aevo-context-trigger__body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.aevo-context-trigger__icon,
+.aevo-scope-switcher__option-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-brand-dark);
+}
+
+.aevo-context-trigger__copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+.aevo-context-trigger__copy strong {
   overflow: hidden;
   font-size: 0.86rem;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.aevo-hub-nav {
+.aevo-context-trigger__copy span {
+  overflow: hidden;
+  color: var(--aevo-muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aevo-scope-switcher__icon,
+.aevo-scope-switcher__search-icon,
+.aevo-scope-switcher__chevron,
+.aevo-scope-switcher__check,
+.aevo-scope-switcher__plus {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.aevo-scope-switcher__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.aevo-scope-switcher__chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--aevo-muted);
+  flex-shrink: 0;
+}
+
+.aevo-scope-switcher {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  width: min(380px, calc(100vw - 40px));
+  max-height: min(620px, calc(100dvh - 32px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--aevo-line-strong);
+  border-radius: var(--aevo-radius-lg);
+  background: var(--aevo-surface-strong);
+  box-shadow: 0 22px 60px rgba(22, 51, 31, 0.2), 0 3px 12px rgba(22, 51, 31, 0.08);
+  z-index: 100;
+  animation: aevo-dialog-appear 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aevo-scope-switcher__header,
+.aevo-scope-switcher__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aevo-space-3);
+  padding: var(--aevo-space-4);
+}
+
+.aevo-scope-switcher__header {
+  border-bottom: 1px solid var(--aevo-line);
+}
+
+.aevo-scope-switcher__header > div {
   display: grid;
+  gap: 3px;
+}
+
+.aevo-scope-switcher__header strong {
+  font-size: 0.86rem;
+}
+
+.aevo-scope-switcher__header span,
+.aevo-scope-switcher__footer > span {
+  color: var(--aevo-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.aevo-scope-switcher__close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--aevo-line-strong);
+  border-radius: var(--aevo-radius-pill);
+  background: transparent;
+  color: var(--aevo-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.aevo-scope-switcher__search {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--aevo-space-2);
+  margin: var(--aevo-space-3) var(--aevo-space-3) 0;
+  padding: 0 10px;
+  border: 1px solid var(--aevo-line-strong);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-scope-switcher__search-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--aevo-muted);
+}
+
+.aevo-scope-switcher__search .aevo-control {
+  min-height: 42px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+
+.aevo-scope-switcher__search kbd,
+.aevo-scope-switcher__footer > span {
+  white-space: nowrap;
+}
+
+.aevo-scope-switcher__search kbd {
+  padding: 3px 5px;
+  border: 1px solid var(--aevo-line-strong);
+  border-radius: 5px;
+  color: var(--aevo-muted);
+  font-size: 0.62rem;
+}
+
+.aevo-scope-switcher__options {
+  min-height: 0;
+  padding: var(--aevo-space-3);
+  overflow-y: auto;
+}
+
+.aevo-scope-switcher__section-label {
+  display: block;
+  padding: 4px 8px 6px;
+}
+
+.aevo-scope-switcher__section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--aevo-space-3);
+  padding: 4px 8px 6px;
+  color: var(--aevo-faint);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.aevo-scope-switcher__section-heading span:last-child {
+  display: grid;
+  min-width: 20px;
+  min-height: 20px;
+  place-items: center;
+  border-radius: var(--aevo-radius-pill);
+  background: var(--aevo-surface-subtle);
+  letter-spacing: 0;
+}
+
+.aevo-scope-switcher__option {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--aevo-space-3);
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--aevo-radius-sm);
+  background: transparent;
+  color: var(--aevo-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.aevo-scope-switcher__option:active {
+  transform: scale(0.98);
+}
+
+.aevo-scope-switcher__option:hover,
+.aevo-scope-switcher__option.is-highlighted {
+  border-color: rgba(45, 122, 73, 0.16);
+  background: var(--aevo-brand-wash);
+}
+
+.aevo-scope-switcher__option.is-switching {
+  background: var(--aevo-brand-wash);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.aevo-scope-switcher__option[aria-selected="true"] .aevo-scope-switcher__option-icon {
+  background: var(--aevo-brand-dark);
+  color: #fff;
+}
+
+.aevo-scope-switcher__option-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.aevo-scope-switcher__option-copy strong,
+.aevo-scope-switcher__option-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aevo-scope-switcher__option-copy strong {
+  font-size: 0.78rem;
+}
+
+.aevo-scope-switcher__option-copy span {
+  color: var(--aevo-muted);
+  font-size: 0.66rem;
+}
+
+.aevo-scope-switcher__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--aevo-muted);
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.aevo-scope-switcher__status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--aevo-faint);
+}
+
+.aevo-scope-switcher__status.is-active {
+  color: var(--aevo-success);
+}
+
+.aevo-scope-switcher__status.is-active i {
+  background: var(--aevo-success);
+}
+
+.aevo-scope-switcher__check {
+  width: 17px;
+  height: 17px;
+  color: var(--aevo-brand-dark);
+}
+
+.aevo-scope-switcher__empty {
+  margin: 0;
+  padding: var(--aevo-space-4) var(--aevo-space-2);
+  color: var(--aevo-muted);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.aevo-scope-switcher__footer {
+  align-items: flex-end;
+  border-top: 1px solid var(--aevo-line);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-scope-switcher__footer > span {
+  max-width: 145px;
+  white-space: normal;
+}
+
+.aevo-scope-switcher__footer button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--aevo-line-strong);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-strong);
+  color: var(--aevo-brand-dark);
+  font-size: 0.7rem;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.aevo-scope-switcher__footer button:hover {
+  border-color: var(--aevo-brand);
+  background: var(--aevo-brand-wash);
+}
+
+.aevo-scope-switcher__plus {
+  width: 15px;
+  height: 15px;
+}
+
+.aevo-hub-nav {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--aevo-space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.aevo-hub-nav__group {
+  display: grid;
+  flex: 0 0 auto;
   gap: 4px;
+}
+
+.aevo-hub-nav__label {
+  padding: 0 10px 4px;
+  color: var(--aevo-faint);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
 }
 
 .aevo-hub-nav a {
   display: flex;
   align-items: center;
-  min-height: 40px;
-  padding: 8px 10px;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 8px 12px;
   border-radius: var(--aevo-radius-sm);
   color: var(--aevo-muted);
   font-size: 0.84rem;
+  font-weight: 550;
   text-decoration: none;
+  transition: background 140ms ease, color 140ms ease, transform 80ms ease, box-shadow 140ms ease;
 }
 
-.aevo-hub-nav a:hover,
+.aevo-hub-nav__link-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.aevo-hub-nav__link-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aevo-hub-nav__link-copy small {
+  color: var(--aevo-faint);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+}
+
+.aevo-hub-nav a.aevo-hub-nav__app-link {
+  padding-left: 16px;
+}
+
+.aevo-hub-nav__app-marker {
+  flex: 0 0 auto;
+  color: var(--aevo-faint);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.aevo-hub-nav__empty {
+  margin: 0;
+  padding: 2px 10px 0;
+  color: var(--aevo-faint);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.aevo-hub-nav a:active {
+  transform: scale(0.98);
+}
+
+.aevo-hub-nav a:hover {
+  background: rgba(45, 122, 73, 0.06);
+  color: var(--aevo-brand-dark);
+}
+
 .aevo-hub-nav a[aria-current="page"] {
   background: var(--aevo-brand-wash);
   color: var(--aevo-brand-dark);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--aevo-brand-dark);
+}
+
+.aevo-hub-nav a.is-pending {
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-brand-dark);
+  opacity: 0.9;
+}
+
+.aevo-nav-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--aevo-brand);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: aevo-spin 650ms linear infinite;
+  flex-shrink: 0;
+}
+
+.aevo-hub-nav__item {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aevo-space-2);
+  padding: 8px 10px;
+  border-radius: var(--aevo-radius-sm);
+  color: var(--aevo-faint);
+  font-size: 0.84rem;
+}
+
+.aevo-hub-nav__item small {
+  color: var(--aevo-faint);
+  font-size: 0.6rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.aevo-hub-sidebar__utility {
+  display: grid;
+  gap: 5px;
+  margin-top: var(--aevo-space-4);
+  padding-top: var(--aevo-space-3);
+  border-top: 1px solid var(--aevo-line);
+}
+
+.aevo-hub-sidebar__utility a {
+  color: var(--aevo-muted);
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+
+.aevo-hub-sidebar__utility a:hover {
+  color: var(--aevo-brand-dark);
+  text-decoration: underline;
 }
 
 .aevo-hub-sidebar-footer {
@@ -121,7 +653,13 @@
 }
 
 .aevo-hub-main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .aevo-hub-topbar {
@@ -129,7 +667,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--aevo-space-4);
-  min-height: 72px;
+  min-height: 64px;
   padding: 0 clamp(20px, 4vw, 48px);
   border-bottom: 1px solid var(--aevo-line);
   background: rgba(246, 248, 245, 0.68);
@@ -157,9 +695,28 @@
 }
 
 .aevo-hub-content {
-  width: min(1180px, 100%);
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   margin: 0 auto;
-  padding: clamp(24px, 4vw, 48px);
+  padding: 0 clamp(20px, 4vw, 48px);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.aevo-hub-content > * {
+  width: min(1280px, 100%);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.aevo-hub-content > .aevo-error-page {
+  width: 100%;
+  min-height: 100%;
+  padding-top: clamp(24px, 4vw, 48px);
+  padding-bottom: clamp(24px, 4vw, 48px);
 }
 
 .aevo-page-heading {
@@ -167,7 +724,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--aevo-space-5);
-  margin-bottom: var(--aevo-space-8);
+  margin-bottom: var(--aevo-space-6);
 }
 
 .aevo-page-heading h1,
@@ -177,6 +734,13 @@
 
 .aevo-page-breadcrumb {
   margin-bottom: var(--aevo-space-4);
+}
+
+.aevo-page-heading__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-3);
+  flex-wrap: wrap;
 }
 
 .aevo-page-heading h1 {
@@ -191,11 +755,82 @@
   line-height: 1.6;
 }
 
+.aevo-page-heading__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-2);
+  margin-top: var(--aevo-space-2);
+  color: var(--aevo-muted);
+  font-size: 0.84rem;
+}
+
+.aevo-page-heading__meta code {
+  font-family: var(--aevo-font-mono);
+  font-size: 0.82rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--aevo-surface-subtle);
+  border: 1px solid var(--aevo-line-strong);
+  color: var(--aevo-brand-dark);
+}
+
 .aevo-page-heading__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--aevo-space-3);
   flex-shrink: 0;
+}
+
+.aevo-scope-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aevo-space-4);
+  margin-bottom: var(--aevo-space-5);
+  padding: var(--aevo-space-3) var(--aevo-space-5);
+  border: 1px solid rgba(45, 122, 73, 0.2);
+  border-radius: var(--aevo-radius-md);
+  background: var(--aevo-success-wash);
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.aevo-scope-banner__content {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-3);
+  min-width: 0;
+}
+
+.aevo-scope-banner__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(45, 122, 73, 0.12);
+  color: var(--aevo-brand-dark);
+  flex-shrink: 0;
+}
+
+.aevo-scope-banner strong,
+.aevo-scope-banner p {
+  margin: 0;
+}
+
+.aevo-scope-banner strong {
+  font-size: 0.96rem;
+}
+
+.aevo-scope-banner p {
+  max-width: 720px;
+  color: var(--aevo-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.aevo-scope-banner--store {
+  border-color: rgba(45, 74, 48, 0.22);
+  background: var(--aevo-brand-wash);
 }
 
 .aevo-kpi-grid,
@@ -205,7 +840,7 @@
 }
 
 .aevo-kpi-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: var(--aevo-space-6);
 }
 
@@ -579,6 +1214,1002 @@
   line-height: 1.5;
 }
 
+/* ==========================================================================
+   Aevo Central SSO Login Portal (Production Dual-Column Responsive Architecture)
+   ========================================================================== */
+
+.aevo-sso-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(16px, 3vw, 40px);
+  background: var(--aevo-canvas);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(91, 123, 88, 0.09) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(45, 74, 48, 0.08) 0px, transparent 55%);
+  box-sizing: border-box;
+}
+
+.aevo-sso-handoff-loading {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: min(100%, 520px);
+  padding: clamp(32px, 7vw, 72px) clamp(24px, 6vw, 56px);
+  border: 1px solid var(--aevo-line);
+  border-radius: 24px;
+  background: var(--aevo-surface);
+  box-shadow: 0 16px 40px rgba(32, 52, 35, 0.07), inset 1px 1.5px 0 rgba(255, 255, 255, 0.9);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.aevo-sso-handoff-loading h1 {
+  margin: 0;
+  color: var(--aevo-ink);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  line-height: 1.3;
+}
+
+.aevo-sso-handoff-loading p {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--aevo-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.aevo-sso-handoff-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(53, 99, 58, 0.18);
+  border-top-color: var(--aevo-brand);
+  border-radius: 50%;
+  animation: aevo-sso-handoff-spin 0.8s linear infinite;
+}
+
+.aevo-sso-handoff-error {
+  border-color: rgba(158, 54, 45, 0.28);
+  background: var(--aevo-danger-wash);
+}
+
+.aevo-sso-handoff-error-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--aevo-danger);
+  border-radius: 50%;
+  color: var(--aevo-danger);
+  font-weight: 800;
+}
+
+.aevo-sso-handoff-error .aevo-button {
+  min-width: 180px;
+}
+
+@keyframes aevo-sso-handoff-spin {
+  to { transform: rotate(360deg); }
+}
+
+.aevo-sso-container {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .aevo-sso-container {
+    max-width: 1040px;
+  }
+}
+
+.aevo-sso-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aevo-space-5);
+  width: 100%;
+  padding: var(--aevo-space-5);
+  border: 1px solid var(--aevo-line);
+  border-radius: 24px;
+  background: var(--aevo-surface);
+  box-shadow: 0 16px 40px rgba(32, 52, 35, 0.07), inset 1px 1.5px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: var(--aevo-glass-blur);
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .aevo-sso-card {
+    display: grid;
+    grid-template-columns: 430px minmax(0, 1fr);
+    gap: 0;
+    padding: 0;
+    border-radius: 28px;
+    box-shadow: 0 24px 64px rgba(32, 52, 35, 0.1), inset 1px 1.5px 0 rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+  }
+}
+
+/* Left Column: Context & Security Panel (Desktop) */
+.aevo-sso-context-panel {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .aevo-sso-context-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--aevo-space-6);
+    padding: 36px 32px;
+    background: rgba(240, 244, 238, 0.72);
+    border-right: 1px solid var(--aevo-line);
+    box-sizing: border-box;
+  }
+}
+
+.aevo-sso-brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-brand-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-brand-title {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--aevo-ink);
+  letter-spacing: -0.02em;
+}
+
+.aevo-brand-subtitle {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--aevo-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aevo-tls-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--aevo-line);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--aevo-brand-dark);
+}
+
+.aevo-live-beacon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  animation: aevo-beacon-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes aevo-beacon-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.9); }
+}
+
+/* Dedicated Target App Hero Box */
+.aevo-target-hero-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aevo-space-4);
+  padding: var(--aevo-space-5);
+  border-radius: 20px;
+  background: var(--aevo-surface-strong);
+  border: 1px solid var(--aevo-line);
+  box-shadow: 0 4px 16px rgba(45, 74, 48, 0.04);
+}
+
+.aevo-target-hero-top {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-target-icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.aevo-target-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.aevo-target-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--aevo-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.aevo-target-name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--aevo-ink);
+  letter-spacing: -0.02em;
+}
+
+.aevo-target-subdomain {
+  font-family: var(--aevo-font-mono);
+  font-size: 0.74rem;
+  color: var(--aevo-brand-dark);
+  font-weight: 600;
+}
+
+.aevo-target-scope-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--aevo-space-3);
+  border-top: 1px solid var(--aevo-line);
+}
+
+.aevo-scope-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--aevo-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.aevo-scope-summary {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--aevo-ink);
+  line-height: 1.4;
+}
+
+.aevo-scope-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.aevo-scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-brand-dark);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+/* Security Guarantee Card */
+.aevo-security-guarantee-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aevo-space-2);
+  padding: var(--aevo-space-4);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--aevo-line);
+}
+
+.aevo-guarantee-header {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-2);
+  color: var(--aevo-brand-dark);
+}
+
+.aevo-guarantee-header strong {
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.aevo-security-guarantee-card p {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--aevo-muted);
+  line-height: 1.5;
+}
+
+.aevo-security-features {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--aevo-brand-dark);
+}
+
+/* Target App Banner on Mobile */
+.aevo-mobile-target-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-3);
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(240, 244, 238, 0.85);
+  border: 1px solid var(--aevo-line);
+}
+
+@media (min-width: 1024px) {
+  .aevo-mobile-target-banner {
+    display: none;
+  }
+}
+
+.aevo-mobile-target-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.aevo-mobile-target-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.aevo-mobile-target-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aevo-mobile-target-title-row strong {
+  font-size: 0.95rem;
+  color: var(--aevo-ink);
+}
+
+.aevo-mobile-subdomain-pill {
+  font-family: var(--aevo-font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--aevo-surface);
+  color: var(--aevo-brand-dark);
+  border: 1px solid var(--aevo-line);
+}
+
+.aevo-mobile-scope-summary {
+  font-size: 0.75rem;
+  color: var(--aevo-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Right Column: Interaction & Form Panel */
+.aevo-sso-interactive-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aevo-space-5);
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .aevo-sso-interactive-panel {
+    padding: 36px 36px;
+    background: var(--aevo-surface-strong);
+  }
+}
+
+.aevo-sso-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-sso-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aevo-sso-header-text h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--aevo-ink);
+}
+
+.aevo-sso-header-text p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--aevo-muted);
+  line-height: 1.5;
+}
+
+.aevo-switch-account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--aevo-line-strong);
+  background: var(--aevo-surface-subtle);
+  color: var(--aevo-brand-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  min-height: 36px;
+}
+
+.aevo-switch-account-trigger:hover {
+  background: var(--aevo-brand-wash);
+}
+
+/* Multi-Account Chooser (Google-Style) */
+.aevo-account-chooser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aevo-space-4);
+  padding: var(--aevo-space-2) 0;
+}
+
+.aevo-account-chooser-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aevo-account-chooser-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--aevo-ink);
+}
+
+.aevo-account-chooser-header p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--aevo-muted);
+}
+
+.aevo-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aevo-account-item {
+  display: flex;
+  align-items: center;
+  gap: var(--aevo-space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--aevo-line);
+  background: var(--aevo-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.aevo-account-item:hover {
+  border-color: var(--aevo-brand);
+  background: var(--aevo-brand-wash);
+  transform: translateY(-1px);
+}
+
+.aevo-account-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.aevo-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.aevo-account-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--aevo-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aevo-account-email {
+  font-size: 0.76rem;
+  color: var(--aevo-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aevo-account-role-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(91, 123, 88, 0.12);
+  color: var(--aevo-brand-dark);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.aevo-account-chevron {
+  color: var(--aevo-faint);
+  display: flex;
+  align-items: center;
+}
+
+.aevo-account-use-another-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px dashed var(--aevo-line-strong);
+  background: transparent;
+  color: var(--aevo-brand-dark);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aevo-account-use-another-btn:hover {
+  background: var(--aevo-surface-subtle);
+  border-style: solid;
+}
+
+/* Federated Identity Buttons */
+.aevo-sso-social-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aevo-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #3c4043;
+  font-family: var(--aevo-font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.aevo-google-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #c6c9cc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.aevo-google-btn:focus-visible {
+  outline: 2px solid #4285F4;
+  outline-offset: 1px;
+}
+
+.aevo-google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aevo-secondary-providers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.aevo-provider-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-family: var(--aevo-font-sans);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aevo-provider-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aevo-provider-btn--apple {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+}
+
+.aevo-provider-btn--apple:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+.aevo-provider-btn--apple:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 1px;
+}
+
+.aevo-provider-btn--line {
+  background: #06C755;
+  color: #ffffff;
+  border: 1px solid #06C755;
+}
+
+.aevo-provider-btn--line:hover:not(:disabled) {
+  background: #05b04c;
+}
+
+.aevo-provider-btn--line:focus-visible {
+  outline: 2px solid #06C755;
+  outline-offset: 1px;
+}
+
+.aevo-passkey-trigger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(45, 122, 73, 0.08);
+  border: 1px solid rgba(45, 122, 73, 0.28);
+  color: var(--aevo-brand-dark);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aevo-passkey-trigger-btn:hover:not(:disabled) {
+  background: rgba(45, 122, 73, 0.14);
+}
+
+.aevo-passkey-trigger-btn:focus-visible {
+  outline: 2px solid var(--aevo-brand);
+  outline-offset: 1px;
+}
+
+/* SSO Divider */
+.aevo-sso-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--aevo-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.aevo-sso-divider::before,
+.aevo-sso-divider::after {
+  flex: 1;
+  height: 1px;
+  background: var(--aevo-line);
+  content: "";
+}
+
+/* Credential Form & Inputs */
+.aevo-sso-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aevo-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aevo-form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.aevo-form-label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--aevo-ink);
+}
+
+.aevo-forgot-link {
+  color: var(--aevo-brand-dark);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.aevo-forgot-link:hover {
+  text-decoration: underline;
+}
+
+.aevo-remember-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: -2px;
+  color: var(--aevo-ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.aevo-remember-row input {
+  width: 17px;
+  height: 17px;
+  margin: 1px 0 0;
+  accent-color: var(--aevo-brand-dark);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.aevo-remember-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.aevo-remember-copy small {
+  color: var(--aevo-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.aevo-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.aevo-sso-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--aevo-line-strong);
+  border-radius: 12px;
+  background: var(--aevo-surface-subtle);
+  color: var(--aevo-ink);
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.aevo-sso-input:focus-visible {
+  border-color: var(--aevo-brand);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(91, 123, 88, 0.2);
+}
+
+.aevo-sso-input.has-toggle {
+  padding-right: 46px; /* Prevents overlap with password manager and visibility button */
+}
+
+.aevo-password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--aevo-muted);
+  border-radius: 8px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.15s, background 0.15s;
+}
+
+.aevo-password-toggle-btn:hover {
+  color: var(--aevo-ink);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.aevo-password-toggle-btn:focus-visible {
+  outline: 2px solid var(--aevo-brand);
+  outline-offset: 1px;
+}
+
+.aevo-sso-submit-btn {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.aevo-submit-busy-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Actionable Entitlement Recovery Card */
+.aevo-entitlement-recovery-card {
+  display: flex;
+  gap: var(--aevo-space-3);
+  padding: 16px;
+  border: 1px solid #fecdd3;
+  border-radius: 16px;
+  background: #fff1f2;
+  color: #881337;
+  box-shadow: 0 4px 12px rgba(136, 19, 55, 0.06);
+}
+
+.aevo-entitlement-icon {
+  display: flex;
+  align-items: flex-start;
+  color: #e11d48;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.aevo-entitlement-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.aevo-entitlement-title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #9f1239;
+  letter-spacing: -0.01em;
+}
+
+.aevo-entitlement-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #881337;
+}
+
+.aevo-entitlement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.aevo-entitlement-btn-primary {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #e11d48;
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aevo-entitlement-btn-primary:hover {
+  background: #be123c;
+}
+
+.aevo-entitlement-btn-primary:focus-visible {
+  outline: 2px solid #be123c;
+  outline-offset: 1px;
+}
+
+.aevo-entitlement-btn-secondary {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #881337;
+  border: 1px solid #fda4af;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aevo-entitlement-btn-secondary:hover {
+  background: #ffe4e6;
+}
+
+.aevo-entitlement-btn-secondary:focus-visible {
+  outline: 2px solid #fda4af;
+  outline-offset: 1px;
+}
+
+.aevo-entitlement-success-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid #bbf7d0;
+}
+
 .aevo-settings-stack {
   display: grid;
   gap: var(--aevo-space-5);
@@ -648,20 +2279,26 @@
 
 .aevo-form-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--aevo-space-4);
 }
 
 .aevo-form-grid--compact {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
 .aevo-form-grid label {
   display: grid;
+  grid-column: span 4;
   gap: 7px;
+  min-width: 0;
   color: var(--aevo-muted);
   font-size: 0.75rem;
   font-weight: 650;
+}
+
+.aevo-form-grid--compact label {
+  grid-column: span 3;
 }
 
 .aevo-form-grid label.aevo-field--wide {
@@ -770,6 +2407,171 @@
   border-radius: var(--aevo-radius-sm);
 }
 
+.aevo-catalog-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--aevo-space-3);
+  margin: var(--aevo-space-5) 0;
+}
+
+.aevo-catalog-summary > div {
+  display: grid;
+  gap: 3px;
+  padding: 14px;
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-catalog-summary strong {
+  color: var(--aevo-ink);
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+}
+
+.aevo-catalog-summary span,
+.aevo-catalog-toolbar label > span {
+  color: var(--aevo-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aevo-catalog-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(130px, 170px) minmax(150px, 190px) auto;
+  align-items: end;
+  gap: var(--aevo-space-3);
+  margin-bottom: var(--aevo-space-4);
+}
+
+.aevo-catalog-toolbar label {
+  display: grid;
+  gap: 6px;
+}
+
+.aevo-catalog-toolbar > .aevo-button {
+  white-space: nowrap;
+}
+
+.aevo-catalog-product {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 230px;
+}
+
+.aevo-catalog-product__media {
+  display: inline-flex;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--aevo-line);
+  border-radius: 10px;
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-brand-dark);
+  font-weight: 800;
+}
+
+.aevo-catalog-product__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aevo-catalog-table {
+  min-width: 1080px;
+}
+
+.aevo-catalog-table td:last-child {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.aevo-catalog-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 300px;
+}
+
+.aevo-catalog-channel-form,
+.aevo-catalog-channel-form .aevo-button {
+  display: inline-flex;
+}
+
+.aevo-catalog-channel-form .aevo-button,
+.aevo-catalog-channel {
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid var(--aevo-line);
+  border-radius: 8px;
+  background: var(--aevo-surface-subtle);
+  color: var(--aevo-muted);
+  font-size: 0.66rem;
+  line-height: 1.1;
+}
+
+.aevo-catalog-channel-form .aevo-button.is-enabled,
+.aevo-catalog-channel.is-enabled {
+  border-color: color-mix(in srgb, var(--aevo-brand) 45%, var(--aevo-line));
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-brand-dark);
+}
+
+.aevo-catalog-channel-form .aevo-button span,
+.aevo-catalog-channel span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.aevo-catalog-empty {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+  padding: 28px;
+  border: 1px dashed var(--aevo-line-strong);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-catalog-empty span {
+  max-width: 620px;
+  color: var(--aevo-muted);
+}
+
+.aevo-catalog-product-form {
+  display: grid;
+  gap: var(--aevo-space-5);
+}
+
+.aevo-catalog-form-note {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--aevo-brand);
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-muted);
+  font-size: 0.78rem;
+}
+
+.aevo-catalog-form-note strong {
+  color: var(--aevo-brand-dark);
+}
+
+.aevo-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--aevo-space-2);
+}
+
 .aevo-data-table {
   width: 100%;
   min-width: 640px;
@@ -855,7 +2657,7 @@
 
 .aevo-store-app-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--aevo-space-4);
 }
 
@@ -870,15 +2672,30 @@
   background: var(--aevo-surface-strong);
 }
 
+.aevo-store-app-card.is-configuring {
+  grid-column: 1 / -1;
+}
+
 .aevo-store-app-card.is-enabled {
   border-color: rgba(45, 122, 73, 0.28);
 }
 
 .aevo-store-app-card__top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--aevo-space-3);
+}
+
+.aevo-store-app-card__identity {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-store-app-card__identity > div {
+  min-width: 0;
 }
 
 .aevo-store-app-card h3,
@@ -888,17 +2705,32 @@
 
 .aevo-store-app-card h3 {
   font-size: 1rem;
+  overflow-wrap: anywhere;
 }
 
 .aevo-store-app-card p {
-  min-height: 42px;
   color: var(--aevo-muted);
   font-size: 0.78rem;
   line-height: 1.55;
 }
 
-.aevo-store-app-card form {
-  margin-top: auto;
+.aevo-store-app-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--aevo-space-2);
+  padding-top: var(--aevo-space-2);
+  border-top: 1px solid var(--aevo-line);
+}
+
+.aevo-store-app-card__actions > form,
+.aevo-store-app-card__actions .aevo-app-launch-form,
+.aevo-store-app-card__actions .aevo-connection-test-form {
+  margin: 0 !important;
+}
+
+.aevo-store-app-card__actions .aevo-form-hint {
+  flex: 1 1 100%;
 }
 
 .aevo-store-workspace-tabs {
@@ -913,19 +2745,48 @@
 }
 
 .aevo-store-workspace-tabs a {
-  min-height: 36px;
-  padding: 9px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 14px;
   border-radius: var(--aevo-radius-sm);
   color: var(--aevo-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-decoration: none;
+  transition: all 140ms ease;
 }
 
-.aevo-store-workspace-tabs a:hover,
+.aevo-store-workspace-tabs a:active {
+  transform: scale(0.97);
+}
+
+.aevo-store-workspace-tabs a:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--aevo-ink);
+}
+
 .aevo-store-workspace-tabs a.is-active {
   background: var(--aevo-surface-strong);
   color: var(--aevo-brand-dark);
+  box-shadow: 0 1px 4px rgba(35, 73, 47, 0.08);
+}
+
+.aevo-store-workspace-tabs a.is-pending {
+  background: var(--aevo-brand-wash);
+  color: var(--aevo-brand-dark);
+}
+
+.aevo-tab-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--aevo-brand-dark);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: aevo-spin 650ms linear infinite;
+  flex-shrink: 0;
 }
 
 .aevo-form-grid textarea {
@@ -956,16 +2817,24 @@
 
 .aevo-feature-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--aevo-space-3);
   padding: 9px 0;
   border-top: 1px solid var(--aevo-line);
 }
 
+.aevo-feature-row > div {
+  min-width: 0;
+}
+
 .aevo-feature-row strong,
 .aevo-feature-row small {
   display: block;
+}
+
+.aevo-feature-row strong {
+  overflow-wrap: anywhere;
 }
 
 .aevo-feature-row small {
@@ -998,6 +2867,251 @@
   color: var(--aevo-danger);
 }
 
+.aevo-app-config-stack {
+  display: grid;
+  gap: var(--aevo-space-3);
+  margin-top: var(--aevo-space-2);
+  min-width: 0;
+}
+
+.aevo-app-config-stack__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--aevo-space-3);
+  padding: var(--aevo-space-3);
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-app-config-stack__heading > div {
+  min-width: 0;
+}
+
+.aevo-app-config-stack__heading h4,
+.aevo-app-config-stack__heading p {
+  margin: 0;
+}
+
+.aevo-app-config-stack__heading h4 {
+  margin-top: 3px;
+  font-size: 0.9rem;
+}
+
+.aevo-app-config-stack__heading p {
+  margin-top: 4px;
+  color: var(--aevo-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.aevo-app-config-panel {
+  display: grid;
+  gap: var(--aevo-space-3);
+  min-width: 0;
+  margin-top: 0 !important;
+  padding: var(--aevo-space-3);
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-app-config-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-app-config-panel__heading > div {
+  min-width: 0;
+}
+
+.aevo-app-config-panel h3,
+.aevo-app-config-panel p {
+  margin: 0;
+}
+
+.aevo-app-config-panel h3 {
+  margin-top: 3px;
+  font-size: 0.84rem;
+}
+
+.aevo-app-config-panel p,
+.aevo-app-config-panel label small,
+.aevo-config-field > span {
+  color: var(--aevo-muted);
+  font-size: 0.7rem;
+  font-weight: 450;
+  line-height: 1.45;
+}
+
+.aevo-app-config-panel .aevo-config-field > span {
+  color: var(--aevo-text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.aevo-app-config-fields {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--aevo-space-4);
+  min-width: 0;
+}
+
+.aevo-config-field {
+  display: grid;
+  grid-column: span 6;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.aevo-config-field small {
+  overflow-wrap: anywhere;
+}
+
+.aevo-app-config-panel .aevo-form-actions {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.aevo-app-config-empty {
+  padding: var(--aevo-space-3);
+  border: 1px dashed var(--aevo-line-strong);
+  border-radius: var(--aevo-radius-sm);
+  color: var(--aevo-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.aevo-app-config-loading {
+  display: grid;
+  gap: 5px;
+  padding: var(--aevo-space-3);
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-app-config-loading strong {
+  font-size: 0.82rem;
+}
+
+.aevo-app-config-loading > span:last-child {
+  color: var(--aevo-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.aevo-store-app-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--aevo-space-3);
+  margin-bottom: var(--aevo-space-4);
+  padding: var(--aevo-space-3);
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-store-app-summary__metric {
+  display: grid;
+  gap: 2px;
+  min-width: 120px;
+  padding-right: var(--aevo-space-3);
+  border-right: 1px solid var(--aevo-line);
+}
+
+.aevo-store-app-summary__metric strong {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.aevo-store-app-summary__metric span,
+.aevo-store-app-summary p {
+  color: var(--aevo-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.aevo-store-app-summary p {
+  flex: 1 1 280px;
+  margin: 0;
+}
+
+.aevo-application-page__heading .aevo-app-icon {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  font-size: 0.72rem;
+}
+
+.aevo-application-page__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: var(--aevo-space-3);
+  margin-bottom: var(--aevo-space-5);
+}
+
+.aevo-application-page__summary article {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: var(--aevo-space-4);
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-md);
+  background: var(--aevo-surface);
+  box-shadow: 0 8px 20px rgba(35, 73, 47, 0.05);
+}
+
+.aevo-application-page__summary strong {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.aevo-application-page__summary small {
+  color: var(--aevo-muted);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+.aevo-application-page__facts {
+  margin-bottom: var(--aevo-space-4);
+}
+
+.aevo-application-page__capabilities {
+  margin-top: var(--aevo-space-4);
+}
+
+.aevo-application-page__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-application-page__actions form {
+  margin: 0 !important;
+}
+
+.aevo-application-page__connection.is-online {
+  border-color: rgba(45, 122, 73, 0.24);
+  background: var(--aevo-success-wash);
+  color: var(--aevo-success);
+}
+
+.aevo-application-page__connection.is-offline,
+.aevo-application-page__connection.is-http_error {
+  border-color: rgba(158, 54, 45, 0.25);
+  background: var(--aevo-danger-wash);
+  color: var(--aevo-danger);
+}
+
 .aevo-module-card {
   display: grid;
   gap: var(--aevo-space-2);
@@ -1007,11 +3121,42 @@
   background: var(--aevo-surface-strong);
   color: var(--aevo-text);
   text-decoration: none;
+  box-shadow: var(--aevo-rim-highlight), var(--aevo-shadow);
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.aevo-module-card:active {
+  transform: scale(0.98);
 }
 
 .aevo-module-card:hover {
-  border-color: var(--aevo-line-strong);
-  transform: translateY(-1px);
+  border-color: rgba(45, 122, 73, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(35, 73, 47, 0.08);
+}
+
+.aevo-module-card.is-pending {
+  border-color: var(--aevo-brand);
+  background: var(--aevo-brand-wash);
+}
+
+.aevo-module-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.aevo-card-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--aevo-brand);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: aevo-spin 650ms linear infinite;
+  flex-shrink: 0;
 }
 
 .aevo-module-card strong {
@@ -1041,6 +3186,76 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--aevo-space-4);
+}
+
+.aevo-app-catalog {
+  display: grid;
+  gap: var(--aevo-space-6);
+}
+
+.aevo-app-catalog__section {
+  display: grid;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-app-catalog__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--aevo-space-4);
+}
+
+.aevo-app-catalog__heading h3,
+.aevo-app-catalog__heading p {
+  margin: 0;
+}
+
+.aevo-app-catalog__heading h3 {
+  margin-top: 4px;
+  font-size: 1rem;
+}
+
+.aevo-app-catalog__heading p {
+  max-width: 680px;
+  margin-top: var(--aevo-space-2);
+  color: var(--aevo-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.aevo-app-card--catalog {
+  background: var(--aevo-surface-subtle);
+}
+
+.aevo-app-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aevo-space-2);
+}
+
+.aevo-app-card__tags span {
+  padding: 4px 7px;
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-pill);
+  color: var(--aevo-muted);
+  font-family: var(--aevo-font-mono);
+  font-size: 0.66rem;
+}
+
+.aevo-app-catalog__note {
+  margin: 0;
+  padding: var(--aevo-space-3) var(--aevo-space-4);
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-sm);
+  background: var(--aevo-surface-subtle);
+  color: var(--aevo-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.aevo-app-catalog__note a {
+  color: var(--aevo-brand-dark);
+  font-weight: 700;
 }
 
 .aevo-app-card {
@@ -1140,6 +3355,42 @@
   font-size: 1.05rem;
 }
 
+.aevo-entitlement-summary > div small {
+  max-width: 280px;
+  color: var(--aevo-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.aevo-entitlement-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(96px, 1fr));
+  gap: var(--aevo-space-3);
+  margin: 0;
+}
+
+.aevo-entitlement-metrics div {
+  min-width: 0;
+}
+
+.aevo-entitlement-metrics dt,
+.aevo-entitlement-metrics dd {
+  margin: 0;
+}
+
+.aevo-entitlement-metrics dt {
+  color: var(--aevo-muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.aevo-entitlement-metrics dd {
+  margin-top: 4px;
+  color: var(--aevo-ink);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
 .aevo-feature-enabled,
 .aevo-feature-disabled {
   border: 1px solid transparent;
@@ -1172,15 +3423,37 @@
   color: var(--aevo-danger);
 }
 
-@media (max-width: 880px) {
-  .aevo-hub-shell {
+.aevo-inline-alert--error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-inline-alert--error > span {
+  flex: 1 1 360px;
+}
+
+@media (max-width: 1180px) {
+  .aevo-store-app-grid {
     grid-template-columns: 1fr;
   }
 
+  .aevo-store-app-card.is-configuring {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 880px) {
+  .aevo-hub-shell {
+    flex-direction: column;
+  }
+
   .aevo-hub-sidebar {
-    position: static;
+    flex: 0 0 auto;
+    width: 100%;
     height: auto;
-    max-height: none;
     min-height: auto;
     padding: var(--aevo-space-4);
     border-right: 0;
@@ -1193,7 +3466,23 @@
   }
 
   .aevo-hub-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: var(--aevo-space-4);
+    margin: 0 calc(var(--aevo-space-4) * -1);
+    padding: 0 var(--aevo-space-4) var(--aevo-space-1);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+  }
+
+  .aevo-hub-nav__group {
+    min-width: max-content;
+  }
+
+  .aevo-hub-nav__label {
+    padding-right: 8px;
+    padding-left: 8px;
   }
 
   .aevo-hub-sidebar-footer {
@@ -1205,6 +3494,7 @@
   .aevo-module-grid,
   .aevo-app-grid,
   .aevo-security-grid,
+  .aevo-catalog-summary,
   .aevo-store-facts,
   .aevo-store-app-grid,
   .aevo-reuse-grid {
@@ -1213,7 +3503,21 @@
 
   .aevo-form-grid,
   .aevo-form-grid--compact {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .aevo-form-grid label,
+  .aevo-form-grid--compact label {
+    grid-column: span 3;
+  }
+
+  .aevo-catalog-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .aevo-catalog-toolbar .aevo-catalog-search,
+  .aevo-catalog-toolbar > .aevo-button {
+    grid-column: 1 / -1;
   }
 }
 
@@ -1239,6 +3543,8 @@
   }
 
   .aevo-section-heading,
+  .aevo-app-catalog__heading,
+  .aevo-scope-banner,
   .aevo-form-actions,
   .aevo-entitlement-summary {
     align-items: flex-start;
@@ -1247,10 +3553,240 @@
 
   .aevo-form-grid,
   .aevo-form-grid--compact,
+  .aevo-catalog-toolbar,
   .aevo-app-facts,
   .aevo-store-facts,
   .aevo-store-app-grid,
   .aevo-reuse-grid {
     grid-template-columns: 1fr;
   }
+
+  .aevo-form-grid label,
+  .aevo-form-grid--compact label,
+  .aevo-config-field {
+    grid-column: 1 / -1;
+  }
+
+  .aevo-store-app-card__top,
+  .aevo-app-config-stack__heading {
+    flex-direction: column;
+  }
+
+  .aevo-store-app-summary__metric {
+    border-right: 0;
+  }
+
+}
+
+/* Modern settings rhythm: wider breathing room, readable measures, and
+   consistent two-column cards inspired by the account-settings reference. */
+.aevo-settings-stack {
+  width: min(1120px, 100%);
+  gap: clamp(20px, 3vw, 32px);
+  padding-bottom: clamp(24px, 5vw, 64px);
+}
+
+.aevo-settings-overview {
+  display: grid;
+  gap: var(--aevo-space-5);
+}
+
+.aevo-settings-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--aevo-space-4);
+}
+
+.aevo-settings-metric,
+.aevo-settings-mini-card {
+  min-width: 0;
+  border: 1px solid var(--aevo-line);
+  border-radius: var(--aevo-radius-md);
+  background: var(--aevo-surface);
+  box-shadow: var(--aevo-shadow);
+}
+
+.aevo-settings-metric {
+  display: grid;
+  gap: 8px;
+  padding: clamp(18px, 2vw, 24px);
+}
+
+.aevo-settings-metric > span,
+.aevo-settings-metric > small {
+  color: var(--aevo-muted);
+  font-size: 0.74rem;
+}
+
+.aevo-settings-metric strong {
+  color: var(--aevo-ink);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  letter-spacing: -0.04em;
+}
+
+.aevo-settings-metric small {
+  line-height: 1.45;
+}
+
+.aevo-settings-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
+  gap: var(--aevo-space-4);
+}
+
+.aevo-settings-mini-card {
+  display: grid;
+  align-content: start;
+  gap: var(--aevo-space-4);
+  padding: clamp(18px, 2vw, 24px);
+}
+
+.aevo-mini-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--aevo-space-3);
+}
+
+.aevo-mini-card-heading h2 {
+  margin: 5px 0 0;
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+}
+
+.aevo-mini-card-heading a {
+  color: var(--aevo-brand-dark);
+  font-size: 0.72rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.aevo-settings-mini-card p {
+  margin: 0;
+  color: var(--aevo-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.aevo-activity-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--aevo-line);
+}
+
+.aevo-activity-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aevo-space-3);
+  padding: 11px 0;
+  border-bottom: 1px solid var(--aevo-line);
+  color: var(--aevo-text);
+  font-size: 0.76rem;
+}
+
+.aevo-activity-list time {
+  color: var(--aevo-muted);
+  font-size: 0.7rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.aevo-retention-section {
+  border-color: rgba(158, 54, 45, 0.24);
+  background: #fffaf8;
+}
+
+.aevo-retention-section.is-pending {
+  border-color: rgba(154, 106, 22, 0.28);
+  background: var(--aevo-warning-wash);
+}
+
+.aevo-retention-countdown {
+  display: grid;
+  gap: 7px;
+  padding: clamp(16px, 2vw, 22px);
+  border: 1px solid rgba(154, 106, 22, 0.24);
+  border-radius: var(--aevo-radius-md);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.aevo-retention-countdown span,
+.aevo-retention-countdown time {
+  color: var(--aevo-muted);
+  font-size: 0.74rem;
+}
+
+.aevo-retention-countdown strong {
+  color: var(--aevo-ink);
+  font-family: var(--aevo-font-mono);
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
+  letter-spacing: -0.04em;
+}
+
+.aevo-retention-form {
+  display: grid;
+  gap: var(--aevo-space-4);
+  max-width: 680px;
+}
+
+.aevo-retention-form > label:not(.aevo-danger-confirm) {
+  display: grid;
+  gap: 7px;
+  color: var(--aevo-muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.aevo-danger-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--aevo-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.aevo-danger-confirm input {
+  margin-top: 2px;
+  accent-color: var(--aevo-danger);
+}
+
+/* Keep store-level application settings readable at desktop widths. The
+   configuration form stays in one card, while sibling apps keep a stable
+   two-column rhythm instead of collapsing into narrow vertical strips. */
+.aevo-store-app-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: clamp(20px, 2.5vw, 32px);
+}
+
+.aevo-store-app-card {
+  gap: var(--aevo-space-4);
+  padding: clamp(20px, 2.2vw, 28px);
+}
+
+.aevo-store-app-card__actions {
+  gap: 10px;
+  padding-top: var(--aevo-space-3);
+}
+
+@media (max-width: 760px) {
+  .aevo-settings-metric-grid,
+  .aevo-settings-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Instant Tactile Feedback */
+.aevo-button:active,
+.aevo-table-link:active,
+.aevo-module-card:active,
+.aevo-store-workspace-tabs a:active,
+.aevo-hub-nav a:active {
+  transform: scale(0.985);
+  opacity: 0.92;
+  transition: transform 50ms ease-out, opacity 50ms ease-out;
 }

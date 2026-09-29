@@ -3,12 +3,18 @@
 The development cutover is complete for the Hub/Accounts/Core session path.
 The responsibility split is:
 
-- Accounts talks to the identity provider and brokers password/OAuth/passkey
-  flows.
+- Accounts talks to the identity provider and brokers password flows. OAuth
+  provider routes and passkey remain gated until their versioned contracts are
+  deployed end to end.
 - Core API issues, resolves, refreshes, and revokes opaque app-scoped sessions.
 - Core API resolves application assignment, organization/store scope, roles,
   permissions, and store app access.
 - Hub is a web client and does not own authentication tables or API migrations.
+
+The local passkey controls remain feature-flagged off until the Accounts/Core
+WebAuthn contract is versioned and implemented. This avoids exposing a UI that
+would call an unavailable endpoint; password, OAuth, and recovery flows remain
+available.
 
 ## Local migration commands
 
@@ -22,12 +28,13 @@ bun run db:migrate:verify
 
 The commands delegate to `Aevo.CoreApi.Migrator`, which uses
 `_aevo_core_migrations`, a PostgreSQL advisory lock, ordered SQL files, and
-SHA-256 drift checks. The current development database has all nine Core
-migrations applied and verified.
+SHA-256 drift checks. The current development database has the ordered Core
+migration set applied and verified.
 
-There is no Hub migration write path and no legacy migration command. The old
-Supabase migration files are retained only as historical compatibility input
-while the database transition is completed by Core API/Infrastructure.
+There is no Hub migration write path and no legacy migration command. Retained
+Supabase migration files are app-domain history only; the confirmed
+control-plane files were removed and Core API/Infrastructure is the only
+authority for the active database migration history.
 
 ## Runtime verification
 

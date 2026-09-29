@@ -11,7 +11,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@aevo/contracts": "workspace:*"
+    "@aevocado/contracts": "file:../../../aevo-contracts"
   },
   "devDependencies": {
     "@types/bun": "^1.2.21",

@@ -1,6 +1,6 @@
 # ADR 0004: Framework allocation for the strangler migration
 
-- Status: accepted
+- Status: superseded by the completed Hub cutover
 - Date: 2026-09-19
 - Scope: `aevo-hub` first migration slice
 
@@ -11,24 +11,23 @@ Admin workspaces move toward React Router Framework Mode with server rendering
 on the eventual Cloudflare Workers runtime. Operational surfaces such as POS,
 Kiosk, and Queue remain React + Vite/React Router applications.
 
-The current Hub gateway and static Bun web server remain the compatibility
-adapter during the migration. The first slice extracts framework-neutral
+The former Hub gateway, static Bun web server, direct-Supabase domain packages,
+and in-repository worker are not runtime owners after cutover. Framework-neutral
 contracts, API client behavior, app access, tenant context, permissions, and
-observability. It does not replace the gateway or perform a route rewrite.
+observability now live in the versioned `@aevocado/*` boundary and Core API.
 
 ## Constraints
 
 - The canonical API, Supabase data model, server-managed session behavior, and
   existing RBAC/entitlement checks remain the source of truth.
-- A new UI route must be introduced behind a route-level flag or canary path
-  before the legacy route is removed.
-- A failed canary rolls back by routing traffic to the existing web adapter;
-  rollback must not require a database rollback.
+- The modern route set must pass loader/action, cross-tenant, and migration
+  verification before the legacy route is removed.
+- A failed cutover is recovered from source control; the deleted adapter is not
+  reintroduced as a second authorization or migration owner.
 - Platform Admin access stays isolated from organization membership access.
 
 ## Consequences
 
-The repository temporarily contains legacy `@aevo/*` packages and new
-`@aevocado/*` framework packages. The package scope migration is incremental;
-existing consumers are not renamed until their boundary has tests and a
-rollback path.
+Historical Supabase migration SQL remains in the repository as read-only
+archive during data transition. Runtime packages are owned by Core API,
+Accounts, Edge, or the separate background-worker repository.
