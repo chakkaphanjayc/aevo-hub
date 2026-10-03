@@ -10,6 +10,10 @@ export default [
   layout("./routes/hub-layout.tsx", [
     index("./routes/workspace.tsx"),
     route("settings", "./routes/settings.tsx"),
+    route("billing", "./routes/billing.tsx"),
+    route("access", "./routes/access.tsx"),
+    route("reports", "./routes/reports.tsx"),
+    route("data", "./routes/data-operations.tsx"),
     route("stores", "./routes/stores.tsx"),
     route("stores/:storeId/apps/:applicationCode", "./routes/store-application.tsx"),
     route("stores/:storeId", "./routes/store.tsx"),
