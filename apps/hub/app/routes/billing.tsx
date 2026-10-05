@@ -6,7 +6,8 @@ import { isAccessAllowed } from "@aevocado/app-access";
 import { CapabilityNotice, PlatformPage } from "../components/platform-settings";
 import { createHubApiClient, requireHubAccess } from "../lib/auth.server";
 import { hasHubPermission, type HubLoaderData } from "../lib/auth.shared";
-import { loadBillingCoreSnapshot, unexposedCapabilities } from "../lib/platform-capabilities.server";
+import { unexposedCapabilities } from "../lib/platform-capabilities";
+import { loadBillingCoreSnapshot } from "../lib/platform-capabilities.server";
 import type { CoreRead } from "../lib/platform-capabilities.server";
 import "../platform-settings.css";
 

@@ -5,7 +5,7 @@ import { isAccessAllowed } from "@aevocado/app-access";
 import { CapabilityNotice, PlatformPage } from "../components/platform-settings";
 import { requireHubAccess } from "../lib/auth.server";
 import type { HubLoaderData } from "../lib/auth.shared";
-import { unexposedCapabilities } from "../lib/platform-capabilities.server";
+import { unexposedCapabilities } from "../lib/platform-capabilities";
 import "../platform-settings.css";
 
 export function meta() {
